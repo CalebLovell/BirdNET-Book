@@ -126,7 +126,7 @@ function Figure({
 					: "feature-card flex items-center gap-4 overflow-hidden rounded-md p-4"
 			}
 		>
-			<div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-[color-mix(in_oklab,var(--sage)_30%,var(--paper-raised))] text-[var(--moss)]">
+			<div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-[var(--icon-well)] text-[var(--moss)]">
 				<Icon aria-hidden="true" className="size-4" />
 			</div>
 			<div className="min-w-0 flex-1">

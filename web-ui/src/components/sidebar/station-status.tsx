@@ -77,8 +77,7 @@ function LivePill() {
 		<span
 			className="flex w-fit shrink-0 items-center gap-1.5 rounded-full px-2 py-0.5 font-semibold text-[10px] uppercase tracking-[0.14em]"
 			style={{
-				backgroundColor:
-					"color-mix(in oklab, var(--moss) 10%, var(--paper-raised))",
+				backgroundColor: "var(--live-fill)",
 				color: "var(--moss)",
 			}}
 		>

@@ -254,7 +254,7 @@ export function SpeciesControlTable({
 							// ordering rather than intent.
 							className={`flex items-center gap-3 rounded-md border-l-2 py-1.5 pr-2 pl-2.5 ${presentation.spine} ${
 								isSelected
-									? "bg-[color-mix(in_oklab,var(--sage)_30%,var(--paper-raised))]"
+									? "bg-[var(--row-selected)]"
 									: "odd:bg-[var(--meadow)]"
 							}`}
 						>

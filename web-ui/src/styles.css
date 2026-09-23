@@ -32,6 +32,18 @@
   --kicker: var(--moss);
   --link-bg-hover: color-mix(in oklab, var(--sage) 18%, var(--paper-raised));
 
+	/* Named tints. Each is one colour pushed into paper; they live here so a
+	   component asks for a meaning rather than re-deriving a mix inline.
+	   --icon-well and --row-selected share a value today but not a meaning. */
+	--icon-well: color-mix(in oklab, var(--sage) 30%, var(--paper-raised));
+	--row-selected: color-mix(in oklab, var(--sage) 30%, var(--paper-raised));
+	--live-fill: color-mix(in oklab, var(--moss) 10%, var(--paper-raised));
+	/* The three confidence tiers (see lib/confidence.ts), each paired with a
+	   text colour: moss, bark, ink. */
+	--confidence-high: color-mix(in oklab, var(--moss) 12%, var(--paper-raised));
+	--confidence-mid: color-mix(in oklab, var(--sand) 20%, var(--paper-raised));
+	--confidence-low: color-mix(in oklab, var(--sage) 32%, var(--paper-raised));
+
   --background: var(--paper);
   --foreground: var(--ink);
   --card: var(--paper-raised);
@@ -43,7 +55,10 @@
   --secondary: color-mix(in oklab, var(--sage) 35%, var(--paper-raised));
   --secondary-foreground: var(--ink);
   --muted: color-mix(in oklab, var(--sage) 20%, var(--paper-raised));
-  --muted-foreground: color-mix(in oklab, var(--ink) 62%, var(--moss) 38%);
+  /* Moss thinned into paper, not a mix of two near-blacks: an ink/moss blend
+     came out barely lighter than body text, so secondary lines didn't read as
+     secondary. 72% keeps it above 4.5:1 on paper, meadow and the icon wells. */
+  --muted-foreground: color-mix(in oklab, var(--moss) 72%, var(--paper-raised));
   --accent: var(--meadow);
   --accent-foreground: var(--ink);
   --destructive: var(--clay);

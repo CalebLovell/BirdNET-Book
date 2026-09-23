@@ -534,7 +534,7 @@ export function DetectionsTable({
 							// would come down to Tailwind's own ordering rather than intent.
 							className={`flex items-center gap-3 rounded-md px-2 py-1.5 ${
 								isSelected
-									? "bg-[color-mix(in_oklab,var(--sage)_30%,var(--paper-raised))]"
+									? "bg-[var(--row-selected)]"
 									: "odd:bg-[var(--meadow)]"
 							}`}
 						>
@@ -670,7 +670,7 @@ export function DetectionsTable({
 							// Tailwind's own ordering, matching the list's choice.
 							className={
 								row.getIsSelected()
-									? "border-none bg-[color-mix(in_oklab,var(--sage)_30%,var(--paper-raised))]"
+									? "border-none bg-[var(--row-selected)]"
 									: "border-none odd:bg-[var(--meadow)]"
 							}
 						>

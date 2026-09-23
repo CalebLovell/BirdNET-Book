@@ -19,23 +19,20 @@ const PROBABLE_MIN = 0.75;
 export function confidenceStyle(confidence: number): CSSProperties {
 	if (confidence >= CONFIDENT_MIN) {
 		return {
-			backgroundColor:
-				"color-mix(in oklab, var(--moss) 12%, var(--paper-raised))",
+			backgroundColor: "var(--confidence-high)",
 			color: "var(--moss)",
 		};
 	}
 
 	if (confidence >= PROBABLE_MIN) {
 		return {
-			backgroundColor:
-				"color-mix(in oklab, var(--sand) 20%, var(--paper-raised))",
+			backgroundColor: "var(--confidence-mid)",
 			color: "var(--bark)",
 		};
 	}
 
 	return {
-		backgroundColor:
-			"color-mix(in oklab, var(--sage) 32%, var(--paper-raised))",
+		backgroundColor: "var(--confidence-low)",
 		color: "var(--ink)",
 	};
 }

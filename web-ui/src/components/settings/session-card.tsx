@@ -63,7 +63,7 @@ export function SessionCard({
 			className="feature-card overflow-hidden rounded-md"
 		>
 			<header className="flex items-center gap-3 border-b p-4">
-				<div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-[color-mix(in_oklab,var(--sage)_30%,var(--paper-raised))]">
+				<div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-[var(--icon-well)]">
 					<KeyRound aria-hidden="true" className="size-4 text-[var(--moss)]" />
 				</div>
 				<div className="min-w-0">
