@@ -3,6 +3,9 @@
 The web UI lives in `web-ui/` (Vite + React + TanStack Start). Code in
 `*.server.ts` runs only on the server; don't import it from client components.
 
+Follow `web-ui/DESIGN.md` for any UI work: its color tokens, type, spacing and
+component rules.
+
 ## Previewing the app
 
 - Start/open the app with the preview browser's launch config named `web-ui`
