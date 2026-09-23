@@ -1,11 +1,9 @@
 # BirdNET-Pi-Live
 
-The web UI lives in `web-ui/` (Vite + React + TanStack Router).
+The web UI lives in `web-ui/` (Vite + React + TanStack Start). Code in
+`*.server.ts` runs only on the server; don't import it from client components.
 
-## Previewing the app — internal browser only
-
-Always view and verify the app in the **Claude Code internal preview browser**.
-Never launch an external browser, real Chrome, or Playwright for this project.
+## Previewing the app
 
 - Start/open the app with the preview browser's launch config named `web-ui`
   (defined in `.claude/launch.json`). It runs `npm run dev` in `web-ui/` on a
