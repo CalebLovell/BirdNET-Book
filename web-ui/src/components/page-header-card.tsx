@@ -106,7 +106,11 @@ export function PageHeaderStats({
 	}
 
 	return (
-		<dl className={`grid grid-cols-2 gap-(--page-gap) ${columns} ${className}`}>
+		// One figure per row on a phone: two across leaves each card too narrow
+		// for its label ("Total detections") or a species name beside the icon.
+		<dl
+			className={`grid grid-cols-1 gap-(--page-gap) sm:grid-cols-2 ${columns} ${className}`}
+		>
 			{stats.map((stat) => (
 				<Figure key={stat.label} {...stat} />
 			))}

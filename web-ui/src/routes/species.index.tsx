@@ -6,11 +6,12 @@ import {
 import Fuse from "fuse.js";
 import {
 	ArrowDownAZ,
+	ArrowDownWideNarrow,
+	ArrowUpNarrowWide,
 	BarChart3,
 	Bird,
 	ChartNoAxesColumnIncreasing,
 	ChevronDown,
-	ChevronUp,
 	Clock,
 	Clock3,
 	Feather,
@@ -38,6 +39,7 @@ import { getLifeListCards, type LifeListCard } from "~/lib/detections.ts";
 import { pageTitle } from "~/lib/page-title.ts";
 import { comNameToSlug } from "~/lib/species-slug.ts";
 import { hourLabel } from "~/lib/time-ago.ts";
+import { cn } from "~/lib/utils.ts";
 
 const SORT_KEYS = ["count", "recent", "alpha"] as const;
 type SortKey = (typeof SORT_KEYS)[number];
@@ -186,6 +188,20 @@ function Species() {
 		] satisfies PageHeaderStat[];
 	}, [filtered]);
 
+	// A new sort starts in its natural direction; the direction button flips
+	// whichever sort is current. Both go back to page one, since the page you
+	// were on no longer holds the same species.
+	const pickSort = (next: SortKey) =>
+		navigate({
+			search: (prev) => ({ ...prev, sort: next, reverse: false, page: 1 }),
+			replace: true,
+		});
+	const flipDirection = () =>
+		navigate({
+			search: (prev) => ({ ...prev, reverse: !prev.reverse, page: 1 }),
+			replace: true,
+		});
+
 	const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
 	const currentPage = Math.min(page, pageCount);
 	const pageItems = filtered.slice(
@@ -204,7 +220,10 @@ function Species() {
 			{/* Gated on the life list rather than the current result, so a search
 			    that matches nothing keeps the box you need to clear it. */}
 			{cards.length > 0 && (
-				<div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+				// One row at every width: the search takes what the sort leaves. The
+				// three sort tabs need about 340px beside a usable search box, so
+				// below 640px the same choice becomes a dropdown.
+				<div className="flex items-center gap-2 sm:gap-3">
 					<SearchInput
 						aria-label="Filter by species"
 						placeholder="Search species..."
@@ -223,75 +242,20 @@ function Species() {
 							});
 						}}
 					/>
-					{/* Scrolls rather than wraps on a narrow screen: a segmented control
-					    cannot break across lines without losing its joined shape, and
-					    the three labels together are a little wider than a phone. */}
-					<div className="flex max-w-full shrink-0 items-center gap-2 overflow-x-auto">
-						<ToggleGroup
-							type="single"
-							variant="outline"
-							value={sort}
-							onValueChange={(value) => {
-								if (!value) {
-									navigate({
-										search: (prev) => ({
-											...prev,
-											reverse: !prev.reverse,
-											page: 1,
-										}),
-										replace: true,
-									});
-									return;
-								}
-								navigate({
-									search: (prev) => ({
-										...prev,
-										sort: value as SortKey,
-										reverse: false,
-										page: 1,
-									}),
-									replace: true,
-								});
-							}}
-						>
-							<ToggleGroupItem
-								value="count"
-								aria-label={`Total sort (${sort === "count" && reverse ? "ascending" : "descending"})`}
-							>
-								<BarChart3 className="size-4" />
-								Total
-								{sort === "count" && reverse ? (
-									<ChevronUp className="size-3" aria-hidden="true" />
-								) : (
-									<ChevronDown className="size-3" aria-hidden="true" />
-								)}
-							</ToggleGroupItem>
-							<ToggleGroupItem
-								value="recent"
-								aria-label={`Recent sort (${sort === "recent" && reverse ? "ascending" : "descending"})`}
-							>
-								<Clock className="size-4" />
-								Recent
-								{sort === "recent" && reverse ? (
-									<ChevronUp className="size-3" aria-hidden="true" />
-								) : (
-									<ChevronDown className="size-3" aria-hidden="true" />
-								)}
-							</ToggleGroupItem>
-							<ToggleGroupItem
-								value="alpha"
-								aria-label={`Alphabetical sort (${sort === "alpha" && reverse ? "ascending" : "descending"})`}
-							>
-								<ArrowDownAZ className="size-4" />
-								Alphabetical
-								{sort === "alpha" && reverse ? (
-									<ChevronUp className="size-3" aria-hidden="true" />
-								) : (
-									<ChevronDown className="size-3" aria-hidden="true" />
-								)}
-							</ToggleGroupItem>
-						</ToggleGroup>
-					</div>
+					{/* The same two controls at every width -- which sort, then its
+					    direction -- as a dropdown on a phone and tabs from 640px. */}
+					<SortSelect
+						sort={sort}
+						reverse={reverse}
+						onSort={pickSort}
+						onReverse={flipDirection}
+					/>
+					<SortTabs
+						sort={sort}
+						reverse={reverse}
+						onSort={pickSort}
+						onReverse={flipDirection}
+					/>
 				</div>
 			)}
 
@@ -312,7 +276,7 @@ function Species() {
 					</section>
 				)
 			) : (
-				<div className="grid grid-cols-[repeat(auto-fill,minmax(240px,1fr))] gap-4">
+				<div className="grid grid-cols-[repeat(auto-fill,minmax(240px,1fr))] gap-(--page-gap)">
 					{pageItems.map((card) => (
 						<SpeciesCard key={card.comName} card={card} />
 					))}
@@ -381,6 +345,154 @@ function Species() {
 				</Pagination>
 			)}
 		</div>
+	);
+}
+
+const SORT_META: Record<
+	SortKey,
+	{ label: string; icon: React.ComponentType<{ className?: string }> }
+> = {
+	count: { label: "Total", icon: BarChart3 },
+	recent: { label: "Recent", icon: Clock },
+	// "Name" rather than the tab's "Alphabetical": a native select is as wide as
+	// its widest option, and the search box beside it needs that width more.
+	// Not "A–Z" either -- the default order runs Z first (see `filtered`).
+	alpha: { label: "Name", icon: ArrowDownAZ },
+};
+
+/**
+ * The sort on a narrow screen: a native select dressed like the timeline's
+ * period menu -- the same 36px box, border, card surface and hover, the chosen
+ * sort's icon in front -- with the direction joined to its right end by a
+ * hairline, the way the timeline's date stepper joins its arrows -- the same
+ * direction button the tabs carry from 640px.
+ */
+function SortSelect({
+	sort,
+	reverse,
+	onSort,
+	onReverse,
+}: {
+	sort: SortKey;
+	reverse: boolean;
+	onSort: (next: SortKey) => void;
+	onReverse: () => void;
+}) {
+	const Icon = SORT_META[sort].icon;
+	return (
+		<div className="flex h-9 shrink-0 overflow-hidden rounded-md border border-input bg-card focus-within:border-[var(--focus-ring)] sm:hidden">
+			<div className="relative">
+				{/* Under 400px the icon goes: the search box needs the width more. */}
+				<Icon
+					className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 max-[400px]:hidden"
+					aria-hidden="true"
+				/>
+				<select
+					aria-label="Sort by"
+					value={sort}
+					onChange={(event) => onSort(event.target.value as SortKey)}
+					className="h-full cursor-pointer appearance-none bg-transparent pr-7 pl-8 font-medium pointer-coarse:text-base text-sm transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none max-[400px]:pl-2.5"
+				>
+					{SORT_KEYS.map((key) => (
+						<option key={key} value={key}>
+							{SORT_META[key].label}
+						</option>
+					))}
+				</select>
+				<ChevronDown
+					className="pointer-events-none absolute top-1/2 right-2 size-4 -translate-y-1/2 text-muted-foreground"
+					aria-hidden="true"
+				/>
+			</div>
+			<DirectionButton
+				reverse={reverse}
+				onReverse={onReverse}
+				className="w-8 border-l"
+			/>
+		</div>
+	);
+}
+
+/**
+ * The sort from 640px: which order, as three joined tabs, with the direction
+ * joined to their right end -- the same button the phone's dropdown carries.
+ * Picking a tab only picks the sort; clicking the active one does nothing, so
+ * the direction lives in one place instead of hiding behind a second click.
+ */
+function SortTabs({
+	sort,
+	reverse,
+	onSort,
+	onReverse,
+}: {
+	sort: SortKey;
+	reverse: boolean;
+	onSort: (next: SortKey) => void;
+	onReverse: () => void;
+}) {
+	return (
+		<div className="hidden shrink-0 sm:flex">
+			<ToggleGroup
+				type="single"
+				variant="outline"
+				value={sort}
+				onValueChange={(value) => {
+					if (value) onSort(value as SortKey);
+				}}
+			>
+				{SORT_KEYS.map((key) => {
+					const Icon = SORT_META[key].icon;
+					return (
+						<ToggleGroupItem
+							key={key}
+							value={key}
+							// Square where the direction button joins on.
+							className="data-[spacing=0]:last:rounded-r-none"
+						>
+							<Icon className="size-4" />
+							{key === "alpha" ? "Alphabetical" : SORT_META[key].label}
+						</ToggleGroupItem>
+					);
+				})}
+			</ToggleGroup>
+			<DirectionButton
+				reverse={reverse}
+				onReverse={onReverse}
+				className="w-9 rounded-r-md border border-l-0"
+			/>
+		</div>
+	);
+}
+
+/**
+ * Flips the current sort. Every sort starts descending -- biggest, newest, or
+ * Z first -- and reversing it flips the arrow. Not a chevron: beside the
+ * dropdown's own chevron it would read as a second dropdown.
+ */
+function DirectionButton({
+	reverse,
+	onReverse,
+	className,
+}: {
+	reverse: boolean;
+	onReverse: () => void;
+	className: string;
+}) {
+	const Direction = reverse ? ArrowUpNarrowWide : ArrowDownWideNarrow;
+	return (
+		<button
+			type="button"
+			aria-label="Reverse sort order"
+			aria-pressed={reverse}
+			title={reverse ? "Reversed" : "Reverse order"}
+			onClick={onReverse}
+			className={cn(
+				"flex shrink-0 items-center justify-center border-input bg-card transition-colors hover:bg-accent hover:text-accent-foreground",
+				className,
+			)}
+		>
+			<Direction className="size-4" aria-hidden="true" />
+		</button>
 	);
 }
 
