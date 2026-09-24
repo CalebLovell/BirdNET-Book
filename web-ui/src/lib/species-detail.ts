@@ -65,6 +65,9 @@ export type SpeciesDetail = {
 	recentVisits: RecentVisit[];
 	/** When the visit ages were measured, for `useAgeOffset` to advance them. */
 	generatedAt: string;
+	/** The visit log page the URL asked for, clamped to the pages that exist,
+	 * so a deep link server-renders the right rows. */
+	visitLog: VisitPage;
 };
 
 // The slug drops punctuation, so it cannot be turned back into a common name by
@@ -103,6 +106,71 @@ async function getHourActivity(
 		rows.map((row) => ({ hour: Number(row.hour), count: row.count })),
 	);
 }
+
+/** Visits per page of the visit log. */
+export const VISITS_PAGE_SIZE = 10;
+
+/** One page of this species' visits, newest first, aged against `now`. */
+async function getVisitPage(
+	comName: string,
+	page: number,
+	now: Date,
+): Promise<RecentVisit[]> {
+	const rows = await db
+		.select({
+			date: detections.Date,
+			time: detections.Time,
+			confidence: detections.Confidence,
+			fileName: detections.File_Name,
+		})
+		.from(detections)
+		.where(byComName(comName))
+		.orderBy(desc(detections.Date), desc(detections.Time))
+		.limit(VISITS_PAGE_SIZE)
+		.offset((page - 1) * VISITS_PAGE_SIZE);
+
+	return rows.map((visit) => ({
+		date: visit.date,
+		time: visit.time,
+		confidence: visit.confidence,
+		audioUrl: audioUrlFor(visit.date, comName, visit.fileName),
+		ageMs: now.getTime() - timestampToMillis(`${visit.date} ${visit.time}`),
+	}));
+}
+
+export type VisitPage = {
+	page: number;
+	visits: RecentVisit[];
+	generatedAt: string;
+};
+
+/** How many visit-log pages a species with `total` detections fills. */
+export function visitPageCount(total: number): number {
+	return Math.max(1, Math.ceil(total / VISITS_PAGE_SIZE));
+}
+
+function toPageNumber(page: number): number {
+	return Number.isFinite(page) ? Math.max(1, Math.floor(page)) : 1;
+}
+
+/**
+ * A later page of the visit log. The detail loader already carries page one,
+ * so this only runs when someone steps back through the species' history --
+ * which reaches all the way to its first detection, not just the selected year.
+ */
+export const getSpeciesVisits = createServerFn({ method: "GET" })
+	.validator((input: { comName: string; page: number }) => ({
+		comName: input.comName,
+		page: toPageNumber(input.page),
+	}))
+	.handler(async ({ data: { comName, page } }): Promise<VisitPage> => {
+		const now = new Date();
+		return {
+			page,
+			visits: await getVisitPage(comName, page, now),
+			generatedAt: localTimestamp(now),
+		};
+	});
 
 /**
  * What a `/species/$comName` slug turned out to name.
@@ -149,18 +217,24 @@ async function missToResult(slug: string): Promise<SpeciesDetailResult> {
 	};
 }
 
-export type SpeciesDetailInput = { comNameSlug: string; year: number };
+export type SpeciesDetailInput = {
+	comNameSlug: string;
+	year: number;
+	/** Which page of the visit log to include alongside page one. */
+	visitsPage?: number;
+};
 
 export const getSpeciesDetail = createServerFn({ method: "GET" })
 	.validator((input: SpeciesDetailInput) => input)
 	.handler(
-		async ({ data: { comNameSlug, year } }): Promise<SpeciesDetailResult> => {
+		async ({
+			data: { comNameSlug, year, visitsPage = 1 },
+		}): Promise<SpeciesDetailResult> => {
 			const resolved = await resolveComName(comNameSlug);
 			if (!resolved) return missToResult(comNameSlug);
 
 			const filter = byComName(resolved);
 			const generatedAtDate = new Date();
-			const generatedAtMs = generatedAtDate.getTime();
 
 			const [totals] = await db
 				.select({
@@ -177,6 +251,10 @@ export const getSpeciesDetail = createServerFn({ method: "GET" })
 				return missToResult(comNameSlug);
 			}
 			const comName = totals.comName;
+			const logPage = Math.min(
+				toPageNumber(visitsPage),
+				visitPageCount(totals.totalDetections),
+			);
 
 			const [
 				[first],
@@ -188,6 +266,7 @@ export const getSpeciesDetail = createServerFn({ method: "GET" })
 				detectionTrend,
 				hourActivity,
 				{ imageUrl: wikiImageUrl },
+				logVisits,
 			] = await Promise.all([
 				db
 					.select({
@@ -222,23 +301,17 @@ export const getSpeciesDetail = createServerFn({ method: "GET" })
 					// the most recent, since that clip is likeliest to still be on disk.
 					.orderBy(desc(detections.Confidence), desc(detections.Date))
 					.limit(1),
-				db
-					.select({
-						date: detections.Date,
-						time: detections.Time,
-						confidence: detections.Confidence,
-						fileName: detections.File_Name,
-					})
-					.from(detections)
-					.where(filter)
-					.orderBy(desc(detections.Date), desc(detections.Time))
-					.limit(9), // odd count so the visit log's zebra striping starts and ends on the tinted row
+				getVisitPage(comName, 1, generatedAtDate),
 				getDetectionYears(filter),
 				getYearTrend(year, filter),
 				getMonthlyTrend(filter),
 				getHourActivity(filter),
 				getSpeciesInfo(comName),
+				// Page one is already in hand as `recentVisits`; only a deeper page
+				// costs a second query.
+				logPage === 1 ? null : getVisitPage(comName, logPage, generatedAtDate),
 			]);
+			const generatedAt = localTimestamp(generatedAtDate);
 
 			const detail: SpeciesDetail = {
 				comName,
@@ -263,15 +336,13 @@ export const getSpeciesDetail = createServerFn({ method: "GET" })
 							audioUrl: audioUrlFor(best.date, comName, best.fileName),
 						}
 					: null,
-				recentVisits: recentVisits.map((visit) => ({
-					date: visit.date,
-					time: visit.time,
-					confidence: visit.confidence,
-					audioUrl: audioUrlFor(visit.date, comName, visit.fileName),
-					ageMs:
-						generatedAtMs - timestampToMillis(`${visit.date} ${visit.time}`),
-				})),
-				generatedAt: localTimestamp(generatedAtDate),
+				recentVisits,
+				generatedAt,
+				visitLog: {
+					page: logPage,
+					visits: logVisits ?? recentVisits,
+					generatedAt,
+				},
 			};
 
 			return { status: "detected", detail };

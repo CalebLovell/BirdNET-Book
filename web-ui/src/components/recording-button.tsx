@@ -15,6 +15,8 @@ export function RecordingButton({
 	label = "Bird Call",
 	speciesName,
 	iconSize = "icon-xs",
+	labelClassName,
+	className = "",
 }: {
 	audioUrl: string | null;
 	iconOnly?: boolean;
@@ -26,6 +28,10 @@ export function RecordingButton({
 	speciesName?: string;
 	/** Tap targets in a dense table want more than the default. */
 	iconSize?: "icon-xs" | "icon-lg";
+	/** Lets a responsive row hide the label at some widths (e.g. under a
+	 * container query) while the button, and its one <audio>, stay mounted. */
+	labelClassName?: string;
+	className?: string;
 }) {
 	const {
 		audioRef,
@@ -42,7 +48,7 @@ export function RecordingButton({
 			<Button
 				variant="outline"
 				size={iconOnly ? iconSize : "xs"}
-				className="shrink-0"
+				className={`shrink-0 ${className}`}
 				icon={isPlaying ? Pause : Volume2}
 				loading={isLoading}
 				disabled={!audioUrl}
@@ -51,7 +57,11 @@ export function RecordingButton({
 					speciesName ? `${speciesName} recording` : "bird call"
 				}`}
 			>
-				{iconOnly ? null : label}
+				{iconOnly ? null : labelClassName ? (
+					<span className={labelClassName}>{label}</span>
+				) : (
+					label
+				)}
 			</Button>
 			{audioUrl && (
 				<audio

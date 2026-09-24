@@ -4,13 +4,17 @@ import {
 	notFound,
 	stripSearchParams,
 } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
 import {
 	CalendarDays,
 	ChartNoAxesColumnIncreasing,
+	ChevronLeft,
+	ChevronRight,
 	Clock3,
 	Gauge,
 	Sunrise,
 } from "lucide-react";
+import { useEffect, useState } from "react";
 import { z } from "zod";
 
 import { BestRecordingCard } from "~/components/best-recording-card.tsx";
@@ -30,6 +34,7 @@ import {
 } from "~/components/species-hero-card.tsx";
 import { StatusPage } from "~/components/status-page.tsx";
 import { Button } from "~/components/ui/button.tsx";
+import { Input } from "~/components/ui/input.tsx";
 import {
 	Tooltip,
 	TooltipContent,
@@ -44,8 +49,10 @@ import { illustrationUrlFor } from "~/lib/illustrations.ts";
 import { pageTitle } from "~/lib/page-title.ts";
 import {
 	getSpeciesDetail,
-	type RecentVisit,
+	getSpeciesVisits,
 	type SpeciesDetail,
+	type VisitPage,
+	visitPageCount,
 } from "~/lib/species-detail.ts";
 import { formatTimeAgo } from "~/lib/time-ago.ts";
 import type { TrendPoint } from "~/lib/trend.ts";
@@ -64,17 +71,26 @@ const speciesDetailSearchSchema = z.object({
 		.max(CURRENT_YEAR)
 		.default(DEFAULT_YEAR)
 		.catch(DEFAULT_YEAR),
+	/** Visit log page, 1 = newest. Clamped to the bird's last page on render. */
+	visits: z.coerce.number().int().min(1).default(1).catch(1),
 });
 
 export const Route = createFileRoute("/species/$comName")({
 	validateSearch: speciesDetailSearchSchema,
 	search: {
-		middlewares: [stripSearchParams({ year: DEFAULT_YEAR })],
+		middlewares: [stripSearchParams({ year: DEFAULT_YEAR, visits: 1 })],
 	},
+	// The visit page is deliberately not a dep: paging the log fetches just
+	// that page, rather than rerunning every query on the page. The loader still
+	// reads it so a deep link to page 40 server-renders page 40.
 	loaderDeps: ({ search }) => ({ year: search.year }),
-	loader: async ({ params, deps }) => {
+	loader: async ({ params, deps, location }) => {
 		const result = await getSpeciesDetail({
-			data: { comNameSlug: params.comName, year: deps.year },
+			data: {
+				comNameSlug: params.comName,
+				year: deps.year,
+				visitsPage: (location.search as { visits?: number }).visits,
+			},
 		});
 		// Thrown rather than rendered so the router's not-found path handles it,
 		// which is what lets this route keep its own masthead below.
@@ -263,7 +279,7 @@ function SpeciesNotFound() {
 }
 
 function SpeciesDetailView({ detail }: { detail: SpeciesDetail }) {
-	const { year } = Route.useSearch();
+	const { year, visits: visitsPage } = Route.useSearch();
 	const navigate = Route.useNavigate();
 	const offsetMs = useAgeOffset(detail.generatedAt);
 	// The same flight illustration the hero draws, so the browser serves it from
@@ -278,6 +294,12 @@ function SpeciesDetailView({ detail }: { detail: SpeciesDetail }) {
 		navigate({
 			search: (prev) => ({ ...prev, year: next }),
 			replace: true,
+		});
+	const selectVisitsPage = (next: number) =>
+		navigate({
+			search: (prev) => ({ ...prev, visits: next }),
+			replace: true,
+			resetScroll: false,
 		});
 
 	return (
@@ -373,7 +395,21 @@ function SpeciesDetailView({ detail }: { detail: SpeciesDetail }) {
 						/>
 					</div>
 
-					<RecentVisitsCard visits={detail.recentVisits} offsetMs={offsetMs} />
+					{/* Keyed by bird so moving to another species starts its log
+					    back at page one instead of carrying the old page number. */}
+					<VisitLogCard
+						key={detail.comName}
+						comName={detail.comName}
+						totalVisits={detail.totalDetections}
+						firstPage={{
+							page: 1,
+							visits: detail.recentVisits,
+							generatedAt: detail.generatedAt,
+						}}
+						loadedPage={detail.visitLog}
+						page={visitsPage}
+						onPageChange={selectVisitsPage}
+					/>
 				</div>
 			</div>
 		</TooltipProvider>
@@ -513,24 +549,109 @@ function formatVisitTime(time: string): string {
 	});
 }
 
-function RecentVisitsCard({
-	visits,
-	offsetMs,
+/**
+ * Every visit this species has ever made, newest first, a page at a time. The
+ * page lives in the URL (`?visits=`); the loader brings page one (which the
+ * hero also reads) and whichever page the URL opened on, and every other page
+ * is fetched on demand -- so the log reaches the very first detection, across
+ * every year rather than just the heat map's, one page of rows at a time.
+ */
+function VisitLogCard({
+	comName,
+	totalVisits,
+	firstPage,
+	loadedPage,
+	page: requestedPage,
+	onPageChange,
 }: {
-	visits: RecentVisit[];
-	offsetMs: number;
+	comName: string;
+	totalVisits: number;
+	firstPage: VisitPage;
+	loadedPage: VisitPage;
+	page: number;
+	onPageChange: (page: number) => void;
 }) {
+	const fetchVisits = useServerFn(getSpeciesVisits);
+	const pageCount = visitPageCount(totalVisits);
+	// A URL past the last page (the bird's history is shorter than the link
+	// remembers) shows the last page rather than an empty log.
+	const page = Math.min(requestedPage, pageCount);
+	const [fetched, setFetched] = useState<Record<number, VisitPage>>({});
+	const current =
+		page === 1
+			? firstPage
+			: page === loadedPage.page
+				? loadedPage
+				: fetched[page];
+	// Until the next page lands the previous one stays up, dimmed, so paging
+	// never collapses the card to nothing.
+	const [held, setHeld] = useState(current ?? firstPage);
+	useEffect(() => {
+		if (current) setHeld(current);
+	}, [current]);
+	const shown = current ?? held;
+	const offsetMs = useAgeOffset(shown.generatedAt);
+
+	useEffect(() => {
+		if (current) return;
+		let cancelled = false;
+		fetchVisits({ data: { comName, page } }).then((data) => {
+			if (!cancelled) setFetched((prev) => ({ ...prev, [data.page]: data }));
+		});
+		return () => {
+			cancelled = true;
+		};
+	}, [comName, page, current, fetchVisits]);
+
+	const loading = !current;
+	const visits = shown.visits;
+
 	return (
 		<section
 			aria-label="Visit log"
-			className="feature-card flex min-h-[420px] flex-col rounded-md p-4"
+			// A container, because the log's width depends on the grid track it
+			// lands in more than on the screen: it gets ~18rem both on a phone and
+			// in the right-hand column at lg, and the whole content width between.
+			className="@container feature-card flex min-h-[420px] flex-col rounded-md p-4"
 		>
-			<div className="island-kicker">Visit log</div>
+			<div className="flex flex-wrap items-center justify-between gap-2">
+				<div className="island-kicker">Visit log</div>
+				{pageCount > 1 ? (
+					<div className="flex items-center gap-2">
+						<Button
+							variant="outline"
+							size="icon-xs"
+							disabled={page <= 1}
+							aria-label="Newer visits"
+							onClick={() => onPageChange(page - 1)}
+						>
+							<ChevronLeft />
+						</Button>
+						<PageField
+							page={page}
+							pageCount={pageCount}
+							onPageChange={onPageChange}
+						/>
+						<Button
+							variant="outline"
+							size="icon-xs"
+							disabled={page >= pageCount}
+							aria-label="Older visits"
+							onClick={() => onPageChange(page + 1)}
+						>
+							<ChevronRight />
+						</Button>
+					</div>
+				) : null}
+			</div>
 
 			{visits.length === 0 ? (
 				<EmptyNote>No visits recorded yet.</EmptyNote>
 			) : (
-				<ul className="mt-4 space-y-1">
+				<ul
+					aria-busy={loading}
+					className={`mt-(--page-gap) space-y-1 transition-opacity ${loading ? "opacity-50" : ""}`}
+				>
 					{visits.map((visit) => {
 						const date = new Date(`${visit.date}T00:00:00`);
 						const dateLabel = date.toLocaleDateString([], {
@@ -544,16 +665,31 @@ function RecentVisitsCard({
 							<li
 								key={`${visit.date}-${visit.time}`}
 								aria-label={`${dateLabel} at ${time}${visit.confidence != null ? `, ${formatConfidence(visit.confidence)} confidence` : ""}`}
-								className="flex items-center gap-3 rounded-md px-3 py-2.5 odd:bg-[var(--meadow)] even:bg-transparent"
+								// 7px rather than the usual 10px, so ten rows take the
+								// height nine used to and the card doesn't grow.
+								//
+								// Under 26rem the row can't hold date, time column, pill and
+								// a labelled button side by side, so the time and age tuck
+								// under the date and the button drops its label. The row
+								// keeps its height either way: two lines on both layouts.
+								className="flex items-center @min-[26rem]:gap-3 gap-2 rounded-md @min-[26rem]:px-3 px-2 py-1.75 odd:bg-[var(--meadow)] even:bg-transparent"
 							>
 								<div className="flex min-w-0 flex-1 items-center gap-1.5 text-sm">
 									<Clock3 className="size-3.5 shrink-0 text-[var(--bark)]" />
-									<time dateTime={visit.date} className="truncate font-medium">
-										{dateLabel}
-									</time>
+									<div className="min-w-0">
+										<time
+											dateTime={visit.date}
+											className="block truncate font-medium"
+										>
+											{dateLabel}
+										</time>
+										<div className="tabular-data @min-[26rem]:hidden truncate text-muted-foreground text-xs">
+											{time} · {formatTimeAgo(visit.ageMs + offsetMs)}
+										</div>
+									</div>
 								</div>
 
-								<div className="shrink-0 text-right">
+								<div className="@min-[26rem]:block hidden shrink-0 text-right">
 									<div className="tabular-data text-sm">{time}</div>
 									<div className="text-muted-foreground text-xs">
 										{formatTimeAgo(visit.ageMs + offsetMs)}
@@ -564,12 +700,67 @@ function RecentVisitsCard({
 									confidence={visit.confidence}
 									className="shrink-0"
 								/>
-								<RecordingButton audioUrl={visit.audioUrl ?? null} />
+								<RecordingButton
+									audioUrl={visit.audioUrl ?? null}
+									labelClassName="@min-[26rem]:inline hidden"
+									className="@min-[26rem]:w-auto w-6 @min-[26rem]:px-2.5 px-0"
+								/>
 							</li>
 						);
 					})}
 				</ul>
 			)}
 		</section>
+	);
+}
+
+/**
+ * "[ 12 ] / 1066": type a page and press Enter (or leave the field) to jump
+ * there. Out-of-range and non-numeric entries snap to the nearest real page;
+ * Escape puts the current page back.
+ */
+function PageField({
+	page,
+	pageCount,
+	onPageChange,
+}: {
+	page: number;
+	pageCount: number;
+	onPageChange: (page: number) => void;
+}) {
+	const [draft, setDraft] = useState(String(page));
+	useEffect(() => setDraft(String(page)), [page]);
+
+	const commit = () => {
+		const parsed = Number.parseInt(draft, 10);
+		const next = Number.isNaN(parsed)
+			? page
+			: Math.min(Math.max(parsed, 1), pageCount);
+		setDraft(String(next));
+		if (next !== page) onPageChange(next);
+	};
+	const digits = String(pageCount).length;
+
+	return (
+		<div className="flex items-center gap-1.5 text-muted-foreground text-sm">
+			<Input
+				type="text"
+				inputMode="numeric"
+				aria-label={`Visit log page, of ${pageCount}`}
+				value={draft}
+				onChange={(event) => setDraft(event.target.value.replace(/D/g, ""))}
+				onBlur={commit}
+				onKeyDown={(event) => {
+					if (event.key === "Enter") commit();
+					if (event.key === "Escape") setDraft(String(page));
+				}}
+				onFocus={(event) => event.target.select()}
+				// Wide enough for the bird's largest page number, so it never
+				// clips and paging never nudges the arrows.
+				className="tabular-data h-6 px-1.5 text-center text-foreground"
+				style={{ width: `calc(${digits}ch + 0.75rem + 2px)` }}
+			/>
+			<span className="tabular-data">/ {pageCount}</span>
+		</div>
 	);
 }
