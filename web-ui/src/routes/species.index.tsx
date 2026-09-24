@@ -226,7 +226,7 @@ function Species() {
 					{/* Scrolls rather than wraps on a narrow screen: a segmented control
 					    cannot break across lines without losing its joined shape, and
 					    the three labels together are a little wider than a phone. */}
-					<div className="-mx-1 flex max-w-full shrink-0 items-center gap-2 overflow-x-auto px-1 py-1">
+					<div className="flex max-w-full shrink-0 items-center gap-2 overflow-x-auto">
 						<ToggleGroup
 							type="single"
 							variant="outline"

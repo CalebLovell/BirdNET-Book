@@ -83,9 +83,8 @@ export function PeriodToolbar({
 		<div className="flex flex-wrap items-center justify-between gap-3">
 			{/* Five joined segments are wider than a phone, and a segmented control
 			    cannot wrap without breaking its own shape -- so on a narrow screen
-			    the row scrolls instead, the same way the site nav above it does. The
-			    padding keeps focus rings off the clip edge. */}
-			<div className="-mx-1 max-w-full overflow-x-auto px-1 py-1">
+			    the row scrolls instead, the same way the site nav above it does. */}
+			<div className="max-w-full overflow-x-auto">
 				<ToggleGroup
 					type="single"
 					variant="outline"

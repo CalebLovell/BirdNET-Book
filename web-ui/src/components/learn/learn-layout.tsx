@@ -31,7 +31,7 @@ export function LearnPoolSelector({
 	onPoolChange: (pool: LearnPool) => void;
 }) {
 	return (
-		<div className="mt-4 flex justify-start overflow-x-auto pb-1">
+		<div className="mt-4 flex justify-start overflow-x-auto">
 			<ToggleGroup
 				type="single"
 				variant="outline"
