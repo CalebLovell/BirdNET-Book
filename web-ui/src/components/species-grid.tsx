@@ -92,7 +92,7 @@ export function SpeciesGrid({
 				{species.length === 0 ? (
 					<EmptyNote>{emptyMessage}</EmptyNote>
 				) : (
-					<ul className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-3">
+					<ul className="grid grid-cols-1 gap-2 sm:grid-cols-2 sm:gap-4 xl:grid-cols-3">
 						{species.map((item) => (
 							<SpeciesGridRow
 								key={item.comName}

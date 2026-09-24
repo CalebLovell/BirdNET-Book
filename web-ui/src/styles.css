@@ -55,10 +55,11 @@
   --secondary: color-mix(in oklab, var(--sage) 35%, var(--paper-raised));
   --secondary-foreground: var(--ink);
   --muted: color-mix(in oklab, var(--sage) 20%, var(--paper-raised));
-  /* Moss thinned into paper, not a mix of two near-blacks: an ink/moss blend
-     came out barely lighter than body text, so secondary lines didn't read as
-     secondary. 72% keeps it above 4.5:1 on paper, meadow and the icon wells. */
-  --muted-foreground: color-mix(in oklab, var(--moss) 72%, var(--paper-raised));
+  /* A neutral grey, not thinned moss: green secondary text on top of green
+     names, kickers and charts made the page read as all green. Black thinned
+     into paper (#666) keeps the contrast the moss mix had -- about 4.9:1 on
+     the icon wells, 5.4:1 or better on paper and meadow. */
+  --muted-foreground: color-mix(in oklab, black 49%, var(--paper-raised));
   --accent: var(--meadow);
   --accent-foreground: var(--ink);
   --destructive: var(--clay);

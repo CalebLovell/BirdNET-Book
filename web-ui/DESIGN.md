@@ -25,7 +25,9 @@ Nine named colors: `--paper` `#fbfdf6`, `--paper-raised` `#fff`, `--meadow`
 `#f8faf2`, `--sage` `#c5ccb6`, `--sand` `#c69a58`, `--clay` `#9c4a34`,
 `--bark` `#472f1d`, `--moss` `#203b14`, `--ink` `#0a1d08`.
 
-Everything else is a `color-mix(in oklab, …)` of those. Use the named token
+Everything else is a `color-mix(in oklab, …)` of those (black is also fair
+game as a mix ingredient: secondary text is a neutral grey, so the page isn't
+green all the way down). Use the named token
 for a meaning; don't write a new mix inline when one exists:
 
 | Token | Use |
@@ -34,7 +36,7 @@ for a meaning; don't write a new mix inline when one exists:
 | `--track` | unfilled remainder of a bar (moss 28%) |
 | `--hover-line` | border of a linked card on hover |
 | `--focus-ring` | keyboard focus, 2px outline, 2px offset |
-| `--muted-foreground` | secondary text |
+| `--muted-foreground` | secondary text (neutral grey, black 49%) |
 | `--icon-well` | round background behind a card's leading icon |
 | `--row-selected` | a selected row in a list or table |
 | `--live-fill` | the Live pill |

@@ -1,3 +1,4 @@
+import { HEAT_COLORS, heatLevel } from "~/lib/heatmap.ts";
 import { hourLabel } from "~/lib/time-ago.ts";
 
 const HOURS = Array.from({ length: 24 }, (_, hour) => hour);
@@ -21,7 +22,9 @@ function tickParts(hour: number): { number: string; meridiem: string } {
  * One bird's day as a compact 24-hour column chart: midnight at the left,
  * 11pm at the right. Each bar's height is its share of *this bird's* busiest
  * hour, so the shape of the day reads regardless of how loud the bird is
- * overall -- the same self-scaling the timeline heatmap uses per row. A
+ * overall -- the same self-scaling the timeline heatmap uses per row. Each bar
+ * also takes that hour's heat-map colour, so the busiest hours are the darkest
+ * in both views and the peak is full moss. A
  * non-zero hour always shows at least a sliver; a silent hour is a faint
  * baseline stub. Plots the same series as the page's species-by-hour heatmap,
  * offered here beside each bird's portrait rather than in a ranked grid.
@@ -66,7 +69,10 @@ export function SpeciesHourBars({
 							style={
 								isZero
 									? { height: "2px", backgroundColor: "var(--line)" }
-									: { height: `${percent}%`, backgroundColor: "var(--moss)" }
+									: {
+											height: `${percent}%`,
+											backgroundColor: HEAT_COLORS[heatLevel(count, max)],
+										}
 							}
 						/>
 					);

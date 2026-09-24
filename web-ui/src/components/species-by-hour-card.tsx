@@ -58,19 +58,19 @@ const HOUR_GRID_COLUMNS = "repeat(24, 1.75rem)";
 
 // An hour with no detections: a whisper of moss rather than an outlined box,
 // so the columns still read but a quiet bird's row doesn't become a line of
-// empty frames. Kept well under the 15% of the lightest heat level, so an
+// empty frames. Kept well under the 20% of the lightest heat level, so an
 // empty hour never passes for a quiet one.
 const EMPTY_CELL_COLOR =
 	"color-mix(in oklab, var(--moss) 4%, var(--paper-raised))";
 
 // Ink for the count sitting inside each cell, indexed the same way as
-// HEAT_COLORS. The first four grounds are pale enough to take dark text; the
-// busiest one is 70% moss, where only paper reads.
+// HEAT_COLORS. The first three grounds are pale enough to take dark text; the
+// two busiest are 70% moss and full moss, where only paper reads.
 const HEAT_TEXT_COLORS = [
 	"var(--muted-foreground)",
 	"var(--foreground)",
 	"var(--foreground)",
-	"var(--foreground)",
+	"var(--paper)",
 	"var(--paper)",
 ] as const;
 
