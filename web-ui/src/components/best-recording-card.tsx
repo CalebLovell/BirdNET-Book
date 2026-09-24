@@ -27,13 +27,13 @@ export function BestRecordingCard({
 			{!recording || !recording.audioUrl ? (
 				<EmptyNote>No recordings kept for this species yet.</EmptyNote>
 			) : (
-				<div className="mt-4 flex flex-1 flex-col gap-3">
+				<div className="mt-(--page-gap) flex flex-1 flex-col gap-3 max-[400px]:gap-2">
 					<Spectrogram
 						audioUrl={recording.audioUrl}
 						className="min-h-32 flex-1"
 					/>
 
-					<div className="flex flex-wrap items-center justify-between gap-3">
+					<div className="flex flex-wrap items-center justify-between gap-3 max-[400px]:gap-2">
 						<div className="tabular-data text-muted-foreground text-sm">
 							{formatHeard(recording.date, recording.time)}
 						</div>

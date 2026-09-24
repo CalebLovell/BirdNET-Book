@@ -129,7 +129,7 @@ function Figure({
 			className={
 				inline
 					? "flex items-center gap-4 overflow-hidden"
-					: "feature-card flex items-center gap-4 overflow-hidden rounded-md p-4"
+					: "feature-card flex items-center gap-4 overflow-hidden rounded-md p-4 max-[400px]:gap-3"
 			}
 		>
 			<div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-[var(--icon-well)] text-[var(--moss)]">
@@ -142,7 +142,9 @@ function Figure({
 				    back to a string -- an em dash on an empty period, say -- keeps the
 				    masthead height stable and doesn't shift the page's controls up
 				    under the cursor. */}
-				<dd className="tabular-data mt-2 min-h-[1.75rem] truncate font-semibold text-xl leading-tight">
+				{/* A size down on phones, where each figure has a whole row to itself
+				    and text-xl read as louder than the cards around it. */}
+				<dd className="tabular-data mt-2 min-h-[1.75rem] truncate font-semibold text-xl leading-tight max-[400px]:mt-1 max-[400px]:min-h-6 max-[400px]:text-lg">
 					{typeof value === "number" ? value.toLocaleString() : value}
 				</dd>
 			</div>

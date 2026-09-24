@@ -24,7 +24,7 @@ export const HERO_CARD_SHELL = "feature-card rounded-md p-4";
  * bird down the page every time the panel opened.
  */
 const HERO_CARD_ROW =
-	"grid items-center gap-4 sm:grid-cols-[11rem_minmax(0,1fr)]";
+	"grid items-center gap-(--page-gap) sm:grid-cols-[11rem_minmax(0,1fr)]";
 
 /**
  * Indented past the portrait column and the gap after it -- 11rem + gap-4 --
@@ -54,7 +54,9 @@ export function HeroCardShell({
 			<div className={HERO_CARD_ROW}>
 				{portrait}
 
-				<div className="flex min-w-0 flex-col gap-2.5">{children}</div>
+				<div className="flex min-w-0 flex-col gap-2.5 max-[400px]:gap-2">
+					{children}
+				</div>
 			</div>
 
 			{footer ? <div className={HERO_CARD_FOOTER}>{footer}</div> : null}
@@ -139,7 +141,7 @@ export function SpeciesHeroCard({
 		>
 			{/* Title and actions share a line, so the column starts level with the
 			    top of the portrait. */}
-			<div className="flex flex-wrap items-start justify-between gap-3">
+			<div className="flex flex-wrap items-start justify-between gap-3 max-[400px]:gap-2">
 				<div className="min-w-0">
 					{/* Moss set on the heading, not inherited from the anchor: the title
 					    reads the same whether or not it links anywhere. */}
@@ -187,7 +189,7 @@ export function SpeciesHeroCard({
 	if (!stats || stats.length === 0) return hero;
 
 	return (
-		<div className="space-y-4">
+		<div className="space-y-(--page-gap)">
 			{hero}
 			<PageHeaderStats stats={stats} />
 		</div>

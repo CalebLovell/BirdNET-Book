@@ -45,7 +45,7 @@ export function DetectionsByMonthCard({
 					No detections recorded yet.
 				</p>
 			) : (
-				<div className="mt-4 min-h-0 flex-1">
+				<div className="mt-(--page-gap) min-h-0 flex-1">
 					{/* `minHeight` is not decoration: ResponsiveContainer measures its own
 				    box, and `height: 100%` inside a card sized by `min-h-72` resolves
 				    against an indefinite height -- so it measures zero and draws

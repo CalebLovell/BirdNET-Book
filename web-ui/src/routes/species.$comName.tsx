@@ -14,7 +14,7 @@ import {
 	Gauge,
 	Sunrise,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { z } from "zod";
 
 import { BestRecordingCard } from "~/components/best-recording-card.tsx";
@@ -289,6 +289,17 @@ function SpeciesDetailView({ detail }: { detail: SpeciesDetail }) {
 	useFavicon(illustrationUrlFor(detail.sciName, "flight"));
 
 	const { weeks, maximum } = buildHeatMap(detail.history);
+	// A year of weeks is wider than a phone, so the grid scrolls inside its card.
+	// For the current year the right edge is today, so start there; a past year
+	// starts at January like reading a calendar.
+	const heatScrollRef = useRef<HTMLDivElement>(null);
+	// `detail.history` is the trigger, not an input: the year in the URL changes
+	// before the loader brings that year's grid, so it re-aims once it lands.
+	// biome-ignore lint/correctness/useExhaustiveDependencies: re-aim trigger
+	useEffect(() => {
+		const el = heatScrollRef.current;
+		if (el) el.scrollLeft = year === CURRENT_YEAR ? el.scrollWidth : 0;
+	}, [year, detail.history]);
 	// Only the heat map is year-scoped; the charts below it cover all time.
 	const selectYear = (next: number) =>
 		navigate({
@@ -307,12 +318,16 @@ function SpeciesDetailView({ detail }: { detail: SpeciesDetail }) {
 			<div className="page-wrap pb-4">
 				<SummaryCard detail={detail} offsetMs={offsetMs} />
 
-				<div className="mt-4 grid items-stretch gap-4 lg:grid-cols-[minmax(0,max-content)_minmax(20rem,1fr)]">
+				{/* One column below lg, and `minmax(0,1fr)` rather than the implicit
+				    `auto` track: an auto track sizes to the heat map's full-year
+				    min-content (~900px), which pushed every card off a phone screen
+				    instead of letting the heat map scroll inside its own card. */}
+				<div className="mt-(--page-gap) grid grid-cols-[minmax(0,1fr)] items-stretch gap-(--page-gap) lg:grid-cols-[minmax(0,max-content)_minmax(20rem,1fr)]">
 					<section
 						aria-label="Detection history"
 						className="feature-card overflow-hidden rounded-md p-4"
 					>
-						<div className="flex flex-wrap items-center justify-between gap-4">
+						<div className="flex flex-wrap items-center justify-between gap-2">
 							<div className="island-kicker">Detection history</div>
 							<YearSelector
 								year={year}
@@ -321,27 +336,34 @@ function SpeciesDetailView({ detail }: { detail: SpeciesDetail }) {
 							/>
 						</div>
 
-						<div className="mt-4 overflow-x-auto pb-1">
-							<div className="w-full min-w-max">
-								<div className="mb-1 ml-9 flex w-max gap-1">
-									{weeks.map((week) => (
-										<div
-											key={`month-${week.days[0].date.toISOString()}`}
-											className="w-3 shrink-0 whitespace-nowrap text-[10px] text-muted-foreground"
-										>
-											{week.monthLabel}
-										</div>
-									))}
-								</div>
-								<div className="flex gap-2">
-									<div className="flex w-7 flex-col gap-1 text-[9px] text-muted-foreground leading-3">
-										<span>Sun</span>
-										<span>Mon</span>
-										<span>Tue</span>
-										<span>Wed</span>
-										<span>Thu</span>
-										<span>Fri</span>
-										<span>Sat</span>
+						{/* The weekday labels sit outside the scroller, so they stay put
+						    while a phone scrolls through the weeks. The month row is a
+						    fixed 12px (plus its 4px margin) so the labels' pt-4 lines Sun
+						    up with the first row of squares. */}
+						<div className="mt-(--page-gap) flex gap-2">
+							<div className="flex w-7 shrink-0 flex-col gap-1 pt-4 text-[9px] text-muted-foreground leading-3">
+								<span>Sun</span>
+								<span>Mon</span>
+								<span>Tue</span>
+								<span>Wed</span>
+								<span>Thu</span>
+								<span>Fri</span>
+								<span>Sat</span>
+							</div>
+							<div
+								ref={heatScrollRef}
+								className="min-w-0 flex-1 overflow-x-auto pb-1"
+							>
+								<div className="w-max">
+									<div className="mb-1 flex h-3 gap-1 leading-3">
+										{weeks.map((week) => (
+											<div
+												key={`month-${week.days[0].date.toISOString()}`}
+												className="w-3 shrink-0 whitespace-nowrap text-[10px] text-muted-foreground"
+											>
+												{week.monthLabel}
+											</div>
+										))}
 									</div>
 									<div className="flex w-max gap-1">
 										{weeks.map((week) => (
@@ -363,7 +385,7 @@ function SpeciesDetailView({ detail }: { detail: SpeciesDetail }) {
 								</div>
 							</div>
 						</div>
-						<div className="mt-3 flex items-center justify-end gap-1 text-[10px] text-muted-foreground">
+						<div className="mt-3 flex items-center justify-end gap-1 text-[10px] text-muted-foreground max-[400px]:mt-2">
 							<span>Less</span>
 							{HEAT_COLORS.map((color) => (
 								<span
@@ -383,7 +405,7 @@ function SpeciesDetailView({ detail }: { detail: SpeciesDetail }) {
 					    charts line up on the left and Best recording and the visit log
 					    line up on the right. min-w-0 lets the charts conform to the
 					    left track rather than widen it. */}
-					<div className="grid min-w-0 gap-4 lg:grid-rows-2">
+					<div className="grid min-w-0 gap-(--page-gap) lg:grid-rows-2">
 						<DetectionsByHourCard
 							activity={detail.hourActivity}
 							className="lg:min-h-0"
@@ -527,7 +549,7 @@ function SummaryCard({
 			actions={
 				<SpeciesActions ebirdUrl={detail.ebirdUrl} comName={detail.comName} />
 			}
-			className={`${HERO_CARD_SHELL} mt-4`}
+			className={`${HERO_CARD_SHELL} mt-(--page-gap)`}
 		/>
 	);
 }
