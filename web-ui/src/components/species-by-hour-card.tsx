@@ -136,7 +136,10 @@ export function SpeciesByHourCard({
 					    the view toggle swaps one card for the other. Not "Species": the
 					    summary already says "N species" right beside it. The masthead
 					    subtitle carries the by-hour vs. how-often distinction. */}
-					<div className="flex min-w-0 items-center gap-3">
+					{/* A fixed line height, the summary's own: a quiet window has no
+					    summary, and without this the row would shrink by its 3px and
+					    the switcher centred on it would jump. */}
+					<div className="flex h-5 min-w-0 items-center gap-3">
 						<div className="island-kicker shrink-0">Activity</div>
 						{summary}
 					</div>

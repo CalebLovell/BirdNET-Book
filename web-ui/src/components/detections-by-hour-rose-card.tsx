@@ -1,3 +1,4 @@
+import { EmptyNote } from "~/components/empty-state.tsx";
 import {
 	Tooltip,
 	TooltipContent,
@@ -66,6 +67,7 @@ function wedgePath(hour: number, radius: number): string {
 export function DetectionsByHourRoseCard({
 	activity,
 	title = "Detections by hour · radial",
+	emptyMessage = "No detections recorded yet.",
 	className = "",
 }: {
 	activity: HourActivity[];
@@ -73,6 +75,8 @@ export function DetectionsByHourRoseCard({
 	 * same series, so it says "radial"; shown alone, "Detections by hour" is
 	 * enough. */
 	title?: string;
+	/** What the card says when every hour is zero. */
+	emptyMessage?: string;
 	className?: string;
 }) {
 	// buildHourActivity always returns all 24 hours, so an empty chart is one
@@ -86,9 +90,7 @@ export function DetectionsByHourRoseCard({
 				className={`feature-card flex flex-col rounded-md p-4 ${className}`}
 			>
 				<div className="island-kicker">{title}</div>
-				<p className="mt-4 text-muted-foreground text-sm">
-					No detections recorded yet.
-				</p>
+				<EmptyNote>{emptyMessage}</EmptyNote>
 			</section>
 		);
 	}
@@ -188,7 +190,6 @@ export function DetectionsByHourRose({
 									stroke="var(--paper-raised)"
 									strokeWidth={0.75}
 									className="transition-opacity hover:opacity-80"
-									role="img"
 									aria-label={`${hourLabel(hour)}: ${count.toLocaleString()} detections`}
 								/>
 							</TooltipTrigger>

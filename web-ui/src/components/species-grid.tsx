@@ -72,7 +72,10 @@ export function SpeciesGrid({
 					{/* "Activity" -- identical to the heat-map view's kicker -- so the
 					    summary beside it stays put when the view toggle swaps the cards.
 					    Not "Species": the summary already says "N species" beside it. */}
-					<div className="flex min-w-0 items-center gap-3">
+					{/* A fixed line height, the summary's own: a quiet window has no
+					    summary, and without this the row would shrink by its 3px and
+					    the switcher centred on it would jump. */}
+					<div className="flex h-5 min-w-0 items-center gap-3">
 						<div className="island-kicker shrink-0">Activity</div>
 						{summary}
 					</div>

@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import type { ReactNode } from "react";
 
+import { EmptyNote } from "~/components/empty-state.tsx";
 import { hourLabel } from "~/lib/time-ago.ts";
 import type { TimelineData, TimelineRow } from "~/lib/timeline.ts";
 import type { TimelinePeriod } from "~/lib/timeline-periods.ts";
@@ -44,13 +45,17 @@ export function HighlightsCard({
 	rows,
 	period,
 	previousTotals,
+	emptyMessage,
 	className = "",
 }: {
-	/** The window's species, busiest first; the page shows this card only when
-	 * there's at least one. */
+	/** The window's species, busiest first. Empty for a quiet window, which
+	 * gets an empty note instead of the notes. */
 	rows: TimelineRow[];
 	period: TimelinePeriod;
 	previousTotals: TimelineData["previousTotals"];
+	/** What a quiet window's card says -- the same line the Activity card
+	 * shows, so all three cards report an empty window alike. */
+	emptyMessage: string;
 	className?: string;
 }) {
 	const previousLabel = period === "all" ? null : PREVIOUS_PERIOD[period];
@@ -69,6 +74,18 @@ export function HighlightsCard({
 	const newcomers = rows.filter((row) => row.isNew);
 	const returned = rows.filter((row) => row.isReturned);
 	const rare = rows.filter((row) => row.isRare);
+
+	if (rows.length === 0) {
+		return (
+			<section
+				aria-label="Highlights"
+				className={`feature-card rounded-md p-4 ${className}`}
+			>
+				<div className="island-kicker">Highlights</div>
+				<EmptyNote>{emptyMessage}</EmptyNote>
+			</section>
+		);
+	}
 
 	return (
 		<section

@@ -364,19 +364,23 @@ function TimelineCards({
 	return (
 		<div className="min-[1800px]:flex min-[1800px]:items-start min-[1800px]:gap-4">
 			{body}
-			{rows.length > 0 ? (
-				<div className="hidden min-w-0 flex-1 flex-col gap-4 min-[1800px]:flex">
-					<DetectionsByHourRoseCard
-						activity={hourActivity}
-						title="Detections by hour"
-					/>
-					<HighlightsCard
-						rows={rows}
-						period={period}
-						previousTotals={previousTotals}
-					/>
-				</div>
-			) : null}
+			{/* Drawn for a quiet window too, with the Activity card's own empty
+			    line in each card, so the column holds its place instead of the page jumping when the
+			    period steps from a window that heard something to one that
+			    didn't. */}
+			<div className="hidden min-w-0 flex-1 flex-col gap-4 min-[1800px]:flex">
+				<DetectionsByHourRoseCard
+					activity={hourActivity}
+					title="Detections by hour"
+					emptyMessage={emptyMessage}
+				/>
+				<HighlightsCard
+					rows={rows}
+					period={period}
+					previousTotals={previousTotals}
+					emptyMessage={emptyMessage}
+				/>
+			</div>
 		</div>
 	);
 }
