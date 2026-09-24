@@ -51,25 +51,21 @@ test("species rankings carry navigation and artwork data", () => {
 	assert.match(speciesFixture.imageUrl ?? "", /cardinalis-cardinalis/);
 });
 
-test("builds twelve zero-filled months for the selected year", () => {
-	const result = buildMonthlyTrend(
-		[
-			{ bucket: "2025-01", count: 2 },
-			{ bucket: "2025-05", count: 40 },
-			{ bucket: "2024-05", count: 99 },
-		],
-		2025,
-	);
+test("builds twelve zero-filled calendar months", () => {
+	const result = buildMonthlyTrend([
+		{ bucket: "01", count: 2 },
+		{ bucket: "05", count: 40 },
+	]);
 
 	assert.equal(result.length, 12);
-	assert.deepEqual(result[0], { bucket: "2025-01", label: "Jan", count: 2 });
-	assert.deepEqual(result[1], { bucket: "2025-02", label: "Feb", count: 0 });
-	assert.deepEqual(result[4], { bucket: "2025-05", label: "May", count: 40 });
-	assert.deepEqual(result[11], { bucket: "2025-12", label: "Dec", count: 0 });
+	assert.deepEqual(result[0], { bucket: "01", label: "Jan", count: 2 });
+	assert.deepEqual(result[1], { bucket: "02", label: "Feb", count: 0 });
+	assert.deepEqual(result[4], { bucket: "05", label: "May", count: 40 });
+	assert.deepEqual(result[11], { bucket: "12", label: "Dec", count: 0 });
 });
 
-test("a year with nothing on record is twelve zeroes, not an empty series", () => {
-	const result = buildMonthlyTrend([], 2019);
+test("nothing on record is twelve zeroes, not an empty series", () => {
+	const result = buildMonthlyTrend([]);
 
 	assert.equal(result.length, 12);
 	assert.ok(result.every((point) => point.count === 0));

@@ -136,26 +136,24 @@ export async function getCalendarYearTrend(
 }
 
 /**
- * Detections by month for one calendar year, shared by the stats page (every
- * detection) and the species page (one species). Passing a filter scopes the
- * counts without narrowing the axis, so a species that only turns up in spring
- * still shows the empty months it was absent for.
+ * Detections by calendar month across all time -- every May on record counted
+ * together -- so the chart shows a species' seasons rather than one year's.
+ * Passing a filter scopes the counts without narrowing the axis, so a species
+ * that only turns up in spring still shows the empty months it was absent for.
  */
 export async function getMonthlyTrend(
-	year: number,
 	extraFilter?: SQL,
 ): Promise<TrendPoint[]> {
-	const filter = calendarYearFilter(year);
-	const where = extraFilter ? sql`(${filter}) AND (${extraFilter})` : filter;
-	const bucketExpr = sql<string>`substr(${detections.Date}, 1, 7)`;
-
-	const rows = await db
+	const bucketExpr = sql<string>`substr(${detections.Date}, 6, 2)`;
+	const query = db
 		.select({ bucket: bucketExpr, count: count() })
-		.from(detections)
-		.where(where)
-		.groupBy(bucketExpr);
+		.from(detections);
 
-	return buildMonthlyTrend(rows satisfies TrendBucketCount[], year);
+	const rows = await (extraFilter ? query.where(extraFilter) : query).groupBy(
+		bucketExpr,
+	);
+
+	return buildMonthlyTrend(rows satisfies TrendBucketCount[]);
 }
 
 /** Every calendar year this station (or one species) recorded something in,

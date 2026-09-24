@@ -66,14 +66,12 @@ function wedgePath(hour: number, radius: number): string {
  */
 export function DetectionsByHourRoseCard({
 	activity,
-	title = "Detections by hour · radial",
+	title = "Detections by hour",
 	emptyMessage = "No detections recorded yet.",
 	className = "",
 }: {
 	activity: HourActivity[];
-	/** The kicker. The species page pairs this card with the line chart of the
-	 * same series, so it says "radial"; shown alone, "Detections by hour" is
-	 * enough. */
+	/** The kicker. */
 	title?: string;
 	/** What the card says when every hour is zero. */
 	emptyMessage?: string;

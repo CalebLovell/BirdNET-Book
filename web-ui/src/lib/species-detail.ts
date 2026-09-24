@@ -56,7 +56,7 @@ export type SpeciesDetail = {
 	averageConfidence: number | null;
 	/** Per-day counts for the selected year, which the heat map draws. */
 	history: TrendPoint[];
-	/** The twelve months of the selected year, like the stats page's chart. */
+	/** Every detection by calendar month, all years folded together. */
 	detectionTrend: TrendPoint[];
 	/** Every detection by hour of day, like the stats page's chart. */
 	hourActivity: HourActivity[];
@@ -235,7 +235,7 @@ export const getSpeciesDetail = createServerFn({ method: "GET" })
 					.limit(9), // odd count so the visit log's zebra striping starts and ends on the tinted row
 				getDetectionYears(filter),
 				getYearTrend(year, filter),
-				getMonthlyTrend(year, filter),
+				getMonthlyTrend(filter),
 				getHourActivity(filter),
 				getSpeciesInfo(comName),
 			]);

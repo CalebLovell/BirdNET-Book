@@ -9,13 +9,12 @@ import {
 } from "recharts";
 
 import { ChartValueTooltip } from "~/components/chart-tooltip.tsx";
-import { YearSelector } from "~/components/year-selector.tsx";
+import { CHART_MARGIN, X_AXIS_HEIGHT } from "~/lib/chart-style.ts";
 import type { TrendPoint } from "~/lib/stats-data.ts";
 
 /**
- * The detections-by-month chart, shared by the timeline page's Yearly period
- * (every detection) and the species page (one species). Only the data differs;
- * the scoping, bucketing and styling are deliberately identical in both places.
+ * The species page's detections-by-month chart: every detection on record,
+ * each calendar month summed across the years, so it shows the bird's seasons.
  *
  * Bars rather than the line the by-hour card uses: twelve months are discrete
  * buckets to be compared against each other, not a continuous cycle to trace
@@ -24,22 +23,10 @@ import type { TrendPoint } from "~/lib/stats-data.ts";
  */
 export function DetectionsByMonthCard({
 	trend,
-	year,
-	years,
-	onYearChange,
 	className = "",
 }: {
-	/** The twelve months of `year`, zero-filled. */
+	/** The twelve calendar months, zero-filled, all years folded together. */
 	trend: TrendPoint[];
-	year: number;
-	/**
-	 * The years the selector may step through. Omitted where the year is chosen
-	 * elsewhere -- the timeline page's window picker is already a year picker
-	 * under the Yearly period, and a second one in the card header would be
-	 * two controls for one value.
-	 */
-	years?: number[];
-	onYearChange?: (year: number) => void;
 	className?: string;
 }) {
 	const isEmpty = trend.every((point) => point.count === 0);
@@ -51,16 +38,11 @@ export function DetectionsByMonthCard({
 			// in the card it would just be empty space.
 			className={`feature-card flex flex-col rounded-md p-4 ${isEmpty ? "" : "min-h-72"} ${className}`}
 		>
-			<div className="flex flex-wrap items-center justify-between gap-4">
-				<div className="island-kicker">Detections by month</div>
-				{years && onYearChange ? (
-					<YearSelector year={year} years={years} onChange={onYearChange} />
-				) : null}
-			</div>
+			<div className="island-kicker">Detections by month</div>
 
 			{isEmpty ? (
 				<p className="mt-4 text-muted-foreground text-sm">
-					No detections recorded in {year}.
+					No detections recorded yet.
 				</p>
 			) : (
 				<div className="mt-4 min-h-0 flex-1">
@@ -73,9 +55,9 @@ export function DetectionsByMonthCard({
 					<ResponsiveContainer width="100%" height="100%" minHeight={220}>
 						<BarChart
 							data={trend}
-							// Every month gets a tick, and the last one is centred on the
-							// right edge -- without the extra room "Dec" loses its tail.
-							margin={{ top: 5, right: 16, bottom: 5, left: 5 }}
+							// No extra right margin for "Dec": each label is centred in its
+							// month's band, so the last one sits half a band in from the edge.
+							margin={CHART_MARGIN}
 							// Twelve discrete buckets, not a continuous signal: a fifth of
 							// each band goes to the gap so no two months' fills touch, and
 							// the cap keeps the bars from turning into slabs on a wide card.
@@ -83,6 +65,7 @@ export function DetectionsByMonthCard({
 							<CartesianGrid stroke="var(--line)" vertical={false} />
 							<XAxis
 								dataKey="label"
+								height={X_AXIS_HEIGHT}
 								stroke="var(--muted-foreground)"
 								fontSize={12}
 								tickLine={false}

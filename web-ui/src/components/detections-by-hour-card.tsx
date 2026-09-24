@@ -11,14 +11,19 @@ import {
 } from "recharts";
 
 import { ChartValueTooltip } from "~/components/chart-tooltip.tsx";
-import { CHART_ANIMATION_MS } from "~/lib/chart-style.ts";
+import {
+	CHART_ANIMATION_MS,
+	CHART_MARGIN,
+	X_AXIS_HEIGHT,
+} from "~/lib/chart-style.ts";
 import type { HourActivity } from "~/lib/stats-data.ts";
 import { hourLabel } from "~/lib/time-ago.ts";
 
+const EVEN_HOURS = Array.from({ length: 12 }, (_, index) => index * 2);
+
 /**
- * The detections-by-hour chart, shared by the stats page (every detection) and
- * the species page (one species). Only the data differs; the scoping, bucketing
- * and styling are deliberately identical in both places.
+ * The species page's detections-by-hour chart: every detection of the species
+ * on record, bucketed by hour of day.
  */
 export function DetectionsByHourCard({
 	activity,
@@ -64,7 +69,7 @@ export function DetectionsByHourCard({
 			    definite height. The floor makes the chart render wherever the card
 			    is put, and it still grows past it when a row does stretch. */}
 				<ResponsiveContainer width="100%" height="100%" minHeight={220}>
-					<AreaChart data={activity}>
+					<AreaChart data={activity} margin={CHART_MARGIN}>
 						<defs>
 							<linearGradient id={fillId} x1="0" y1="0" x2="0" y2="1">
 								<stop offset="0%" stopColor="var(--moss)" stopOpacity={0.2} />
@@ -74,11 +79,15 @@ export function DetectionsByHourCard({
 						<CartesianGrid stroke="var(--line)" vertical={false} />
 						<XAxis
 							dataKey="hour"
+							height={X_AXIS_HEIGHT}
 							tickFormatter={hourLabel}
 							stroke="var(--muted-foreground)"
 							fontSize={12}
 							tickLine={false}
-							interval={3}
+							// Every other hour where the card is wide enough; on a narrow
+							// one recharts drops whichever labels would collide.
+							ticks={EVEN_HOURS}
+							interval="preserveStart"
 						/>
 						<YAxis
 							stroke="var(--muted-foreground)"

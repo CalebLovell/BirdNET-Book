@@ -16,7 +16,6 @@ import { z } from "zod";
 import { BestRecordingCard } from "~/components/best-recording-card.tsx";
 import { ConfidencePill } from "~/components/confidence-pill.tsx";
 import { DetectionsByHourCard } from "~/components/detections-by-hour-card.tsx";
-import { DetectionsByHourRoseCard } from "~/components/detections-by-hour-rose-card.tsx";
 import { DetectionsByMonthCard } from "~/components/detections-by-month-card.tsx";
 import { EmptyNote } from "~/components/empty-state.tsx";
 import {
@@ -274,8 +273,7 @@ function SpeciesDetailView({ detail }: { detail: SpeciesDetail }) {
 	useFavicon(illustrationUrlFor(detail.sciName, "flight"));
 
 	const { weeks, maximum } = buildHeatMap(detail.history);
-	// Both year-scoped cards read and write the one `year` search param, so
-	// stepping either selector moves the whole page to that year at once.
+	// Only the heat map is year-scoped; the charts below it cover all time.
 	const selectYear = (next: number) =>
 		navigate({
 			search: (prev) => ({ ...prev, year: next }),
@@ -364,25 +362,13 @@ function SpeciesDetailView({ detail }: { detail: SpeciesDetail }) {
 					    line up on the right. min-w-0 lets the charts conform to the
 					    left track rather than widen it. */}
 					<div className="grid min-w-0 gap-4 lg:grid-rows-2">
-						{/* The line chart and its radial twin read the same hour series
-						    side by side: one for the exact counts, one for the shape of
-						    the day as a clock-face. They stack on a narrow screen. */}
-						<div className="grid min-w-0 gap-4 sm:grid-cols-2">
-							<DetectionsByHourCard
-								activity={detail.hourActivity}
-								className="lg:min-h-0"
-							/>
-							<DetectionsByHourRoseCard
-								activity={detail.hourActivity}
-								className="lg:min-h-0"
-							/>
-						</div>
+						<DetectionsByHourCard
+							activity={detail.hourActivity}
+							className="lg:min-h-0"
+						/>
 
 						<DetectionsByMonthCard
 							trend={detail.detectionTrend}
-							year={year}
-							years={detail.availableYears}
-							onYearChange={selectYear}
 							className="lg:min-h-0"
 						/>
 					</div>

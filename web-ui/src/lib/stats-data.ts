@@ -37,18 +37,16 @@ const MONTH_LABELS = [
 ];
 
 /**
- * The twelve months of one calendar year, zero-filled. A fixed twelve-point
- * axis is the point of the chart: two years are comparable at a glance only if
- * a quiet January still takes up as much room as a busy May.
+ * The twelve calendar months, zero-filled, from rows bucketed by two-digit
+ * month ("01".."12") with every year folded together. A fixed twelve-point
+ * axis is the point of the chart: the seasons read at a glance only if a quiet
+ * January still takes up as much room as a busy May.
  */
-export function buildMonthlyTrend(
-	rows: TrendBucketCount[],
-	year: number,
-): TrendPoint[] {
+export function buildMonthlyTrend(rows: TrendBucketCount[]): TrendPoint[] {
 	const countByBucket = new Map(rows.map((row) => [row.bucket, row.count]));
 
 	return MONTH_LABELS.map((label, index) => {
-		const bucket = `${year}-${(index + 1).toString().padStart(2, "0")}`;
+		const bucket = (index + 1).toString().padStart(2, "0");
 		return { bucket, label, count: countByBucket.get(bucket) ?? 0 };
 	});
 }
