@@ -9,8 +9,8 @@ import {
 } from "@tanstack/react-router";
 import { renderToStaticMarkup } from "react-dom/server";
 
+import { returnedTooltip } from "~/components/species-flag-pills.tsx";
 import {
-	returnedTooltip,
 	SpeciesGrid,
 	type SpeciesGridItem,
 } from "~/components/species-grid.tsx";

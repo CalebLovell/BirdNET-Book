@@ -8,6 +8,7 @@ import { classifyDay } from "~/lib/day-range.ts";
 import {
 	loadTimelineData,
 	loadTimelineNav,
+	type TimelineData,
 	type TimelineNav,
 	type TimelineRow,
 } from "~/lib/timeline.ts";
@@ -36,7 +37,11 @@ export type DayOutOfRange =
  * to draw and replaces the page with an explanation instead.
  */
 export type TimelineBody =
-	| { kind: "rows"; rows: TimelineRow[] }
+	| {
+			kind: "rows";
+			rows: TimelineRow[];
+			previousTotals: TimelineData["previousTotals"];
+	  }
 	| { kind: "day-out-of-range"; result: DayOutOfRange };
 
 export type TimelinePageData = TimelineNav & { body: TimelineBody };
@@ -68,6 +73,9 @@ export const getTimelinePage = createServerFn({ method: "GET" })
 			}
 		}
 
-		const { rows, ...nav } = await loadTimelineData({ period, anchor });
-		return { ...nav, body: { kind: "rows", rows } };
+		const { rows, previousTotals, ...nav } = await loadTimelineData({
+			period,
+			anchor,
+		});
+		return { ...nav, body: { kind: "rows", rows, previousTotals } };
 	});

@@ -15,7 +15,7 @@ import type { TimelinePeriod } from "~/lib/timeline-periods.ts";
 const HOURS = 24;
 
 /** Hours that count as after dark for the nightlife line, 9pm through 4am. */
-const NIGHT_HOURS = new Set([21, 22, 23, 0, 1, 2, 3, 4]);
+export const NIGHT_HOURS = new Set([21, 22, 23, 0, 1, 2, 3, 4]);
 
 const PERIOD_EMOJI: Record<TimelinePeriod, string> = {
 	day: "🕐",

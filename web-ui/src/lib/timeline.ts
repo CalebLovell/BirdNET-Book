@@ -72,6 +72,12 @@ export type TimelineRow = {
 
 export type TimelineData = {
 	rows: TimelineRow[];
+	/**
+	 * The period just before this window -- the day, week, month or year before
+	 * -- as the two figures the page compares against. Null on "all time", which
+	 * has no period before it.
+	 */
+	previousTotals: { detections: number; species: number } | null;
 	/** The resolved window, or null on "all time". */
 	window: TimelineWindow | null;
 	/**
@@ -245,12 +251,17 @@ export async function loadTimelineData({
 			})
 			.from(detections)
 			.groupBy(detections.Com_Name),
-		// Did the station record anything at all during the previous period? If it
-		// was down for the whole span, an empty period is silence on our side, not
-		// the bird's -- so nothing counts as "returned" against it.
+		// The previous period's detection and species totals. They're the figures
+		// the window is compared against, and they answer whether the station
+		// recorded anything at all then: if it was down for the whole span, an
+		// empty period is silence on our side, not the bird's -- so nothing counts
+		// as "returned" against it.
 		prevPeriodStart != null && window != null
 			? db
-					.select({ present: sql<number>`1` })
+					.select({
+						detections: sql<number>`count(*)`,
+						species: sql<number>`count(distinct ${detections.Com_Name})`,
+					})
 					.from(detections)
 					.where(
 						and(
@@ -258,12 +269,12 @@ export async function loadTimelineData({
 							lt(detections.Date, window.start),
 						),
 					)
-					.limit(1)
 			: Promise.resolve([]),
 		loadTimelineNav(period, window),
 	]);
 
-	const prevPeriodHadActivity = prevActivityRows.length > 0;
+	const previousTotals = prevActivityRows[0] ?? null;
+	const prevPeriodHadActivity = (previousTotals?.detections ?? 0) > 0;
 
 	const bySpecies = new Map<
 		string,
@@ -337,6 +348,7 @@ export async function loadTimelineData({
 
 	return {
 		rows: withImages.sort((a, b) => b.totalDetections - a.totalDetections),
+		previousTotals,
 		...nav,
 	};
 }

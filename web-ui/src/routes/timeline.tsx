@@ -1,6 +1,7 @@
 import { createFileRoute, stripSearchParams } from "@tanstack/react-router";
-import { Bird, Clock3, LayoutGrid } from "lucide-react";
+import { Bird, Grid3x3, LayoutDashboard } from "lucide-react";
 import { z } from "zod";
+import { DetectionsByHourRoseCard } from "~/components/detections-by-hour-rose-card.tsx";
 import { EmptyState } from "~/components/empty-state.tsx";
 import { PageHeaderCard } from "~/components/page-header-card.tsx";
 import { SpeciesByHourCard } from "~/components/species-by-hour-card.tsx";
@@ -17,7 +18,8 @@ import { getDayShareCard } from "~/lib/day-share.ts";
 import { formatDayTitle } from "~/lib/day-title.ts";
 import { pageTitle } from "~/lib/page-title.ts";
 import { formatShareCard } from "~/lib/share-card.ts";
-import type { TimelineRow } from "~/lib/timeline.ts";
+import type { HourActivity } from "~/lib/stats-data.ts";
+import type { TimelineData, TimelineRow } from "~/lib/timeline.ts";
 import {
 	type DayOutOfRange,
 	getTimelinePage,
@@ -144,6 +146,8 @@ function Timeline() {
 				{data.hasAnyDetections ? (
 					<TimelineCards
 						rows={data.body.rows}
+						previousTotals={data.body.previousTotals}
+						period={period}
 						windowLabel={data.window?.label ?? null}
 						view={view}
 						onViewChange={(next) => show({ view: next })}
@@ -260,7 +264,7 @@ function WindowSummary({ rows }: { rows: TimelineRow[] }) {
 			{/* Lifted 1.5px so its ink centres on the kicker's. The boxes already
 			    centre, but Georgia's lowercase and old-style figures sit low in theirs
 			    next to the kicker's all-caps, so box-centred reads as dropped. */}
-			<div className="-translate-y-[1.5px] flex items-center gap-2 truncate text-[13px] text-muted-foreground">
+			<div className="flex -translate-y-[1.5px] items-center gap-2 truncate text-[13px] text-muted-foreground">
 				<span className="whitespace-nowrap">
 					<span className="count-figure">{detections.toLocaleString()}</span>{" "}
 					detections
@@ -286,11 +290,15 @@ function WindowSummary({ rows }: { rows: TimelineRow[] }) {
  */
 function TimelineCards({
 	rows,
+	previousTotals,
+	period,
 	windowLabel,
 	view,
 	onViewChange,
 }: {
 	rows: TimelineRow[];
+	previousTotals: TimelineData["previousTotals"];
+	period: TimelinePeriod;
 	windowLabel: string | null;
 	view: TimelineView;
 	onViewChange: (next: TimelineView) => void;
@@ -318,6 +326,16 @@ function TimelineCards({
 	// species" line reading back the emptiness the card already states.
 	const summary = rows.length > 0 ? <WindowSummary rows={rows} /> : undefined;
 
+	// The window's day for the side column's rose: every species summed, hour by
+	// hour.
+	const hourActivity: HourActivity[] = Array.from(
+		{ length: 24 },
+		(_, hour) => ({
+			hour,
+			count: rows.reduce((sum, row) => sum + (row.hourCounts[hour] ?? 0), 0),
+		}),
+	);
+
 	const body =
 		view === "hours" ? (
 			<SpeciesByHourCard
@@ -339,28 +357,38 @@ function TimelineCards({
 			/>
 		);
 
-	// Two cards side by side on the widest screens: the body on the left at one
-	// fixed width in both views, so the toggle never shifts Highlights, and
-	// Highlights taking the rest. Below that there isn't room for both, so the
-	// body fills the row on its own.
+	// On the widest screens the body sits on the left at one fixed width in both
+	// views, so the toggle never shifts the column beside it: the window's
+	// detections by hour, then Highlights, stacked. Below that there isn't room
+	// for the column, so the body fills the row on its own.
 	return (
 		<div className="min-[1800px]:flex min-[1800px]:items-start min-[1800px]:gap-4">
 			{body}
 			{rows.length > 0 ? (
-				<HighlightsCard className="hidden min-w-0 flex-1 min-[1800px]:block" />
+				<div className="hidden min-w-0 flex-1 flex-col gap-4 min-[1800px]:flex">
+					<DetectionsByHourRoseCard
+						activity={hourActivity}
+						title="Detections by hour"
+					/>
+					<HighlightsCard
+						rows={rows}
+						period={period}
+						previousTotals={previousTotals}
+					/>
+				</div>
 			) : null}
 		</div>
 	);
 }
 
-// Wide enough for the heat map's natural width -- the name column at its
-// 12rem floor, its count and 24 fixed 1.75rem hour columns -- with the names
-// taking up the rest, so even an all-time count of eight or nine characters
-// fits without the hours scrolling inside it. The species grid takes the same width
-// so the view toggle leaves the left card, and Highlights beside it, in place.
-// Highlights only appears from 1800px: below that, what's left beside a 65rem
-// card is too narrow to hold anything.
-const BODY_CARD_WIDTH = "min-w-0 min-[1800px]:w-[65rem] min-[1800px]:flex-none";
+// The heat map's hours (24 fixed 1.75rem columns) and counts plus a generous
+// name column: the heat map's names soak up whatever the hours and counts
+// leave, so this width is really the room given to bird names -- enough that
+// even long ones and an all-time count of eight or nine characters fit. The
+// species grid takes the same width so the view toggle leaves the left card,
+// and the column beside it, in place. That column only appears from 1800px:
+// below that, what's left beside a 72rem card is too narrow to hold anything.
+const BODY_CARD_WIDTH = "min-w-0 min-[1800px]:w-[72rem] min-[1800px]:flex-none";
 
 /**
  * The masthead subtitle -- one line for every period and both bodies. The view
@@ -375,22 +403,19 @@ const VIEW_META: Record<
 	TimelineView,
 	{
 		label: string;
+		/** A grid of cells for the heat map, uneven panels for the species
+		    tiles. Both glyphs fill the same 18 of lucide's 24 units, so they share
+		    one size. */
 		icon: React.ComponentType<{ className?: string }>;
-		/** Sized per glyph so the two read as one size: the clock's circle fills
-		    20 of lucide's 24 units, the grid's squares only 18, so the grid is
-		    drawn that much larger to carry the same ink. */
-		iconSize: string;
 	}
 > = {
 	hours: {
-		label: "By hour",
-		icon: Clock3,
-		iconSize: "size-3.5",
+		label: "Heatmap",
+		icon: Grid3x3,
 	},
 	grid: {
-		label: "By species",
-		icon: LayoutGrid,
-		iconSize: "size-[15.5px]",
+		label: "Grid",
+		icon: LayoutDashboard,
 	},
 };
 
@@ -399,9 +424,9 @@ const VIEW_META: Record<
  * One bordered pill split into two equal tabs, each an icon and its word, with
  * a hairline between them. The pill's rounding is clipped from outside, so
  * only its two ends round: where the tabs meet they sit flush, square against
- * the divider. The active tab takes the sage wash with ink text rather than a
- * moss fill, so the switch reads as part of the card's furniture, not a toolbar
- * dropped into its corner.
+ * the divider. The active tab takes the moss fill with paper text -- the same
+ * on state as the period toggle above the card -- so every "which view"
+ * control on the page marks its choice the same way.
  */
 function ViewToggle({
 	view,
@@ -413,7 +438,7 @@ function ViewToggle({
 	return (
 		<div className="grid w-52 shrink-0 grid-cols-2 overflow-hidden rounded-full border border-[var(--line)] bg-card">
 			{TIMELINE_VIEWS.map((value) => {
-				const { label, icon: Icon, iconSize } = VIEW_META[value];
+				const { label, icon: Icon } = VIEW_META[value];
 				const active = value === view;
 				return (
 					<button
@@ -424,11 +449,11 @@ function ViewToggle({
 						className={cn(
 							"flex h-6 items-center justify-center gap-1.5 whitespace-nowrap px-3 font-medium text-xs transition-colors [&+&]:border-[var(--line)] [&+&]:border-l",
 							active
-								? "bg-secondary text-foreground"
+								? "bg-primary text-primary-foreground"
 								: "text-muted-foreground hover:bg-[var(--meadow)] hover:text-foreground",
 						)}
 					>
-						<Icon className={`shrink-0 ${iconSize}`} aria-hidden="true" />
+						<Icon className="size-[15.5px] shrink-0" aria-hidden="true" />
 						{label}
 					</button>
 				);

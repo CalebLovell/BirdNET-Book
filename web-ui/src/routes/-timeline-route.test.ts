@@ -33,7 +33,7 @@ test("one loader serves every period", async () => {
 test("every period draws the same body", async () => {
 	const source = await read("../lib/timeline-page.ts");
 	// One rows path for every period; the Daily range check is the only branch.
-	assert.match(source, /kind: "rows"; rows: TimelineRow\[\]/);
+	assert.match(source, /kind: "rows";\s+rows: TimelineRow\[\];/);
 	assert.match(source, /kind: "day-out-of-range"/);
 	assert.doesNotMatch(source, /loadAllTimeStats/);
 	assert.doesNotMatch(source, /getMonthlyTrend/);

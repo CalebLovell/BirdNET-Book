@@ -1,14 +1,13 @@
 import { Link } from "@tanstack/react-router";
-import { Bird, Sparkles } from "lucide-react";
+import { Bird } from "lucide-react";
 import type { ReactNode } from "react";
 
 import { EmptyNote } from "~/components/empty-state.tsx";
 import {
-	Tooltip,
-	TooltipContent,
-	TooltipProvider,
-	TooltipTrigger,
-} from "~/components/ui/tooltip.tsx";
+	type ReturnedUnit,
+	SpeciesFlagPills,
+} from "~/components/species-flag-pills.tsx";
+import { TooltipProvider } from "~/components/ui/tooltip.tsx";
 import { HEAT_COLORS, heatLevel } from "~/lib/heatmap.ts";
 import { comNameToSlug } from "~/lib/species-slug.ts";
 import { hourLabel } from "~/lib/time-ago.ts";
@@ -26,6 +25,11 @@ export type SpeciesHourRow = {
 	totalDetections: number;
 	/** The station had never recorded this species before the window opened. */
 	isNew: boolean;
+	/** Back after missing the period before this window. */
+	isReturned: boolean;
+	/** Heard only a handful of times ever at this station. */
+	isRare: boolean;
+	returnedUnit: ReturnedUnit;
 };
 
 const HOURS = Array.from({ length: 24 }, (_, hour) => hour);
@@ -43,15 +47,18 @@ const HOURS = Array.from({ length: 24 }, (_, hour) => hour);
 const LABEL_GRID_COLUMNS =
 	"grid-cols-[minmax(0,1fr)_auto] md:grid-cols-[minmax(12rem,1fr)_auto]";
 
-// Tallest bar in the all-species totals row, in px: a tile's height, so the
-// busiest hour's bar stands exactly as tall as a heatmap cell.
-const TOTAL_BAR_MAX_PX = 24;
-
 // The hour columns are a fixed 1.75rem wide so each cell stays square (its
 // 1.5rem tile plus the 0.125rem margin on either side) no matter how wide the
 // card gets -- the grid never stretches the tiles into rectangles, and it
 // scrolls once the viewport can't afford the full 24 columns.
 const HOUR_GRID_COLUMNS = "repeat(24, 1.75rem)";
+
+// An hour with no detections: a whisper of moss rather than an outlined box,
+// so the columns still read but a quiet bird's row doesn't become a line of
+// empty frames. Kept well under the 15% of the lightest heat level, so an
+// empty hour never passes for a quiet one.
+const EMPTY_CELL_COLOR =
+	"color-mix(in oklab, var(--moss) 4%, var(--paper-raised))";
 
 // Ink for the count sitting inside each cell, indexed the same way as
 // HEAT_COLORS. The first four grounds are pale enough to take dark text; the
@@ -66,13 +73,6 @@ const HEAT_TEXT_COLORS = [
 
 const HEADER_HEIGHT = "mb-2 h-4";
 const ROW_HEIGHT = "h-8";
-// The totals row is taller than a species row: its bars grow up from the
-// baseline with their count printed above, and both need to fit.
-const TOTALS_ROW_HEIGHT = "h-12";
-// A firmer rule than the hairline between species, marking the totals row as
-// a sum of the rows above rather than one more bird.
-const TOTALS_RULE =
-	"border-t border-[color-mix(in_oklab,var(--moss)_35%,transparent)]";
 
 function hourTickParts(hour: number): { number: string; meridiem: string } {
 	if (hour === 0) return { number: "12", meridiem: "a" };
@@ -86,7 +86,7 @@ function hourTickParts(hour: number): { number: string; meridiem: string } {
  * by total detections, name and count; the heatmap to its right scales each
  * row against its own busiest hour, so a quiet species still shows the shape
  * of when it was around rather than flattening against the station's loudest
- * bird. A totals row closes both panels: every species summed, per hour.
+ * bird.
  *
  * Nothing stretches. The hour columns keep their fixed width at any card
  * size, so a card wider than its content leaves the spare width to the right
@@ -103,7 +103,7 @@ export function SpeciesByHourCard({
 	className = "",
 }: {
 	rows: SpeciesHourRow[];
-	/** Names the window in the "New" tooltip. Null hides the badge entirely,
+	/** Names the window in the "New" tooltip. Null hides the New pill entirely,
 	 * which is what "all time" wants: everything is trivially first heard. */
 	newLabel?: string | null;
 	emptyMessage: string;
@@ -117,15 +117,10 @@ export function SpeciesByHourCard({
 	className?: string;
 }) {
 	const isEmpty = rows.length === 0;
-	// Every species summed, hour by hour, for the totals row.
-	const hourTotals = HOURS.map((hour) =>
-		rows.reduce((sum, row) => sum + (row.hourCounts[hour] ?? 0), 0),
-	);
-	const grandTotal = rows.reduce((sum, row) => sum + row.totalDetections, 0);
-	// The count column is fixed to the widest number's character count -- the
-	// grand total, which no single row can exceed -- so every count, the total
-	// included, right-aligns into the same column.
-	const countWidthCh = grandTotal.toLocaleString().length;
+	// The count column is fixed to the widest count's character count, so every
+	// count right-aligns into the same column.
+	const maxTotal = Math.max(...rows.map((row) => row.totalDetections), 0);
+	const countWidthCh = maxTotal.toLocaleString().length;
 
 	return (
 		<TooltipProvider>
@@ -154,7 +149,10 @@ export function SpeciesByHourCard({
 				{isEmpty ? (
 					<EmptyNote>{emptyMessage}</EmptyNote>
 				) : (
-					<div className="flex gap-6">
+					// No gap between the panels: the space between the counts and the
+					// hours is the label rows' own right padding, so each row's hairline
+					// runs unbroken from the name to the card's far edge.
+					<div className="flex">
 						{/* LEFT: bird, name and count. Takes whatever width the hours leave,
 						    down to its min-content -- the name column's 12rem floor plus
 						    the counts, with longer names truncating -- and only past that
@@ -163,33 +161,29 @@ export function SpeciesByHourCard({
 						    card before any name had truncated. p-1/-m-1 give the row
 						    links' focus ring room against the edge. */}
 						<div className="-m-1 min-w-0 flex-1 p-1 md:min-w-min">
-							{/* An empty spacer the height of the heatmap's hour-tick header,
-							    so the first bar row lines up with the first heatmap row. The
-							    "Detections" caption that sat here is gone -- the card's
-							    summary already names the detection count. */}
-							<div className={HEADER_HEIGHT} />
-
-							{rows.map((row) => (
-								<LabelRow
-									key={row.comName}
-									row={row}
-									countWidthCh={countWidthCh}
-									newLabel={newLabel}
-								/>
-							))}
-
+							{/* The panel's header, the height of the heatmap's hour ticks so
+							    the first name row lines up with the first heatmap row. It
+							    labels the count column, set exactly like the hour numbers. */}
 							<div
-								className={`grid items-center gap-4 ${LABEL_GRID_COLUMNS} ${TOTALS_ROW_HEIGHT} ${TOTALS_RULE}`}
+								className={`grid items-center gap-4 md:pr-6 ${LABEL_GRID_COLUMNS} ${HEADER_HEIGHT}`}
 							>
-								<div className="min-w-0 truncate text-muted-foreground text-xs italic">
-									All species
-								</div>
-								<span
-									className="count-figure text-right"
-									style={{ width: `${countWidthCh}ch` }}
-								>
-									{grandTotal.toLocaleString()}
+								<span />
+								<span className="text-right font-semibold text-[10px] text-foreground leading-none">
+									Total
 								</span>
+							</div>
+
+							{/* Hairlines run between rows only: the first bird sits right
+							    under the header with no rule above it. */}
+							<div className="[&>*:first-child]:border-t-0">
+								{rows.map((row) => (
+									<LabelRow
+										key={row.comName}
+										row={row}
+										countWidthCh={countWidthCh}
+										newLabel={newLabel}
+									/>
+								))}
 							</div>
 						</div>
 
@@ -220,43 +214,17 @@ export function SpeciesByHourCard({
 									})}
 								</div>
 
-								{rows.map((row) => (
-									<HeatRow key={row.comName} row={row} />
-								))}
-
-								<TotalsRow hourTotals={hourTotals} />
+								<div className="[&>*:first-child]:border-t-0">
+									{rows.map((row) => (
+										<HeatRow key={row.comName} row={row} />
+									))}
+								</div>
 							</div>
 						</div>
 					</div>
 				)}
 			</section>
 		</TooltipProvider>
-	);
-}
-
-/**
- * Marks a species the station had never recorded before the window opened, so
- * an arrival stands out from the residents it's stacked against. Matches the
- * day page's "First ever" badge, trimmed to fit a 2rem grid row.
- */
-function NewBadge({ newLabel }: { newLabel: string }) {
-	return (
-		<Tooltip>
-			<TooltipTrigger asChild>
-				<span
-					className="inline-flex shrink-0 items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[9px] leading-none"
-					style={{
-						backgroundColor:
-							"color-mix(in oklab, var(--sand) 22%, var(--paper-raised))",
-						color: "var(--bark)",
-					}}
-				>
-					<Sparkles className="size-2.5" />
-					New
-				</span>
-			</TooltipTrigger>
-			<TooltipContent>First recorded here in {newLabel}</TooltipContent>
-		</Tooltip>
 	);
 }
 
@@ -276,7 +244,7 @@ function LabelRow({
 		<Link
 			to="/species/$comName"
 			params={{ comName: comNameToSlug(row.comName) }}
-			className={`group grid items-center gap-4 border-[var(--line)] border-t no-underline ${LABEL_GRID_COLUMNS} ${ROW_HEIGHT}`}
+			className={`group grid items-center gap-4 border-[var(--line)] border-t no-underline md:pr-6 ${LABEL_GRID_COLUMNS} ${ROW_HEIGHT}`}
 		>
 			<div className="flex min-w-0 items-center gap-2">
 				<div className="flex size-6 shrink-0 items-center justify-center">
@@ -294,7 +262,13 @@ function LabelRow({
 				<div className="min-w-0 truncate font-semibold text-sm group-hover:underline">
 					{row.comName}
 				</div>
-				{row.isNew && newLabel && <NewBadge newLabel={newLabel} />}
+				<SpeciesFlagPills
+					isNew={row.isNew}
+					isReturned={row.isReturned}
+					isRare={row.isRare}
+					returnedUnit={row.returnedUnit}
+					newLabel={newLabel}
+				/>
 			</div>
 
 			{/* Right-aligned into a column fixed to the widest count, so the digits
@@ -331,61 +305,16 @@ function HeatRow({ row }: { row: SpeciesHourRow }) {
 						key={`hour-${hour}`}
 						role="img"
 						aria-label={`${row.comName} — ${hourLabel(hour)}: ${count} detections`}
-						className="tabular-data mx-0.5 my-1 flex h-6 items-center justify-center overflow-hidden rounded-[3px] border border-[var(--line)] text-[10px] leading-none"
+						className="tabular-data mx-0.5 my-1 flex h-6 items-center justify-center overflow-hidden rounded-[3px] text-[10px] leading-none"
 						style={{
-							backgroundColor: HEAT_COLORS[level],
+							backgroundColor:
+								count > 0 ? HEAT_COLORS[level] : EMPTY_CELL_COLOR,
 							color: HEAT_TEXT_COLORS[level],
 						}}
 					>
 						{/* A zero reads as an empty cell: printing the digit 24 times a
 						    row would bury the counts that matter under noise. */}
 						{count > 0 ? count.toLocaleString() : ""}
-					</div>
-				);
-			})}
-		</div>
-	);
-}
-
-/**
- * The heatmap's closing row: every species summed per hour, as a bar standing
- * in each hour's column with its count above. Scaled against the busiest hour
- * across all species -- unlike the rows above, which each scale to themselves
- * -- so this is the one row that shows when the station as a whole was busiest.
- */
-function TotalsRow({ hourTotals }: { hourTotals: number[] }) {
-	const maxTotal = Math.max(...hourTotals, 0);
-
-	return (
-		<div
-			className={`grid items-end pb-1 ${TOTALS_ROW_HEIGHT} ${TOTALS_RULE}`}
-			style={{ gridTemplateColumns: HOUR_GRID_COLUMNS }}
-		>
-			{HOURS.map((hour) => {
-				const total = hourTotals[hour] ?? 0;
-				return (
-					<div
-						key={`total-${hour}`}
-						role="img"
-						aria-label={`All species — ${hourLabel(hour)}: ${total} detections`}
-						className="mx-0.5 flex flex-col items-center justify-end gap-0.5"
-					>
-						{total > 0 ? (
-							<>
-								<span className="tabular-data text-[10px] text-muted-foreground leading-none">
-									{total.toLocaleString()}
-								</span>
-								{/* A non-zero hour always shows a sliver, so a quiet one doesn't
-								    vanish next to the busiest. */}
-								<div
-									className="w-full rounded-t-[2px]"
-									style={{
-										height: `${Math.max((total / maxTotal) * TOTAL_BAR_MAX_PX, 2)}px`,
-										backgroundColor: HEAT_COLORS[3],
-									}}
-								/>
-							</>
-						) : null}
 					</div>
 				);
 			})}

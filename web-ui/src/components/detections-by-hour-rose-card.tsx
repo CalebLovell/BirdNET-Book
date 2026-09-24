@@ -65,9 +65,14 @@ function wedgePath(hour: number, radius: number): string {
  */
 export function DetectionsByHourRoseCard({
 	activity,
+	title = "Detections by hour · radial",
 	className = "",
 }: {
 	activity: HourActivity[];
+	/** The kicker. The species page pairs this card with the line chart of the
+	 * same series, so it says "radial"; shown alone, "Detections by hour" is
+	 * enough. */
+	title?: string;
 	className?: string;
 }) {
 	// buildHourActivity always returns all 24 hours, so an empty chart is one
@@ -80,7 +85,7 @@ export function DetectionsByHourRoseCard({
 				aria-label="Detections by hour, radial"
 				className={`feature-card flex flex-col rounded-md p-4 ${className}`}
 			>
-				<div className="island-kicker">Detections by hour · radial</div>
+				<div className="island-kicker">{title}</div>
 				<p className="mt-4 text-muted-foreground text-sm">
 					No detections recorded yet.
 				</p>
@@ -88,107 +93,130 @@ export function DetectionsByHourRoseCard({
 		);
 	}
 
-	const countByHour = new Map(activity.map((point) => [point.hour, point.count]));
+	return (
+		<section
+			aria-label="Detections by hour, radial"
+			className={`feature-card flex min-h-72 flex-col rounded-md p-4 ${className}`}
+		>
+			<div className="island-kicker">{title}</div>
+
+			<div className="mt-4 flex min-h-0 flex-1 items-center justify-center">
+				<DetectionsByHourRose
+					activity={activity}
+					className="h-full max-h-72 w-full"
+				/>
+			</div>
+		</section>
+	);
+}
+
+/**
+ * The rose itself, without a card around it -- for a card that holds other
+ * things too, like the timeline's Highlights, where a nested feature-card
+ * would break the one-card rule. Expects at least one non-zero hour; callers
+ * show their own empty state.
+ */
+export function DetectionsByHourRose({
+	activity,
+	className = "",
+}: {
+	activity: HourActivity[];
+	className?: string;
+}) {
+	const countByHour = new Map(
+		activity.map((point) => [point.hour, point.count]),
+	);
 	const maximum = Math.max(...activity.map((point) => point.count), 0);
 
 	return (
 		<TooltipProvider>
-			<section
-				aria-label="Detections by hour, radial"
-				className={`feature-card flex min-h-72 flex-col rounded-md p-4 ${className}`}
+			<svg
+				viewBox={`0 0 ${VIEW} ${VIEW}`}
+				className={className}
+				role="img"
+				aria-label="Detections by hour of day, as a radial polar-area chart with midnight at the top"
 			>
-				<div className="island-kicker">Detections by hour · radial</div>
+				<title>Detections by hour of day</title>
 
-				<div className="mt-4 flex min-h-0 flex-1 items-center justify-center">
-					<svg
-						viewBox={`0 0 ${VIEW} ${VIEW}`}
-						className="h-full max-h-72 w-full"
-						role="img"
-						aria-label="Detections by hour of day, as a radial polar-area chart with midnight at the top"
-					>
-						<title>Detections by hour of day</title>
+				{/* The guide rings and the spokes between wedges, so a petal reads
+			    against a scale rather than floating on its own. */}
+				{GRID_RINGS.map((fraction) => (
+					<circle
+						key={`ring-${fraction}`}
+						cx={CENTER}
+						cy={CENTER}
+						r={MAX_RADIUS * fraction}
+						fill="none"
+						stroke="var(--line)"
+						strokeWidth={0.5}
+					/>
+				))}
+				{HOURS.map((hour) => {
+					const [x, y] = polar(
+						MAX_RADIUS,
+						hour * DEGREES_PER_HOUR - DEGREES_PER_HOUR / 2,
+					);
+					return (
+						<line
+							key={`spoke-${hour}`}
+							x1={CENTER}
+							y1={CENTER}
+							x2={x}
+							y2={y}
+							stroke="var(--line)"
+							strokeWidth={0.25}
+						/>
+					);
+				})}
 
-						{/* The guide rings and the spokes between wedges, so a petal reads
-						    against a scale rather than floating on its own. */}
-						{GRID_RINGS.map((fraction) => (
-							<circle
-								key={`ring-${fraction}`}
-								cx={CENTER}
-								cy={CENTER}
-								r={MAX_RADIUS * fraction}
-								fill="none"
-								stroke="var(--line)"
-								strokeWidth={0.5}
-							/>
-						))}
-						{HOURS.map((hour) => {
-							const [x, y] = polar(
-								MAX_RADIUS,
-								hour * DEGREES_PER_HOUR - DEGREES_PER_HOUR / 2,
-							);
-							return (
-								<line
-									key={`spoke-${hour}`}
-									x1={CENTER}
-									y1={CENTER}
-									x2={x}
-									y2={y}
-									stroke="var(--line)"
-									strokeWidth={0.25}
+				{/* The petals. Area tracks the count, so radius is the square root
+			    of the count's share of the busiest hour. */}
+				{HOURS.map((hour) => {
+					const count = countByHour.get(hour) ?? 0;
+					if (count === 0) return null;
+					const radius = Math.max(
+						MAX_RADIUS * Math.sqrt(count / maximum),
+						MIN_WEDGE_RADIUS,
+					);
+					const level = heatLevel(count, maximum);
+					return (
+						<Tooltip key={`wedge-${hour}`}>
+							<TooltipTrigger asChild>
+								<path
+									d={wedgePath(hour, radius)}
+									fill={HEAT_COLORS[level]}
+									stroke="var(--paper-raised)"
+									strokeWidth={0.75}
+									className="transition-opacity hover:opacity-80"
+									role="img"
+									aria-label={`${hourLabel(hour)}: ${count.toLocaleString()} detections`}
 								/>
-							);
-						})}
+							</TooltipTrigger>
+							<TooltipContent>
+								<span className="font-semibold">{hourLabel(hour)}</span>
+								{` — ${count.toLocaleString()} ${count === 1 ? "detection" : "detections"}`}
+							</TooltipContent>
+						</Tooltip>
+					);
+				})}
 
-						{/* The petals. Area tracks the count, so radius is the square root
-						    of the count's share of the busiest hour. */}
-						{HOURS.map((hour) => {
-							const count = countByHour.get(hour) ?? 0;
-							if (count === 0) return null;
-							const radius = Math.max(
-								MAX_RADIUS * Math.sqrt(count / maximum),
-								MIN_WEDGE_RADIUS,
-							);
-							const level = heatLevel(count, maximum);
-							return (
-								<Tooltip key={`wedge-${hour}`}>
-									<TooltipTrigger asChild>
-										<path
-											d={wedgePath(hour, radius)}
-											fill={HEAT_COLORS[level]}
-											stroke="var(--paper-raised)"
-											strokeWidth={0.75}
-											className="transition-opacity hover:opacity-80"
-											role="img"
-											aria-label={`${hourLabel(hour)}: ${count.toLocaleString()} detections`}
-										/>
-									</TooltipTrigger>
-									<TooltipContent>
-										<span className="font-semibold">{hourLabel(hour)}</span>
-										{` — ${count.toLocaleString()} ${count === 1 ? "detection" : "detections"}`}
-									</TooltipContent>
-								</Tooltip>
-							);
-						})}
-
-						{/* The four quarters of the day, sitting just outside the petals. */}
-						{CLOCK_LABELS.map(({ hour, dx, dy }) => {
-							const [x, y] = polar(MAX_RADIUS + 13, hour * DEGREES_PER_HOUR);
-							return (
-								<text
-									key={`label-${hour}`}
-									x={x + dx * 2}
-									y={y + dy * 2}
-									textAnchor="middle"
-									dominantBaseline="central"
-									className="fill-[var(--muted-foreground)] text-[9px]"
-								>
-									{hourLabel(hour)}
-								</text>
-							);
-						})}
-					</svg>
-				</div>
-			</section>
+				{/* The four quarters of the day, sitting just outside the petals. */}
+				{CLOCK_LABELS.map(({ hour, dx, dy }) => {
+					const [x, y] = polar(MAX_RADIUS + 13, hour * DEGREES_PER_HOUR);
+					return (
+						<text
+							key={`label-${hour}`}
+							x={x + dx * 2}
+							y={y + dy * 2}
+							textAnchor="middle"
+							dominantBaseline="central"
+							className="fill-[var(--muted-foreground)] text-[9px]"
+						>
+							{hourLabel(hour)}
+						</text>
+					);
+				})}
+			</svg>
 		</TooltipProvider>
 	);
 }

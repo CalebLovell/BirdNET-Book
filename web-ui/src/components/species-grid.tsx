@@ -1,16 +1,15 @@
 import { Link } from "@tanstack/react-router";
-import { Gem, Sparkles, Undo2 } from "lucide-react";
-import type { CSSProperties, ReactNode } from "react";
+import type { ReactNode } from "react";
 
 import { EmptyNote } from "~/components/empty-state.tsx";
+import {
+	Pill,
+	type ReturnedUnit,
+	SpeciesFlagPills,
+} from "~/components/species-flag-pills.tsx";
 import { SpeciesHourBars } from "~/components/species-hour-bars.tsx";
 import { SpeciesThumbnail } from "~/components/species-row.tsx";
-import {
-	Tooltip,
-	TooltipContent,
-	TooltipProvider,
-	TooltipTrigger,
-} from "~/components/ui/tooltip.tsx";
+import { TooltipProvider } from "~/components/ui/tooltip.tsx";
 import { confidenceStyle, formatConfidence } from "~/lib/confidence.ts";
 import { comNameToSlug } from "~/lib/species-slug.ts";
 
@@ -25,36 +24,11 @@ export type SpeciesGridItem = {
 	isReturned: boolean;
 	/** The selected period's unit, or null unless isReturned. Returned always means
 	    absent the one period before this one, so the pill names a single unit. */
-	returnedUnit: "day" | "week" | "month" | "year" | null;
+	returnedUnit: ReturnedUnit;
 	/** 24 detection counts, midnight first, for this species in the window.
 	    Absent when the caller has no hourly breakdown; the row then draws no
 	    chart. */
 	hourCounts?: number[];
-};
-
-export function returnedTooltip(returnedUnit: string | null): string {
-	if (returnedUnit == null)
-		return "Back after an absence, having missed the previous period.";
-	return `Back after an absence — last heard a ${returnedUnit} before.`;
-}
-
-// Each status pill wears its own tint over the raised paper, so a glance down the
-// grid sorts them by hue -- and none reuses the confidence pill's moss/sand/sage
-// scale, which reads as data rather than as a flag. Blue for a first arrival,
-// rose for a bird back from a long absence, heather for a rare visitor.
-const NEW_PILL_STYLE: CSSProperties = {
-	backgroundColor: "color-mix(in oklab, #3f6ea6 20%, var(--paper-raised))",
-	color: "#2a4d78",
-};
-
-const RETURNED_PILL_STYLE: CSSProperties = {
-	backgroundColor: "color-mix(in oklab, #a8536e 20%, var(--paper-raised))",
-	color: "#733a4e",
-};
-
-const RARE_PILL_STYLE: CSSProperties = {
-	backgroundColor: "color-mix(in oklab, #6f5c9c 22%, var(--paper-raised))",
-	color: "#463a73",
 };
 
 /**
@@ -163,30 +137,13 @@ function SpeciesGridRow({
 								tabular
 							/>
 						) : null}
-						{item.isNew && newLabel ? (
-							<Pill
-								icon={Sparkles}
-								label="New"
-								style={NEW_PILL_STYLE}
-								tooltip={`First recorded here in ${newLabel}`}
-							/>
-						) : null}
-						{item.isReturned ? (
-							<Pill
-								icon={Undo2}
-								label="Returned"
-								style={RETURNED_PILL_STYLE}
-								tooltip={returnedTooltip(item.returnedUnit)}
-							/>
-						) : null}
-						{item.isRare ? (
-							<Pill
-								icon={Gem}
-								label="Rare"
-								style={RARE_PILL_STYLE}
-								tooltip="Barely ever heard here — a rare visitor."
-							/>
-						) : null}
+						<SpeciesFlagPills
+							isNew={item.isNew}
+							isReturned={item.isReturned}
+							isRare={item.isRare}
+							returnedUnit={item.returnedUnit}
+							newLabel={newLabel}
+						/>
 					</div>
 				</div>
 			</div>
@@ -201,45 +158,5 @@ function SpeciesGridRow({
 				/>
 			) : null}
 		</li>
-	);
-}
-
-/**
- * One pill in a row's cluster. Every pill -- confidence, New, Returned, Rare --
- * shares this size, radius and weight so the cluster reads as one family; only
- * the tint and the optional icon set them apart. The flag pills carry a tooltip
- * explaining what they mean; the confidence pill is a bare number, so it takes
- * no tooltip and renders without one.
- */
-function Pill({
-	icon: Icon,
-	label,
-	style,
-	tooltip,
-	tabular = false,
-}: {
-	icon?: React.ComponentType<{ className?: string }>;
-	label: string;
-	style: CSSProperties;
-	tooltip?: string;
-	tabular?: boolean;
-}) {
-	const pill = (
-		<span
-			className={`inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 font-semibold text-[11px] leading-none ${tabular ? "tabular-data" : ""}`}
-			style={style}
-		>
-			{Icon ? <Icon className="size-2.5" /> : null}
-			{label}
-		</span>
-	);
-
-	if (!tooltip) return pill;
-
-	return (
-		<Tooltip>
-			<TooltipTrigger asChild>{pill}</TooltipTrigger>
-			<TooltipContent>{tooltip}</TooltipContent>
-		</Tooltip>
 	);
 }
