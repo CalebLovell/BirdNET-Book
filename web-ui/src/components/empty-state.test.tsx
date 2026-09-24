@@ -10,7 +10,10 @@ test("a section-level empty is a quiet line, not a card", () => {
 		<EmptyNote>No detections match these filters.</EmptyNote>,
 	);
 
-	assert.match(markup, /^<p class="mt-4 text-muted-foreground text-sm">/);
+	assert.match(
+		markup,
+		/^<p class="mt-\(--page-gap\) text-muted-foreground text-sm">/,
+	);
 	assert.doesNotMatch(markup, /feature-card/);
 	assert.doesNotMatch(markup, /<svg/);
 });

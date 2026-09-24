@@ -9,7 +9,11 @@ import type { ReactNode } from "react";
  * the card is empty is usually visible in the control that emptied it.
  */
 export function EmptyNote({ children }: { children: ReactNode }) {
-	return <p className="mt-4 text-muted-foreground text-sm">{children}</p>;
+	// The page gap, like every other card-internal gap: 16px, tightening to
+	// 8px on phones along with the card's own padding.
+	return (
+		<p className="mt-(--page-gap) text-muted-foreground text-sm">{children}</p>
+	);
 }
 
 /**
@@ -32,7 +36,7 @@ export function EmptyState({
 	children?: ReactNode;
 }) {
 	return (
-		<section className="feature-card mt-4 flex flex-col items-start gap-2 rounded-md p-4">
+		<section className="feature-card mt-(--page-gap) flex flex-col items-start gap-2 rounded-md p-4">
 			<Icon aria-hidden="true" className="size-8 text-muted-foreground" />
 			<p className="font-semibold">{title}</p>
 			{children ? (

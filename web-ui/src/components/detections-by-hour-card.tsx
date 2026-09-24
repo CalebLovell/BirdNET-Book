@@ -11,6 +11,7 @@ import {
 } from "recharts";
 
 import { ChartValueTooltip } from "~/components/chart-tooltip.tsx";
+import { EmptyNote } from "~/components/empty-state.tsx";
 import {
 	CHART_ANIMATION_MS,
 	CHART_MARGIN,
@@ -47,9 +48,7 @@ export function DetectionsByHourCard({
 				className={`feature-card flex flex-col rounded-md p-4 ${className}`}
 			>
 				<div className="island-kicker">Detections by hour</div>
-				<p className="mt-4 text-muted-foreground text-sm">
-					No detections recorded yet.
-				</p>
+				<EmptyNote>No detections recorded yet.</EmptyNote>
 			</section>
 		);
 	}

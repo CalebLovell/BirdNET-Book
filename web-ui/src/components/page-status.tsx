@@ -44,8 +44,10 @@ export function PageStatus({
 	const Heading = heading;
 
 	return (
-		<section className="feature-card rounded-md p-5">
-			<div className="flex items-start gap-3">
+		// 20px padding is this card's own, so the page-gap rule for `p-4` cards
+		// doesn't reach it; on phones it steps down to 8px with the rest.
+		<section className="feature-card rounded-md p-5 max-[400px]:p-2">
+			<div className="flex items-start gap-3 max-[400px]:gap-2">
 				<Icon
 					aria-hidden="true"
 					className={`mt-0.5 size-5 ${TONE_COLOR[tone]}`}
@@ -62,7 +64,7 @@ export function PageStatus({
 					{actions ? (
 						<div
 							data-testid="page-status-actions"
-							className="mt-4 flex flex-wrap items-center gap-2"
+							className="mt-(--page-gap) flex flex-wrap items-center gap-2"
 						>
 							{actions}
 						</div>

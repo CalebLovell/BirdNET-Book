@@ -1,6 +1,7 @@
 import { Link } from "@tanstack/react-router";
 
 import { ConfidencePill } from "~/components/confidence-pill.tsx";
+import { EmptyNote } from "~/components/empty-state.tsx";
 import { RecordingButton } from "~/components/recording-button.tsx";
 import { LIST_ROW, SpeciesThumbnail } from "~/components/species-row.tsx";
 import type { RecentDetection } from "~/lib/now.ts";
@@ -23,9 +24,7 @@ export function RecentLogCard({
 			<div className="island-kicker">Recent activity</div>
 
 			{recent.length === 0 ? (
-				<p className="mt-4 text-muted-foreground text-sm">
-					No detections recorded in the last 24 hours.
-				</p>
+				<EmptyNote>No detections recorded in the last 24 hours.</EmptyNote>
 			) : (
 				<ul className="mt-4 space-y-1">
 					{recent.map((detection) => (

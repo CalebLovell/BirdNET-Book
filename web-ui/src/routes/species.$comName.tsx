@@ -215,8 +215,8 @@ function UndetectedSpecies({
 				title={SPECIES_SECTION}
 				description={SPECIES_SECTION_DESCRIPTION}
 			/>
-			<section className="feature-card rounded-md p-5">
-				<div className="flex flex-wrap items-start gap-5">
+			<section className="feature-card rounded-md p-4">
+				<div className="flex flex-wrap items-start gap-5 max-[400px]:gap-2">
 					{illustration ? (
 						<img
 							src={illustration}
@@ -235,12 +235,12 @@ function UndetectedSpecies({
 						    you could see, which read as an accident. Left alone it sets on
 						    one line and wraps against the card itself when the column is
 						    narrow. */}
-						<p className="mt-3 text-muted-foreground text-sm leading-relaxed">
+						<p className="mt-3 text-muted-foreground text-sm leading-relaxed max-[400px]:mt-2">
 							Not detected at this station yet. The installed model can
 							recognise this bird, so it will appear here the first time it is
 							heard.
 						</p>
-						<div className="mt-4 flex flex-wrap items-center gap-2">
+						<div className="mt-(--page-gap) flex flex-wrap items-center gap-2">
 							<SpeciesActions
 								ebirdUrl={ebirdUrlFor(sciName, comName)}
 								comName={comName}

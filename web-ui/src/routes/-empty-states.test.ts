@@ -78,11 +78,14 @@ test("no route hand-rolls the empty paragraph any more", async () => {
 		"./learn.tsx",
 		"./species.index.tsx",
 		"./species.$comName.tsx",
+		"../components/detections-by-hour-card.tsx",
+		"../components/detections-by-month-card.tsx",
+		"../components/now/recent-log-card.tsx",
 	]) {
 		const source = await read(file);
 		assert.doesNotMatch(
 			source,
-			/<p className="mt-4 text-muted-foreground text-sm">/,
+			/<p className="mt-(?:4|\(--page-gap\)) text-muted-foreground text-sm">/,
 			`${file} should use EmptyNote rather than its own paragraph`,
 		);
 	}

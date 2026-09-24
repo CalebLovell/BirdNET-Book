@@ -9,6 +9,7 @@ import {
 } from "recharts";
 
 import { ChartValueTooltip } from "~/components/chart-tooltip.tsx";
+import { EmptyNote } from "~/components/empty-state.tsx";
 import { CHART_MARGIN, X_AXIS_HEIGHT } from "~/lib/chart-style.ts";
 import type { TrendPoint } from "~/lib/stats-data.ts";
 
@@ -41,9 +42,7 @@ export function DetectionsByMonthCard({
 			<div className="island-kicker">Detections by month</div>
 
 			{isEmpty ? (
-				<p className="mt-4 text-muted-foreground text-sm">
-					No detections recorded yet.
-				</p>
+				<EmptyNote>No detections recorded yet.</EmptyNote>
 			) : (
 				<div className="mt-(--page-gap) min-h-0 flex-1">
 					{/* `minHeight` is not decoration: ResponsiveContainer measures its own
