@@ -165,10 +165,15 @@ export function SpeciesHeroCard({
 				<p className="font-semibold text-[var(--moss)] text-lg">
 					{relativeTime}
 				</p>
-				<div className="tabular-data mt-1 flex flex-wrap items-center gap-2 text-muted-foreground text-sm">
+				{/* Only the phrase is muted: set on the row, the colour leaked into
+				    the outline button (which inherits its text colour), leaving it
+				    greyer than the same button everywhere else. */}
+				<div className="tabular-data mt-1 flex flex-wrap items-center gap-2 text-sm">
 					{/* Phrased identically on both pages: the card always describes the
 					    most recent detection, whether or not the page is polling. */}
-					<span>last heard at {clockTime}</span>
+					<span className="text-muted-foreground">
+						last heard at {clockTime}
+					</span>
 					<ConfidencePill confidence={confidence} />
 					<RecordingButton audioUrl={audioUrl} />
 				</div>
