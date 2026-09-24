@@ -85,7 +85,7 @@ function SpeciesListRow({
 					>
 						{comName}
 					</Link>
-					<span className="tabular-data shrink-0 font-semibold text-sm">
+					<span className="count-figure shrink-0">
 						{count.toLocaleString()}
 					</span>
 				</div>

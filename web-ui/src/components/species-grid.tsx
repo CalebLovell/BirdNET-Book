@@ -102,7 +102,10 @@ export function SpeciesGrid({
 						<div className="island-kicker shrink-0">Activity</div>
 						{summary}
 					</div>
-					{action}
+					{/* The switcher is taller than the kicker line; pulled out of the row's
+					    height so the kicker sits at the card's top padding, level with
+					    every other card's title, rather than centred lower against it. */}
+					{action ? <div className="-my-1.5 shrink-0">{action}</div> : null}
 				</div>
 
 				{species.length === 0 ? (
@@ -151,9 +154,7 @@ function SpeciesGridRow({
 
 				{/* RIGHT: everything measured about it -- the count and its flags. */}
 				<div className="flex shrink-0 flex-col items-end gap-1.5">
-					<span className="tabular-data font-semibold text-sm">
-						{item.count.toLocaleString()}
-					</span>
+					<span className="count-figure">{item.count.toLocaleString()}</span>
 					<div className="flex flex-wrap items-center justify-end gap-1.5">
 						{item.averageConfidence != null ? (
 							<Pill

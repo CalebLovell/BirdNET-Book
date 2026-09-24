@@ -50,6 +50,10 @@ Georgia for everything: headings, body, controls, figures. Numbers use
 
 - Page title: 20px bold (`display-title`)
 - Figure: 20px semibold, tabular
+- Count: `.count-figure`, 13px bold ink, tabular. Every count of birds or
+  detections in running UI (a species row's total, a "117 detections · 30
+  species" readout) uses it. Headline stats stay Figures; numbers drawn inside
+  a chart (heatmap cells, bar labels) and table cells keep their own sizes.
 - Body 16px, secondary 14px, species binomial 14px italic
 - Kicker: `.island-kicker`, 11px, 700, uppercase, 0.16em tracking, moss
 - Controls: 11–14px, weight 500

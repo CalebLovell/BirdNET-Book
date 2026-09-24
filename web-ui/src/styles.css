@@ -169,6 +169,18 @@ code {
   font-variant-numeric: tabular-nums;
 }
 
+/* A count of birds or detections set in running UI -- a species row's total,
+   a card's "117 detections · 30 species" readout. Bold 13px ink, tabular, so
+   every count reads alike wherever it sits. Not for headline stat figures
+   (PageHeaderCard's 20px) or the numbers drawn inside a chart. */
+.count-figure {
+  font-family: var(--font-sans);
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  font-size: 13px;
+  color: var(--foreground);
+}
+
 /* Content fills whatever the sidebar leaves rather than centring in a capped
    column: the sidebar is pinned to the viewport's left edge, so a max-width
    here would strand content in the middle of the remaining space. The 1rem

@@ -9,6 +9,7 @@ import {
 	type SpeciesGridItem,
 } from "~/components/species-grid.tsx";
 import { StatusPage } from "~/components/status-page.tsx";
+import { HighlightsCard } from "~/components/timeline/highlights-card.tsx";
 import { PeriodToolbar } from "~/components/timeline/period-toolbar.tsx";
 import { TooltipProvider } from "~/components/ui/tooltip.tsx";
 import { useShareCard } from "~/components/use-share-card.tsx";
@@ -256,11 +257,12 @@ function WindowSummary({ rows }: { rows: TimelineRow[] }) {
 	return (
 		<div className="flex min-w-0 items-center gap-2.5">
 			<span className="h-4 w-px shrink-0 bg-[var(--line)]" aria-hidden="true" />
-			<div className="flex items-center gap-2 truncate text-[13px] text-muted-foreground">
+			{/* Lifted 1.5px so its ink centres on the kicker's. The boxes already
+			    centre, but Georgia's lowercase and old-style figures sit low in theirs
+			    next to the kicker's all-caps, so box-centred reads as dropped. */}
+			<div className="-translate-y-[1.5px] flex items-center gap-2 truncate text-[13px] text-muted-foreground">
 				<span className="whitespace-nowrap">
-					<span className="tabular-data font-bold text-foreground">
-						{detections.toLocaleString()}
-					</span>{" "}
+					<span className="count-figure">{detections.toLocaleString()}</span>{" "}
 					detections
 				</span>
 				<span
@@ -268,9 +270,7 @@ function WindowSummary({ rows }: { rows: TimelineRow[] }) {
 					aria-hidden="true"
 				/>
 				<span className="whitespace-nowrap">
-					<span className="tabular-data font-bold text-foreground">
-						{rows.length.toLocaleString()}
-					</span>{" "}
+					<span className="count-figure">{rows.length.toLocaleString()}</span>{" "}
 					species
 				</span>
 			</div>
@@ -318,24 +318,49 @@ function TimelineCards({
 	// species" line reading back the emptiness the card already states.
 	const summary = rows.length > 0 ? <WindowSummary rows={rows} /> : undefined;
 
-	return view === "hours" ? (
-		<SpeciesByHourCard
-			rows={rows}
-			newLabel={windowLabel}
-			emptyMessage={emptyMessage}
-			summary={summary}
-			action={toggle}
-		/>
-	) : (
-		<SpeciesGrid
-			species={gridItems}
-			newLabel={windowLabel}
-			emptyMessage={emptyMessage}
-			summary={summary}
-			action={toggle}
-		/>
+	const body =
+		view === "hours" ? (
+			<SpeciesByHourCard
+				rows={rows}
+				newLabel={windowLabel}
+				emptyMessage={emptyMessage}
+				summary={summary}
+				action={toggle}
+				className={BODY_CARD_WIDTH}
+			/>
+		) : (
+			<SpeciesGrid
+				species={gridItems}
+				newLabel={windowLabel}
+				emptyMessage={emptyMessage}
+				summary={summary}
+				action={toggle}
+				className={BODY_CARD_WIDTH}
+			/>
+		);
+
+	// Two cards side by side on the widest screens: the body on the left at one
+	// fixed width in both views, so the toggle never shifts Highlights, and
+	// Highlights taking the rest. Below that there isn't room for both, so the
+	// body fills the row on its own.
+	return (
+		<div className="min-[1800px]:flex min-[1800px]:items-start min-[1800px]:gap-4">
+			{body}
+			{rows.length > 0 ? (
+				<HighlightsCard className="hidden min-w-0 flex-1 min-[1800px]:block" />
+			) : null}
+		</div>
 	);
 }
+
+// Wide enough for the heat map's natural width -- the name column at its
+// 12rem floor, its count and 24 fixed 1.75rem hour columns -- with the names
+// taking up the rest, so even an all-time count of eight or nine characters
+// fits without the hours scrolling inside it. The species grid takes the same width
+// so the view toggle leaves the left card, and Highlights beside it, in place.
+// Highlights only appears from 1800px: below that, what's left beside a 65rem
+// card is too narrow to hold anything.
+const BODY_CARD_WIDTH = "min-w-0 min-[1800px]:w-[65rem] min-[1800px]:flex-none";
 
 /**
  * The masthead subtitle -- one line for every period and both bodies. The view
@@ -351,24 +376,32 @@ const VIEW_META: Record<
 	{
 		label: string;
 		icon: React.ComponentType<{ className?: string }>;
+		/** Sized per glyph so the two read as one size: the clock's circle fills
+		    20 of lucide's 24 units, the grid's squares only 18, so the grid is
+		    drawn that much larger to carry the same ink. */
+		iconSize: string;
 	}
 > = {
 	hours: {
-		label: "By-hour heat map",
+		label: "By hour",
 		icon: Clock3,
+		iconSize: "size-3.5",
 	},
 	grid: {
-		label: "Grid",
+		label: "By species",
 		icon: LayoutGrid,
+		iconSize: "size-[15.5px]",
 	},
 };
 
 /**
  * Picks which body the window draws -- set against the card's title, top-right.
- * A pair of icon buttons sized to the kicker beside them, not the page's chunky
- * segmented control: the active one takes the card's own sage wash rather than a
+ * One bordered pill split into two equal tabs, each an icon and its word, with
+ * a hairline between them. The pill's rounding is clipped from outside, so
+ * only its two ends round: where the tabs meet they sit flush, square against
+ * the divider. The active tab takes the sage wash with ink text rather than a
  * moss fill, so the switch reads as part of the card's furniture, not a toolbar
- * dropped into its corner. The glyphs carry the labels (tooltip + a11y name).
+ * dropped into its corner.
  */
 function ViewToggle({
 	view,
@@ -378,34 +411,25 @@ function ViewToggle({
 	onViewChange: (next: TimelineView) => void;
 }) {
 	return (
-		<div className="inline-flex shrink-0 items-center gap-0.5 rounded-md border border-[var(--line)] bg-card p-0.5">
+		<div className="grid w-52 shrink-0 grid-cols-2 overflow-hidden rounded-full border border-[var(--line)] bg-card">
 			{TIMELINE_VIEWS.map((value) => {
-				const { label, icon: Icon } = VIEW_META[value];
+				const { label, icon: Icon, iconSize } = VIEW_META[value];
 				const active = value === view;
 				return (
 					<button
 						key={value}
 						type="button"
 						aria-pressed={active}
-						aria-label={label}
-						title={label}
 						onClick={() => !active && onViewChange(value)}
 						className={cn(
-							"flex size-6 items-center justify-center rounded-sm transition-colors",
+							"flex h-6 items-center justify-center gap-1.5 whitespace-nowrap px-3 font-medium text-xs transition-colors [&+&]:border-[var(--line)] [&+&]:border-l",
 							active
-								? "text-[var(--moss)]"
+								? "bg-secondary text-foreground"
 								: "text-muted-foreground hover:bg-[var(--meadow)] hover:text-foreground",
 						)}
-						style={
-							active
-								? {
-										backgroundColor:
-											"color-mix(in oklab, var(--sage) 45%, var(--paper-raised))",
-									}
-								: undefined
-						}
 					>
-						<Icon className="size-3.5" />
+						<Icon className={`shrink-0 ${iconSize}`} aria-hidden="true" />
+						{label}
 					</button>
 				);
 			})}
