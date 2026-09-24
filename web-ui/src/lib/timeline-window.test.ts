@@ -6,6 +6,7 @@ import {
 	currentAnchor,
 	isValidAnchor,
 	previousPeriodStart,
+	shortAnchorLabel,
 	windowFor,
 } from "./timeline-window.ts";
 
@@ -123,4 +124,20 @@ test("the previous period crosses month, year and ISO-week boundaries", () => {
 	assert.equal(previousPeriodStart("year", "2025"), "2024-01-01");
 	// Week 1 of 2026 (starts 2025-12-29) follows the last week of 2025.
 	assert.equal(previousPeriodStart("week", "2026-W01"), "2025-12-22");
+});
+
+test("short anchor labels fit a phone's date stepper", () => {
+	assert.equal(shortAnchorLabel("day", "2026-09-23"), "Sep 23, 2026");
+	assert.equal(shortAnchorLabel("week", "2026-W39"), "Week 39, 2026");
+	assert.equal(shortAnchorLabel("week", "2026-W01"), "Week 1, 2026");
+	assert.equal(
+		shortAnchorLabel("week", "2026-W39", { compact: true }),
+		"Wk 39, 2026",
+	);
+	assert.equal(
+		shortAnchorLabel("day", "2026-09-23", { compact: true }),
+		"Sep 23, 2026",
+	);
+	assert.equal(shortAnchorLabel("month", "2026-09"), "Sep 2026");
+	assert.equal(shortAnchorLabel("year", "2026"), "2026");
 });

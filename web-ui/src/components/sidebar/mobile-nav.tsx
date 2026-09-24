@@ -8,7 +8,9 @@ import { SidebarBody } from "~/components/sidebar/site-sidebar.tsx";
  * The narrow-screen counterpart to the sidebar: a slim bar carrying the site
  * name and a hamburger, plus the drawer it opens.
  *
- * Hidden from `lg` up, where the sidebar itself is always on screen.
+ * Hidden from `xl` up, where the sidebar itself is always on screen. Not
+ * earlier: the sidebar only takes its column once the page beside it can hold
+ * the timeline's full heat map (see SiteSidebar).
  */
 export function MobileNav() {
 	const [isOpen, setIsOpen] = useState(false);
@@ -38,8 +40,10 @@ export function MobileNav() {
 	return (
 		<>
 			{/* `shrink-0`, not `sticky`: the bar sits outside the scrolling pane in
-			    the shell, so it holds its place without any stickiness. */}
-			<div className="z-30 flex h-14 shrink-0 items-center gap-3 border-[var(--line)] border-b bg-[var(--paper-raised)] px-4 lg:hidden">
+			    the shell, so it holds its place without any stickiness. Its side
+			    padding tracks the page gutter (.page-wrap), halving under 400px, so
+			    the menu icon stays in line with the cards' left edge. */}
+			<div className="z-30 flex h-14 shrink-0 items-center gap-3 border-[var(--line)] border-b bg-[var(--paper-raised)] px-4 max-[400px]:px-2 xl:hidden">
 				<button
 					type="button"
 					onClick={() => setIsOpen(true)}
@@ -58,7 +62,7 @@ export function MobileNav() {
 			</div>
 
 			{isOpen ? (
-				<div className="fixed inset-0 z-40 lg:hidden">
+				<div className="fixed inset-0 z-40 xl:hidden">
 					{/* Sits under the panel and above the page; clicking it dismisses. */}
 					<button
 						type="button"

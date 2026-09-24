@@ -100,7 +100,7 @@ function Detections() {
 		// filters and the card's pager all hold their place and only the rows
 		// move. `h-full` measures against `main`, which the shell has already
 		// bounded to the viewport.
-		<div className="page-wrap flex h-full min-h-0 flex-col gap-4 py-4">
+		<div className="page-wrap flex h-full min-h-0 flex-col gap-(--page-gap) py-4">
 			<div className="shrink-0 space-y-4">
 				<PageHeaderCard
 					title="Detections"

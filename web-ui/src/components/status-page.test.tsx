@@ -33,5 +33,5 @@ test("the page wrapper matches a locked page's", () => {
 		</StatusPage>,
 	);
 
-	assert.match(markup, /class="page-wrap space-y-4 py-4"/);
+	assert.match(markup, /class="page-wrap space-y-\(--page-gap\) py-4"/);
 });

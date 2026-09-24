@@ -48,9 +48,11 @@ export function PageHeaderCard({
 	children?: ReactNode;
 }) {
 	return (
-		<section aria-label={title} className="space-y-4">
+		<section aria-label={title} className="space-y-(--page-gap)">
 			<div className="feature-card rounded-md p-4">
-				<div className="flex items-start justify-between gap-3">
+				{/* Under 400px the action drops beneath the description instead of
+				    squeezing the title and description into a narrow column beside it. */}
+				<div className="flex items-start justify-between gap-3 max-[400px]:flex-col">
 					<div className="min-w-0">
 						<h1 className="display-title font-bold text-xl leading-tight">
 							{title}
@@ -104,7 +106,7 @@ export function PageHeaderStats({
 	}
 
 	return (
-		<dl className={`grid grid-cols-2 gap-4 ${columns} ${className}`}>
+		<dl className={`grid grid-cols-2 gap-(--page-gap) ${columns} ${className}`}>
 			{stats.map((stat) => (
 				<Figure key={stat.label} {...stat} />
 			))}

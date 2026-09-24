@@ -45,9 +45,13 @@ export function SidebarBody({ onNavigate }: { onNavigate?: () => void }) {
  * exactly a viewport minus the inset, so the station block stays reachable on a
  * short window.
  */
+// From `xl` (1280px), not earlier: the sidebar's 272px column has to leave the
+// page room for the timeline's full heat map -- 24 fixed squares beside the
+// species names, about 1234px of window in all. Below that the mobile menu
+// stands in, and the page gets the whole width.
 export function SiteSidebar() {
 	return (
-		<aside className="hidden h-full shrink-0 py-4 pl-4 lg:block">
+		<aside className="hidden h-full shrink-0 py-4 pl-4 xl:block">
 			<div className="feature-card h-full w-64 overflow-y-auto rounded-md">
 				<SidebarBody />
 			</div>

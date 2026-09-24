@@ -194,7 +194,7 @@ function Species() {
 	);
 
 	return (
-		<div className="page-wrap space-y-4 py-4">
+		<div className="page-wrap space-y-(--page-gap) py-4">
 			<PageHeaderCard
 				title="Species"
 				description="Every species ever recorded at this station."

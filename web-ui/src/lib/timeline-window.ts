@@ -125,6 +125,41 @@ export function isValidAnchor(period: TimelinePeriod, anchor: string): boolean {
 	}
 }
 
+const SHORT_DAY = new Intl.DateTimeFormat("en-US", {
+	month: "short",
+	day: "numeric",
+	year: "numeric",
+	timeZone: "UTC",
+});
+const SHORT_MONTH = new Intl.DateTimeFormat("en-US", {
+	month: "short",
+	year: "numeric",
+	timeZone: "UTC",
+});
+
+/**
+ * The anchor as the timeline's date stepper names it -- "Sep 23, 2026",
+ * "Week 39, 2026", "Sep 2026", "2026" -- shorter than the browser's own picker
+ * text ("09/23/2026", "September 2026"). `compact` squeezes the one word that
+ * can give, "Week" to "Wk", for a phone.
+ */
+export function shortAnchorLabel(
+	period: Exclude<TimelinePeriod, "all">,
+	anchor: TimelineAnchor,
+	{ compact = false }: { compact?: boolean } = {},
+): string {
+	switch (period) {
+		case "day":
+			return SHORT_DAY.format(utcDate(anchor));
+		case "week":
+			return `${compact ? "Wk" : "Week"} ${Number(anchor.slice(6))}, ${anchor.slice(0, 4)}`;
+		case "month":
+			return SHORT_MONTH.format(utcDate(`${anchor}-01`));
+		case "year":
+			return anchor;
+	}
+}
+
 /** The anchor for the period containing `day`, used to snap between periods. */
 export function anchorForDay(
 	period: TimelinePeriod,

@@ -1,5 +1,5 @@
 import { createFileRoute, stripSearchParams } from "@tanstack/react-router";
-import { Bird, Grid3x3, LayoutDashboard } from "lucide-react";
+import { Bird, LayoutDashboard, Rows3 } from "lucide-react";
 import { z } from "zod";
 import { DetectionsByHourRoseCard } from "~/components/detections-by-hour-rose-card.tsx";
 import { EmptyState } from "~/components/empty-state.tsx";
@@ -131,7 +131,7 @@ function Timeline() {
 
 	return (
 		<TooltipProvider>
-			<div className="page-wrap space-y-4 py-4">
+			<div className="page-wrap space-y-(--page-gap) py-4">
 				<TimelineHeader
 					data={data}
 					period={period}
@@ -259,8 +259,14 @@ function WindowSummary({ rows }: { rows: TimelineRow[] }) {
 	const detections = rows.reduce((sum, row) => sum + row.totalDetections, 0);
 
 	return (
-		<div className="flex min-w-0 items-center gap-2.5">
-			<span className="h-4 w-px shrink-0 bg-[var(--line)]" aria-hidden="true" />
+		// Under 400px there's no room beside the kicker and the view switcher, so
+		// the figures take their own line beneath both (the cards' header wraps
+		// there), dropping the divider that only made sense beside the kicker.
+		<div className="flex min-w-0 items-center gap-2.5 max-[400px]:order-last max-[400px]:basis-full">
+			<span
+				className="h-4 w-px shrink-0 bg-[var(--line)] max-[400px]:hidden"
+				aria-hidden="true"
+			/>
 			{/* Lifted 1.5px so its ink centres on the kicker's. The boxes already
 			    centre, but Georgia's lowercase and old-style figures sit low in theirs
 			    next to the kicker's all-caps, so box-centred reads as dropped. */}
@@ -360,7 +366,9 @@ function TimelineCards({
 	// On the widest screens the body sits on the left at one fixed width in both
 	// views, so the toggle never shifts the column beside it: the window's
 	// detections by hour, then Highlights, stacked. Below that there isn't room
-	// for the column, so the body fills the row on its own.
+	// for the column beside the body, so the same two cards follow it
+	// underneath, side by side and matched in height, from md (768px, roughly
+	// 360px each) up. Only on a phone do they stack.
 	return (
 		<div className="min-[1800px]:flex min-[1800px]:items-start min-[1800px]:gap-4">
 			{body}
@@ -368,7 +376,7 @@ function TimelineCards({
 			    line in each card, so the column holds its place instead of the page jumping when the
 			    period steps from a window that heard something to one that
 			    didn't. */}
-			<div className="hidden min-w-0 flex-1 flex-col gap-4 min-[1800px]:flex">
+			<div className="mt-(--page-gap) grid min-w-0 gap-(--page-gap) md:max-[1799px]:grid-cols-2 min-[1800px]:mt-0 min-[1800px]:flex-1">
 				<DetectionsByHourRoseCard
 					activity={hourActivity}
 					title="Detections by hour"
@@ -390,8 +398,9 @@ function TimelineCards({
 // leave, so this width is really the room given to bird names -- enough that
 // even long ones and an all-time count of eight or nine characters fit. The
 // species grid takes the same width so the view toggle leaves the left card,
-// and the column beside it, in place. That column only appears from 1800px:
-// below that, what's left beside a 72rem card is too narrow to hold anything.
+// and the column beside it, in place. That column only sits beside it from
+// 1800px: below that, what's left beside a 72rem card is too narrow to hold
+// anything, so its cards drop beneath the body instead.
 const BODY_CARD_WIDTH = "min-w-0 min-[1800px]:w-[72rem] min-[1800px]:flex-none";
 
 /**
@@ -407,15 +416,15 @@ const VIEW_META: Record<
 	TimelineView,
 	{
 		label: string;
-		/** A grid of cells for the heat map, uneven panels for the species
-		    tiles. Both glyphs fill the same 18 of lucide's 24 units, so they share
-		    one size. */
+		/** Stacked rows for the one-bird-per-row view, uneven panels for the
+		    species tiles. Both glyphs fill the same 18 of lucide's 24 units, so
+		    they share one size. */
 		icon: React.ComponentType<{ className?: string }>;
 	}
 > = {
 	hours: {
-		label: "Heatmap",
-		icon: Grid3x3,
+		label: "Rows",
+		icon: Rows3,
 	},
 	grid: {
 		label: "Grid",
@@ -425,12 +434,17 @@ const VIEW_META: Record<
 
 /**
  * Picks which body the window draws -- set against the card's title, top-right.
- * One bordered pill split into two equal tabs, each an icon and its word, with
- * a hairline between them. The pill's rounding is clipped from outside, so
+ * One bordered pill split into two tabs, each only as wide as its icon and
+ * word, with a hairline between them. The pill's rounding is clipped from outside, so
  * only its two ends round: where the tabs meet they sit flush, square against
  * the divider. The active tab takes the moss fill with paper text -- the same
  * on state as the period toggle above the card -- so every "which view"
  * control on the page marks its choice the same way.
+ *
+ * Below 520px the words go (kept for screen readers) and each tab is just its
+ * icon, so the pill shrinks to leave the kicker's figures room. Not sooner:
+ * the kicker, the widest figures ("139,372 detections · 50 species", all
+ * time) and the labelled pill still share one line down to about 513px.
  */
 function ViewToggle({
 	view,
@@ -440,7 +454,7 @@ function ViewToggle({
 	onViewChange: (next: TimelineView) => void;
 }) {
 	return (
-		<div className="grid w-52 shrink-0 grid-cols-2 overflow-hidden rounded-full border border-[var(--line)] bg-card">
+		<div className="flex shrink-0 overflow-hidden rounded-full border border-[var(--line)] bg-card">
 			{TIMELINE_VIEWS.map((value) => {
 				const { label, icon: Icon } = VIEW_META[value];
 				const active = value === view;
@@ -451,14 +465,14 @@ function ViewToggle({
 						aria-pressed={active}
 						onClick={() => !active && onViewChange(value)}
 						className={cn(
-							"flex h-6 items-center justify-center gap-1.5 whitespace-nowrap px-3 font-medium text-xs transition-colors [&+&]:border-[var(--line)] [&+&]:border-l",
+							"flex h-6 items-center justify-center gap-1.5 whitespace-nowrap px-3 font-medium text-xs transition-colors max-[520px]:px-2.5 [&+&]:border-[var(--line)] [&+&]:border-l",
 							active
 								? "bg-primary text-primary-foreground"
 								: "text-muted-foreground hover:bg-[var(--meadow)] hover:text-foreground",
 						)}
 					>
 						<Icon className="size-[15.5px] shrink-0" aria-hidden="true" />
-						{label}
+						<span className="max-[520px]:sr-only">{label}</span>
 					</button>
 				);
 			})}

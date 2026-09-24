@@ -67,22 +67,26 @@ export function SpeciesGrid({
 				className={`feature-card rounded-md p-4 ${className}`}
 			>
 				<div
-					className={`flex items-center justify-between gap-3 ${species.length === 0 && !action ? "" : "mb-4"}`}
+					className={`flex items-center justify-between gap-3 max-[400px]:flex-wrap max-[400px]:gap-y-2 ${species.length === 0 && !action ? "" : "mb-4"}`}
 				>
 					{/* "Activity" -- identical to the heat-map view's kicker -- so the
 					    summary beside it stays put when the view toggle swaps the cards.
 					    Not "Species": the summary already says "N species" beside it. */}
+					{/* Under 400px this wrapper steps aside (`contents`) so the kicker,
+					    the summary and the switcher wrap as one row: the kicker and the
+					    switcher on the first line, the summary on its own below them.
+					    See WindowSummary on the timeline page. */}
 					{/* A fixed line height, the summary's own: a quiet window has no
 					    summary, and without this the row would shrink by its 3px and
 					    the switcher centred on it would jump. */}
-					<div className="flex h-5 min-w-0 items-center gap-3">
+					<div className="flex h-5 min-w-0 items-center gap-3 max-[400px]:contents">
 						<div className="island-kicker shrink-0">Activity</div>
 						{summary}
 					</div>
-					{/* The switcher is taller than the kicker line; pulled out of the row's
-					    height so the kicker sits at the card's top padding, level with
-					    every other card's title, rather than centred lower against it. */}
-					{action ? <div className="-my-1.5 shrink-0">{action}</div> : null}
+					{/* The switcher sits inside the content box, flush with its top and
+					    right edges -- never pulled out into the card's padding. The row
+					    takes its height and the kicker centres against it. */}
+					{action ? <div className="shrink-0">{action}</div> : null}
 				</div>
 
 				{species.length === 0 ? (

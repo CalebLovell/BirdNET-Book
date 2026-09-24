@@ -23,7 +23,7 @@ export function LockedPage({
 	description: string;
 }) {
 	return (
-		<div className="page-wrap space-y-4 py-4">
+		<div className="page-wrap space-y-(--page-gap) py-4">
 			<PageHeaderCard title={title} description={description} />
 			<UnlockGate />
 		</div>

@@ -28,7 +28,7 @@ export function StatusPage({
 	children: ReactNode;
 }) {
 	return (
-		<div className="page-wrap space-y-4 py-4">
+		<div className="page-wrap space-y-(--page-gap) py-4">
 			<PageHeaderCard title={section} description={sectionDescription} />
 			{/* h2: the masthead above is already this page's h1. */}
 			<PageStatus tone={tone} title={title} heading="h2" actions={actions}>

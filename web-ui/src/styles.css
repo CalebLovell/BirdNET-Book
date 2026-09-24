@@ -181,14 +181,44 @@ code {
   color: var(--foreground);
 }
 
+/* The page's standard spacing: the gutter around it and the gap between its
+   cards. One value so the two always move together -- halved on the smallest
+   phones (under 400px), so the cards get the width back. Page-level layouts
+   use it as `space-y-(--page-gap)` / `gap-(--page-gap)`. */
+:root {
+  --page-gap: 1rem;
+}
+@media (width < 400px) {
+  :root {
+    --page-gap: 0.5rem;
+  }
+}
+
 /* Content fills whatever the sidebar leaves rather than centring in a capped
    column: the sidebar is pinned to the viewport's left edge, so a max-width
-   here would strand content in the middle of the remaining space. The 1rem
-   inline padding is what makes the gap from the sidebar to the first card
-   match the gap from the last card to the right edge. */
+   here would strand content in the middle of the remaining space. The inline
+   padding (the page gap) is what makes the gap from the sidebar to the first
+   card match the gap from the last card to the right edge. */
 .page-wrap {
   width: 100%;
-  padding-inline: 1rem;
+  padding-inline: var(--page-gap);
+}
+
+/* Top and bottom come from each page's own `py-4` (or `pb-4`) utility, and a
+   card's inner padding from its own standard `p-4`; on the smallest phones all
+   of them follow the page gap down with the sides, so the page, the gaps
+   between cards and the cards' own edges stay one measure. This block is
+   unlayered, so it outranks those utilities without touching every page. */
+@media (width < 400px) {
+  .page-wrap.py-4 {
+    padding-block: var(--page-gap);
+  }
+  .page-wrap.pb-4 {
+    padding-bottom: var(--page-gap);
+  }
+  .feature-card.p-4 {
+    padding: var(--page-gap);
+  }
 }
 
 .display-title {

@@ -325,7 +325,7 @@ export function SpeciesControlPage({
 		// Fills `main` exactly and never scrolls itself, so the header, toolbar and
 		// the card's pager hold their place and only the rows move. `h-full`
 		// measures against `main`, which the shell already bounds to the viewport.
-		<div className="page-wrap flex h-full min-h-0 flex-col gap-4 py-4">
+		<div className="page-wrap flex h-full min-h-0 flex-col gap-(--page-gap) py-4">
 			<div className="@container shrink-0 space-y-4">
 				<PageHeaderCard
 					title={SPECIES_CONTROL_PAGE_TITLE}

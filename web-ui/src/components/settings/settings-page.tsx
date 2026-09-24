@@ -62,7 +62,7 @@ export function SettingsPage({
 	]);
 
 	return (
-		<div className="page-wrap space-y-4 py-4">
+		<div className="page-wrap space-y-(--page-gap) py-4">
 			<PageHeaderCard
 				title={SETTINGS_PAGE_TITLE}
 				description={SETTINGS_PAGE_DESCRIPTION}

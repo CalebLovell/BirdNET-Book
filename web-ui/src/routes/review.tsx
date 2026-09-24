@@ -93,7 +93,7 @@ function ReviewContent({
 		}
 	}
 	return (
-		<div className="page-wrap space-y-4 py-4">
+		<div className="page-wrap space-y-(--page-gap) py-4">
 			<PageHeaderCard
 				title={REVIEW_PAGE_TITLE}
 				description={`Species the station has heard fewer than ${page.rareSpeciesMax} times, on recordings BirdNET scored below ${formatConfidence(CONFIDENT_MIN)}.`}

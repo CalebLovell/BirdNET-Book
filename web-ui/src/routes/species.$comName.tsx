@@ -195,7 +195,7 @@ function UndetectedSpecies({
 	const illustration = illustrationUrlFor(sciName, "flight");
 
 	return (
-		<div className="page-wrap space-y-4 py-4">
+		<div className="page-wrap space-y-(--page-gap) py-4">
 			<PageHeaderCard
 				title={SPECIES_SECTION}
 				description={SPECIES_SECTION_DESCRIPTION}
