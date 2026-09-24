@@ -100,7 +100,7 @@ export function DetectionsByHourRoseCard({
 		>
 			<div className="island-kicker">{title}</div>
 
-			<div className="mt-4 flex min-h-0 flex-1 items-center justify-center">
+			<div className="mt-(--page-gap) flex min-h-0 flex-1 items-center justify-center">
 				<DetectionsByHourRose
 					activity={activity}
 					className="h-full max-h-72 w-full"

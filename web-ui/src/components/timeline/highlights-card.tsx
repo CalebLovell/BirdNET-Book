@@ -198,7 +198,7 @@ function Note({
 	children: ReactNode;
 }) {
 	return (
-		<li className="flex items-baseline gap-2.5 border-[var(--line)] border-t py-2.5 text-[13px] leading-normal first:border-t-0 first:pt-1.5 last:pb-0">
+		<li className="flex items-baseline gap-2.5 border-[var(--line)] border-t py-2.5 text-[13px] leading-normal first:border-t-0 first:pt-1.5 last:pb-0 max-[400px]:gap-2">
 			<Icon
 				className="size-3.5 shrink-0 translate-y-0.5 text-muted-foreground"
 				aria-hidden="true"

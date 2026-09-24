@@ -52,7 +52,7 @@ export function PageHeaderCard({
 			<div className="feature-card rounded-md p-4">
 				{/* Under 400px the action drops beneath the description instead of
 				    squeezing the title and description into a narrow column beside it. */}
-				<div className="flex items-start justify-between gap-3 max-[400px]:flex-col">
+				<div className="flex items-start justify-between gap-3 max-[400px]:flex-col max-[400px]:gap-2">
 					<div className="min-w-0">
 						<h1 className="display-title font-bold text-xl leading-tight">
 							{title}

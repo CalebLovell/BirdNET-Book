@@ -50,7 +50,7 @@ const HOURS = Array.from({ length: 24 }, (_, hour) => hour);
 const ROW_LAYOUT = "flex items-center";
 
 const LABEL_LAYOUT =
-	"grid min-w-0 flex-1 grid-cols-[minmax(0,1fr)_auto] items-center gap-4 @min-[56rem]/card:pr-6";
+	"grid min-w-0 flex-1 grid-cols-[minmax(0,1fr)_auto] items-center gap-4 max-[400px]:gap-2 @min-[56rem]/card:pr-6";
 
 const HOURS_LAYOUT = "hidden flex-none @min-[56rem]/card:block";
 
@@ -126,7 +126,7 @@ export function SpeciesByHourCard({
 				className={`feature-card @container/card rounded-md p-4 ${className}`}
 			>
 				<div
-					className={`flex items-center justify-between gap-3 max-[400px]:flex-wrap max-[400px]:gap-y-2 ${isEmpty && !action ? "" : "mb-4"}`}
+					className={`flex items-center justify-between gap-3 max-[400px]:flex-wrap max-[400px]:gap-y-2 ${isEmpty && !action ? "" : "mb-(--page-gap)"}`}
 				>
 					{/* "Activity" -- identical to the grid view's kicker -- so the summary
 					    beside it sits at the same x in both bodies and doesn't jump when

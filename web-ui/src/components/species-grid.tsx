@@ -67,7 +67,7 @@ export function SpeciesGrid({
 				className={`feature-card rounded-md p-4 ${className}`}
 			>
 				<div
-					className={`flex items-center justify-between gap-3 max-[400px]:flex-wrap max-[400px]:gap-y-2 ${species.length === 0 && !action ? "" : "mb-4"}`}
+					className={`flex items-center justify-between gap-3 max-[400px]:flex-wrap max-[400px]:gap-y-2 ${species.length === 0 && !action ? "" : "mb-(--page-gap)"}`}
 				>
 					{/* "Activity" -- identical to the heat-map view's kicker -- so the
 					    summary beside it stays put when the view toggle swaps the cards.
@@ -115,8 +115,8 @@ function SpeciesGridRow({
 	newLabel: string | null;
 }) {
 	return (
-		<li className="flex min-h-16 min-w-0 flex-col gap-2 rounded-md bg-[var(--meadow)] px-3 py-2">
-			<div className="flex min-w-0 items-center gap-3">
+		<li className="flex min-h-16 min-w-0 flex-col gap-2 rounded-md bg-[var(--meadow)] px-3 py-2 max-[400px]:px-2">
+			<div className="flex min-w-0 items-center gap-3 max-[400px]:gap-2">
 				<SpeciesThumbnail imageUrl={item.imageUrl} comName={item.comName} />
 
 				{/* LEFT: who the bird is -- common name over its scientific name. */}

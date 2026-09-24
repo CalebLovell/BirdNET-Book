@@ -7,7 +7,7 @@ import { Bird } from "lucide-react";
  * one pads out to match rather than drifting out of alignment down the column.
  */
 export const LIST_ROW =
-	"flex min-h-18 items-center gap-3 rounded-md px-3 py-2 odd:bg-[var(--meadow)]";
+	"flex min-h-18 items-center gap-3 rounded-md px-3 py-2 odd:bg-[var(--meadow)] max-[400px]:gap-2 max-[400px]:px-2";
 
 export function SpeciesThumbnail({
 	imageUrl,
