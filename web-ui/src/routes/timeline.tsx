@@ -326,11 +326,14 @@ function TimelineCards({
 		hourCounts: row.hourCounts,
 	}));
 
-	const toggle = <ViewToggle view={view} onViewChange={onViewChange} />;
-
 	// A quiet window (no rows) shows the empty card without a "0 detections · 0
-	// species" line reading back the emptiness the card already states.
-	const summary = rows.length > 0 ? <WindowSummary rows={rows} /> : undefined;
+	// species" line reading back the emptiness the card already states, and
+	// without the view toggle: there's nothing to draw either way.
+	const hasRows = rows.length > 0;
+	const toggle = hasRows ? (
+		<ViewToggle view={view} onViewChange={onViewChange} />
+	) : undefined;
+	const summary = hasRows ? <WindowSummary rows={rows} /> : undefined;
 
 	// The window's day for the side column's rose: every species summed, hour by
 	// hour.
