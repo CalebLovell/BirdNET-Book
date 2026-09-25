@@ -67,7 +67,7 @@ export function SpeciesGrid({
 				className={`feature-card rounded-md p-4 ${className}`}
 			>
 				<div
-					className={`flex items-center justify-between gap-3 max-[400px]:flex-wrap max-[400px]:gap-y-2 ${species.length === 0 && !action ? "" : "mb-(--page-gap)"}`}
+					className={`flex items-start justify-between gap-3 max-[400px]:flex-wrap max-[400px]:gap-y-2 ${species.length === 0 && !action ? "" : "mb-(--page-gap)"}`}
 				>
 					{/* "Activity" -- identical to the heat-map view's kicker -- so the
 					    summary beside it stays put when the view toggle swaps the cards.
@@ -76,16 +76,17 @@ export function SpeciesGrid({
 					    the summary and the switcher wrap as one row: the kicker and the
 					    switcher on the first line, the summary on its own below them.
 					    See WindowSummary on the timeline page. */}
-					{/* A fixed line height, the summary's own: a quiet window has no
-					    summary, and without this the row would shrink by its 3px and
-					    the switcher centred on it would jump. */}
-					<div className="flex h-5 min-w-0 items-center gap-3 max-[400px]:contents">
+					{/* Exactly the kicker's own line box, pinned to the top of the row, so
+					    the kicker sits where every other card's title does -- the taller
+					    switcher beside it can't push it down. The summary centres on it and
+					    overhangs by a hair; a quiet window with none doesn't move it. */}
+					<div className="flex h-[calc(0.69rem*1.5)] min-w-0 items-center gap-3 max-[400px]:contents">
 						<div className="island-kicker shrink-0">Activity</div>
 						{summary}
 					</div>
 					{/* The switcher sits inside the content box, flush with its top and
-					    right edges -- never pulled out into the card's padding. The row
-					    takes its height and the kicker centres against it. */}
+					    right edges -- never pulled out into the card's padding. It hangs a
+					    little below the kicker's line rather than lift the kicker off it. */}
 					{action ? <div className="shrink-0">{action}</div> : null}
 				</div>
 
