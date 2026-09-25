@@ -8,8 +8,6 @@ import { useServerFn } from "@tanstack/react-start";
 import {
 	CalendarDays,
 	ChartNoAxesColumnIncreasing,
-	ChevronLeft,
-	ChevronRight,
 	Clock3,
 	Gauge,
 	Sunrise,
@@ -34,7 +32,7 @@ import {
 } from "~/components/species-hero-card.tsx";
 import { StatusPage } from "~/components/status-page.tsx";
 import { Button } from "~/components/ui/button.tsx";
-import { Input } from "~/components/ui/input.tsx";
+import { PageStepper } from "~/components/ui/page-stepper.tsx";
 import {
 	Tooltip,
 	TooltipContent,
@@ -51,6 +49,7 @@ import {
 	getSpeciesDetail,
 	getSpeciesVisits,
 	type SpeciesDetail,
+	VISITS_PAGE_SIZE,
 	type VisitPage,
 	visitPageCount,
 } from "~/lib/species-detail.ts";
@@ -627,6 +626,11 @@ function VisitLogCard({
 
 	const loading = !current;
 	const visits = shown.visits;
+	// Each row's place in the bird's whole history, 1 = newest, so the number
+	// keeps counting across pages. The column is sized to the widest number
+	// on this page, so the dates line up without a gap for digits never shown.
+	const firstIndex = (shown.page - 1) * VISITS_PAGE_SIZE + 1;
+	const indexWidth = `${(firstIndex + visits.length - 1).toLocaleString().length}ch`;
 
 	return (
 		<section
@@ -636,33 +640,14 @@ function VisitLogCard({
 			// in the right-hand column at lg, and the whole content width between.
 			className="@container feature-card flex min-h-[420px] flex-col rounded-md p-4"
 		>
-			<div className="flex flex-wrap items-center justify-between gap-2">
+			{/* The footer's twin: the same full-width hairline and the same 45px
+			    band, rule included, so the log is bookended evenly. */}
+			<div className="-mx-(--page-gap) -mt-(--page-gap) flex min-h-[45px] flex-wrap items-center justify-between gap-2 border-b px-(--page-gap)">
 				<div className="island-kicker">Visit log</div>
-				{pageCount > 1 ? (
-					<div className="flex items-center gap-2">
-						<Button
-							variant="outline"
-							size="icon-xs"
-							disabled={page <= 1}
-							aria-label="Newer visits"
-							onClick={() => onPageChange(page - 1)}
-						>
-							<ChevronLeft />
-						</Button>
-						<PageField
-							page={page}
-							pageCount={pageCount}
-							onPageChange={onPageChange}
-						/>
-						<Button
-							variant="outline"
-							size="icon-xs"
-							disabled={page >= pageCount}
-							aria-label="Older visits"
-							onClick={() => onPageChange(page + 1)}
-						>
-							<ChevronRight />
-						</Button>
+				{totalVisits > 0 ? (
+					<div className="tabular-data text-muted-foreground text-xs">
+						{totalVisits.toLocaleString()}{" "}
+						{totalVisits === 1 ? "visit" : "visits"}
 					</div>
 				) : null}
 			</div>
@@ -672,9 +657,9 @@ function VisitLogCard({
 			) : (
 				<ul
 					aria-busy={loading}
-					className={`mt-(--page-gap) space-y-1 transition-opacity ${loading ? "opacity-50" : ""}`}
+					className={`-mx-(--page-gap) mb-3 space-y-1 transition-opacity ${loading ? "opacity-50" : ""}`}
 				>
-					{visits.map((visit) => {
+					{visits.map((visit, i) => {
 						const date = new Date(`${visit.date}T00:00:00`);
 						const dateLabel = date.toLocaleDateString([], {
 							month: "long",
@@ -694,8 +679,21 @@ function VisitLogCard({
 								// a labelled button side by side, so the time and age tuck
 								// under the date and the button drops its label. The row
 								// keeps its height either way: two lines on both layouts.
-								className="flex items-center @min-[26rem]:gap-3 gap-2 rounded-md @min-[26rem]:px-3 px-2 py-1.75 odd:bg-[var(--meadow)] even:bg-transparent"
+								//
+								// The zebra bands run out to the card's edges (the list
+								// bleeds through the card's padding), and the row's own
+								// padding hands that page gap back (the card's own padding, which
+								// halves on the smallest phones) so the content lines up with
+								// the header and footer and never pokes past the card's border.
+								className="flex items-center @min-[26rem]:gap-3 gap-2 px-(--page-gap) py-1.75 odd:bg-[var(--meadow)] even:bg-transparent"
 							>
+								<span
+									aria-hidden
+									style={{ minWidth: indexWidth }}
+									className="tabular-data shrink-0 font-bold text-foreground text-xs"
+								>
+									{(firstIndex + i).toLocaleString()}
+								</span>
 								<div className="flex min-w-0 flex-1 items-center gap-1.5 text-sm">
 									<Clock3 className="size-3.5 shrink-0 text-[var(--bark)]" />
 									<div className="min-w-0">
@@ -732,57 +730,21 @@ function VisitLogCard({
 					})}
 				</ul>
 			)}
+
+			{/* The detections table's pager, in a footer like the table's: a
+			    hairline across the card's full width, the stepper held right, and
+			    `mt-auto` pinning it to the card's bottom on a short last page. */}
+			{pageCount > 1 ? (
+				<div className="-mx-(--page-gap) mt-auto -mb-(--page-gap) flex shrink-0 items-center border-t px-(--page-gap) py-2">
+					<PageStepper
+						className="ml-auto"
+						label="Visit log pages"
+						page={page}
+						pageCount={pageCount}
+						onPageChange={onPageChange}
+					/>
+				</div>
+			) : null}
 		</section>
-	);
-}
-
-/**
- * "[ 12 ] / 1066": type a page and press Enter (or leave the field) to jump
- * there. Out-of-range and non-numeric entries snap to the nearest real page;
- * Escape puts the current page back.
- */
-function PageField({
-	page,
-	pageCount,
-	onPageChange,
-}: {
-	page: number;
-	pageCount: number;
-	onPageChange: (page: number) => void;
-}) {
-	const [draft, setDraft] = useState(String(page));
-	useEffect(() => setDraft(String(page)), [page]);
-
-	const commit = () => {
-		const parsed = Number.parseInt(draft, 10);
-		const next = Number.isNaN(parsed)
-			? page
-			: Math.min(Math.max(parsed, 1), pageCount);
-		setDraft(String(next));
-		if (next !== page) onPageChange(next);
-	};
-	const digits = String(pageCount).length;
-
-	return (
-		<div className="flex items-center gap-1.5 text-muted-foreground text-sm">
-			<Input
-				type="text"
-				inputMode="numeric"
-				aria-label={`Visit log page, of ${pageCount}`}
-				value={draft}
-				onChange={(event) => setDraft(event.target.value.replace(/D/g, ""))}
-				onBlur={commit}
-				onKeyDown={(event) => {
-					if (event.key === "Enter") commit();
-					if (event.key === "Escape") setDraft(String(page));
-				}}
-				onFocus={(event) => event.target.select()}
-				// Wide enough for the bird's largest page number, so it never
-				// clips and paging never nudges the arrows.
-				className="tabular-data h-6 px-1.5 text-center text-foreground"
-				style={{ width: `calc(${digits}ch + 0.75rem + 2px)` }}
-			/>
-			<span className="tabular-data">/ {pageCount}</span>
-		</div>
 	);
 }
