@@ -15,6 +15,7 @@ import { getLearnRound } from "~/lib/learn.ts";
 import { LEARN_POOLS, type LearnPool } from "~/lib/learn-pools.ts";
 import { CHOICES_PER_QUESTION } from "~/lib/learn-round.ts";
 import { pageTitle } from "~/lib/page-title.ts";
+import { useHeldRound } from "~/lib/use-held-round.ts";
 
 const DEFAULT_POOL: LearnPool = "today";
 
@@ -34,13 +35,15 @@ export const Route = createFileRoute("/learn")({
 });
 
 function Learn() {
-	const { round, hasAnyDetections } = Route.useLoaderData();
+	const { round: loadedRound, hasAnyDetections } = Route.useLoaderData();
 	const { pool } = Route.useSearch();
 	const navigate = Route.useNavigate();
 	const router = useRouter();
 	// The loader hands back a freshly randomized round every time it runs, so
 	// "play again" is just an invalidation -- and the new round's id re-keys the
-	// game below, which is what clears the finished round's state.
+	// game below, which is what clears the finished round's state. Reruns nobody
+	// asked for are held off, so they can't reshuffle a round mid-question.
+	const { round, requestNextRound } = useHeldRound(loadedRound, pool);
 	const isLoading = useRouterState({ select: (state) => state.isLoading });
 
 	return (
@@ -75,7 +78,10 @@ function Learn() {
 					<LearnGame
 						key={round.id}
 						round={round}
-						onPlayAgain={() => router.invalidate()}
+						onPlayAgain={() => {
+							requestNextRound();
+							router.invalidate();
+						}}
 						isLoadingNextRound={isLoading}
 					/>
 				)}
