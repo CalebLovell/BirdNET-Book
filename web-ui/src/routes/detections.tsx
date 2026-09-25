@@ -5,7 +5,7 @@ import {
 } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import type { RowSelectionState } from "@tanstack/react-table";
-import { Bird, CircleAlert, Trash2 } from "lucide-react";
+import { Bird, CircleAlert } from "lucide-react";
 import { useState } from "react";
 import { DeleteDetectionsDialog } from "~/components/detections/delete-detections-dialog.tsx";
 import {
@@ -14,7 +14,6 @@ import {
 } from "~/components/detections/detections-table.tsx";
 import { EmptyNote, EmptyState } from "~/components/empty-state.tsx";
 import { PageHeaderCard } from "~/components/page-header-card.tsx";
-import { Button } from "~/components/ui/button.tsx";
 import {
 	hasActiveFilters,
 	normalizeDetectionWorkspaceSearch,
@@ -101,7 +100,7 @@ function Detections() {
 		// move. `h-full` measures against `main`, which the shell has already
 		// bounded to the viewport.
 		<div className="page-wrap flex h-full min-h-0 flex-col gap-(--page-gap) py-4">
-			<div className="shrink-0 space-y-4">
+			<div className="shrink-0 space-y-(--page-gap)">
 				<PageHeaderCard
 					title="Detections"
 					description="Browse, filter, and manage every individual detection."
@@ -114,22 +113,6 @@ function Detections() {
 							setRowSelection({});
 							navigate({ search: nextSearch, replace: true });
 						}}
-						// Delete moved here from the table's old header strip -- with rows
-						// present and the station unlocked. Nothing selectable while empty,
-						// so it would only ever sit disabled there.
-						actions={
-							!isEmpty && canDelete ? (
-								<Button
-									disabled={selectedCount === 0}
-									size="xs"
-									variant={selectedCount > 0 ? "destructive" : "outline"}
-									onClick={() => setDeleteOpen(true)}
-								>
-									<Trash2 />
-									{selectedCount > 0 ? `Delete ${selectedCount}` : "Delete"}
-								</Button>
-							) : undefined
-						}
 					/>
 				)}
 
@@ -161,10 +144,13 @@ function Detections() {
 			) : (
 				/* Takes the leftover height when there are rows to scroll. An empty
 				   filter result has nothing to scroll, so it keeps its natural size
-				   rather than stretching a one-line message down the whole page. */
+				   rather than stretching a one-line message down the whole page.
+				   `overflow-hidden` clips the table's header band, which runs out to
+				   the card's top-left edge, to the card's rounded corner -- square, it
+				   painted over the border's curve there. */
 				<section
 					aria-label="Detections"
-					className={`feature-card flex min-h-0 flex-col rounded-md p-4 pt-2 pr-3 ${isEmpty ? "shrink-0" : "flex-1"}`}
+					className={`feature-card flex min-h-0 flex-col overflow-hidden rounded-md p-(--page-gap) [--card-edge:min(var(--page-gap),0.75rem)] ${isEmpty ? "shrink-0 pt-0" : "flex-1 pr-(--card-edge) pb-0"}`}
 				>
 					{/* No header strip: the "All detections" kicker is gone and Delete
 					    moved up into the filter row, so the table starts at the top of
@@ -181,6 +167,7 @@ function Detections() {
 							rowSelection={rowSelection}
 							onRowSelectionChange={setRowSelection}
 							canDelete={canDelete}
+							onDeleteSelected={() => setDeleteOpen(true)}
 						/>
 					)}
 				</section>

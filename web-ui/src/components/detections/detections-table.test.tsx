@@ -43,6 +43,7 @@ async function renderTableWithDetection(canDelete = true) {
 				rowSelection={{}}
 				onSearchChange={() => {}}
 				onRowSelectionChange={() => {}}
+				onDeleteSelected={() => {}}
 				canDelete={canDelete}
 			/>
 		),
@@ -63,6 +64,7 @@ test("renders every detections column header semibold", () => {
 			rowSelection={{}}
 			onSearchChange={() => {}}
 			onRowSelectionChange={() => {}}
+			onDeleteSelected={() => {}}
 			canDelete
 		/>,
 	);
@@ -110,10 +112,15 @@ test("keeps the complete table for containers wide enough to fit it", () => {
 			rowSelection={{}}
 			onSearchChange={() => {}}
 			onRowSelectionChange={() => {}}
+			onDeleteSelected={() => {}}
 			canDelete
 		/>,
 	);
-	const desktopTable = markup.match(/<table[\s\S]*<\/table>/)?.[0] ?? "";
+	// The narrow sort menu repeats the column names as its options; leave it
+	// out so only the column headings are read.
+	const desktopTable = (
+		markup.match(/<table[\s\S]*<\/table>/)?.[0] ?? ""
+	).replace(/<select[\s\S]*?<\/select>/g, "");
 
 	const order = [
 		...desktopTable.matchAll(
@@ -128,50 +135,78 @@ test("keeps the complete table for containers wide enough to fit it", () => {
 		"Recording",
 	]);
 
-	// The desktop table remains complete; responsive behavior switches the
-	// entire presentation rather than dropping individual columns.
-	assert.doesNotMatch(
-		desktopTable,
-		/data-slot="table-(head|cell)"[^>]*@min-\[/,
-	);
-	assert.doesNotMatch(
-		desktopTable,
-		/data-slot="table-(head|cell)"[^>]*class="hidden/,
-	);
+	// Narrow, the headings give way to the sort menu, and the scientific name
+	// waits for the widest card; the checkbox heading never goes.
+	const hiddenUntil = [
+		...desktopTable.matchAll(/<th[^>]*class="([^"]*)"[^>]*>([\s\S]*?)<\/th>/g),
+	]
+		.filter((match) => /(?:^|\s)hidden(?:\s|$)/.test(match[1]))
+		.map((match) => [
+			match[2].match(
+				/>(Species|Scientific name|Recorded|Confidence|Recording)</,
+			)?.[1],
+			match[1].match(/@min-\[(\d+)rem\]:block/)?.[1],
+		]);
+	assert.deepEqual(hiddenUntil, [
+		["Species", "36"],
+		["Scientific name", "54"],
+		["Recorded", "36"],
+		["Confidence", "36"],
+		["Recording", "36"],
+	]);
+	assert.match(desktopTable, /<th[^>]*class="[^"]*@min-\[36rem\]:hidden/);
 
 	// Only the two ends are pinned, by min-width so they hold when the table
-	// overflows: the shared selection column and Recording. The columns between
-	// divide up the rest under auto layout, so none carries a width, and the
-	// table itself is not `table-fixed`.
+	// overflows: the selection column, sized off the card's padding, and
+	// Recording. The columns between divide up the rest, so none carries a
+	// width, and the table itself is not `table-fixed`.
 	const pinned = [
 		...desktopTable.matchAll(/data-slot="table-head" class="([^"]*)"/g),
 	]
-		.map((match) => match[1].match(/\bmin-w-\S+/)?.[0] ?? null)
+		.map(
+			(match) => match[1].match(/(?:^|\s)(?:@\S+:)?(min-w-\S+)/)?.[1] ?? null,
+		)
 		.filter(Boolean);
-	assert.deepEqual(pinned, ["min-w-10", "min-w-32"]);
+	assert.deepEqual(pinned, [
+		"min-w-[calc(var(--page-gap)*1.5+0.875rem)]",
+		"min-w-32",
+	]);
 	assert.doesNotMatch(desktopTable, /data-slot="table"[^>]*table-fixed/);
 });
 
-test("renders every detection field and action in a vertical small-screen list", async () => {
+test("renders the one table at every width, with no separate small-screen list", async () => {
 	const markup = await renderTableWithDetection();
 
-	// `lg:`, the width the sidebar leaves at, so the two changes land together.
-	assert.match(
+	assert.doesNotMatch(markup, /data-slot="detections-list"/);
+	// Narrow, the header band is a sort menu over every sortable column.
+	assert.match(markup, /aria-label="Sort detections by"/);
+	assert.doesNotMatch(
 		markup,
-		/data-slot="detections-list" class="[^"]*lg:hidden[^"]*"/,
-	);
-	assert.match(
-		markup,
-		/data-slot="table-container" class="[^"]*hidden[^"]*lg:block[^"]*"/,
+		/data-slot="table-container" class="(?:[^"]*\s)?hidden[\s"]/,
 	);
 	assert.match(markup, /aria-label="Select Northern Cardinal"/);
 	assert.match(markup, />Northern Cardinal</);
 	assert.match(markup, />Cardinalis cardinalis</);
-	assert.match(markup, />Scientific name</);
-	assert.match(markup, />Recorded</);
-	assert.match(markup, />Confidence</);
 	assert.match(markup, />94%|>94</);
-	assert.match(markup, />Recording</);
-	assert.match(markup, /aria-label="Sort detections by"/);
-	assert.match(markup, /aria-label="Sort detections ascending"/);
+});
+
+test("the footer offers Delete only once rows are selected", () => {
+	const render = (rowSelection: Record<string, boolean>, canDelete = true) =>
+		renderToStaticMarkup(
+			<DetectionsTable
+				page={{ rows: [], total: 3 }}
+				search={{ page: 1, pageSize: 100, sort: "recorded", direction: "desc" }}
+				rowSelection={rowSelection}
+				onSearchChange={() => {}}
+				onRowSelectionChange={() => {}}
+				onDeleteSelected={() => {}}
+				canDelete={canDelete}
+			/>,
+		);
+
+	assert.doesNotMatch(render({}), /Delete/);
+	const selected = render({ "17": true, "18": true, "19": false });
+	assert.match(selected, />2<\/span><span[^>]*>selected</);
+	assert.match(selected, /aria-label="Delete 2 selected detections"/);
+	assert.doesNotMatch(render({ "17": true }, false), /Delete/);
 });
