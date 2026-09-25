@@ -133,27 +133,23 @@ function Species() {
 		});
 	}, [cards, fuse, search, sort, reverse]);
 
-	// Derived from `filtered` rather than the page slice, so the figures
-	// describe the whole search result, not just the 24 cards on screen.
+	// Derived from the whole life list, never the search: the header describes
+	// the station, and only the grid below answers the query.
 	const stats = useMemo<PageHeaderStat[]>(() => {
-		// Nothing to describe means every figure would be a 0 or an em dash, so
-		// the row comes off entirely rather than reading as broken.
-		if (filtered.length === 0) return [];
+		// An empty station has nothing to describe, so the row comes off
+		// entirely rather than reading as a line of zeros.
+		if (cards.length === 0) return [];
 
-		const detections = filtered.reduce(
-			(sum, card) => sum + card.allTimeCount,
-			0,
-		);
+		const detections = cards.reduce((sum, card) => sum + card.allTimeCount, 0);
 		// Ranked by count regardless of the current sort, so this always names the
-		// most-detected species in the result rather than whatever the toggle put
-		// on top.
-		const mostActive = filtered.reduce(
+		// most-detected species rather than whatever the toggle put on top.
+		const mostActive = cards.reduce(
 			(top, card) => (card.allTimeCount > top.allTimeCount ? card : top),
-			filtered[0],
+			cards[0],
 		);
-		// Hourly histograms folded across the whole result, so the peak names the
-		// busiest hour of day for these species rather than for any one of them.
-		const hourTotals = filtered.reduce((totals, card) => {
+		// Hourly histograms folded across every species, so the peak names the
+		// station's busiest hour of day rather than any one bird's.
+		const hourTotals = cards.reduce((totals, card) => {
 			for (let hour = 0; hour < 24; hour += 1)
 				totals[hour] += card.hourCounts[hour] ?? 0;
 			return totals;
@@ -172,7 +168,7 @@ function Species() {
 			},
 			{
 				label: "Species",
-				value: filtered.length,
+				value: cards.length,
 				icon: Feather,
 			},
 			{
@@ -186,7 +182,7 @@ function Species() {
 				icon: Clock3,
 			},
 		] satisfies PageHeaderStat[];
-	}, [filtered]);
+	}, [cards]);
 
 	// A new sort starts in its natural direction; the direction button flips
 	// whichever sort is current. Both go back to page one, since the page you
