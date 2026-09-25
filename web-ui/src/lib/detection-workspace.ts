@@ -34,7 +34,7 @@ export function normalizeDetectionWorkspaceSearch(
 			: 1;
 	const pageSize = PAGE_SIZES.includes(input.pageSize as 25 | 50 | 100)
 		? (input.pageSize as 25 | 50 | 100)
-		: 50;
+		: 100;
 	const sort = DETECTION_SORTS.includes(input.sort as DetectionWorkspaceSort)
 		? (input.sort as DetectionWorkspaceSort)
 		: "recorded";

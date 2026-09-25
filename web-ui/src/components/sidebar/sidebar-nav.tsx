@@ -68,7 +68,7 @@ export function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
 					to="/detections"
 					search={{
 						page: 1,
-						pageSize: 50,
+						pageSize: 100,
 						sort: "recorded",
 						direction: "desc",
 					}}

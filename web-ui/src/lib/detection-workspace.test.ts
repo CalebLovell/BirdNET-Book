@@ -15,7 +15,7 @@ test("normalizes out-of-range detections search values", () => {
 			direction: "sideways",
 			minConfidence: 1.4,
 		}),
-		{ page: 1, pageSize: 50, sort: "recorded", direction: "desc" },
+		{ page: 1, pageSize: 100, sort: "recorded", direction: "desc" },
 	);
 });
 
