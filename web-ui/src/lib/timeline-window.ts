@@ -250,8 +250,8 @@ export function windowFor(
  * The first day of the calendar period immediately before the one `anchor`
  * names, at the same granularity: the day before for "day", the Monday a week
  * back for "week", the first of last month, the first of last year. Null for
- * "all", which has no period before it. Used to decide whether a species went
- * unheard for a whole period before turning up again -- a "return".
+ * "all", which has no period before it. Stepped back repeatedly to find the
+ * stretch a window's highlights compare it with (see precedingWindows).
  */
 export function previousPeriodStart(
 	period: TimelinePeriod,
@@ -265,4 +265,39 @@ export function previousPeriodStart(
 	return (
 		windowFor(period, anchorForDay(period, dayInPrevPeriod))?.start ?? null
 	);
+}
+
+/** Calendar days from `start` to `end` inclusive; zero or less when `end` comes
+    first. */
+export function daysInRange(start: string, end: string): number {
+	return (
+		Math.round((utcDate(end).getTime() - utcDate(start).getTime()) / DAY_MS) + 1
+	);
+}
+
+/** `day` moved `delta` days, as a day string. */
+export function addDays(day: string, delta: number): string {
+	return shiftDays(day, delta);
+}
+
+/**
+ * The `count` whole periods just before the one `anchor` names, nearest first:
+ * the stretch a window's highlights call "usual". Empty for "all", which has
+ * nothing before it.
+ */
+export function precedingWindows(
+	period: TimelinePeriod,
+	anchor: TimelineAnchor,
+	count: number,
+): TimelineWindow[] {
+	const windows: TimelineWindow[] = [];
+	let current = anchor;
+	for (let step = 0; step < count; step++) {
+		const start = previousPeriodStart(period, current);
+		if (start == null) break;
+		current = anchorForDay(period, start);
+		const window = windowFor(period, current);
+		if (window) windows.push(window);
+	}
+	return windows;
 }

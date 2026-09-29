@@ -1,14 +1,14 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 
+import { HighlightsCard } from "~/components/highlights-card.tsx";
 import { CurrentBirdCard } from "~/components/now/current-bird-card.tsx";
 import { LiveAudioCard } from "~/components/now/live-audio-card.tsx";
-import { LiveStoryCard } from "~/components/now/live-story-card.tsx";
 import { RecentLogCard } from "~/components/now/recent-log-card.tsx";
 import { SpeciesList } from "~/components/species-list.tsx";
+import { getLiveHighlights } from "~/lib/live-highlights.ts";
 import { getNowSnapshot } from "~/lib/now.ts";
 import { pageTitle } from "~/lib/page-title.ts";
-import { getTodaysStory } from "~/lib/story.ts";
 import { useAgeOffset } from "~/lib/use-age-offset.ts";
 import { useFavicon } from "~/lib/use-favicon.ts";
 import { usePolledData } from "~/lib/use-polled-data.ts";
@@ -19,15 +19,15 @@ const FLASH_DURATION_MS = 2_400;
 export const Route = createFileRoute("/live")({
 	head: () => ({ meta: [{ title: pageTitle("Live") }] }),
 	component: Live,
-	// The story rides the loader alone. It is judged against a fortnight of
-	// history and cannot change inside a ten-second poll, so pulling it here
-	// keeps its full-table scans off the polling path.
+	// The highlights ride the loader alone. They are judged against a fortnight
+	// of history and cannot change inside a ten-second poll, so pulling them
+	// here keeps their full-table scans off the polling path.
 	loader: async ({ context }) => {
-		const [snapshot, story] = await Promise.all([
+		const [snapshot, highlights] = await Promise.all([
 			getNowSnapshot(),
-			getTodaysStory(),
+			getLiveHighlights(),
 		]);
-		return { snapshot, story, unlocked: context.auth.unlocked };
+		return { snapshot, highlights, unlocked: context.auth.unlocked };
 	},
 });
 
@@ -59,7 +59,11 @@ function useFreshKeys(keys: string[]): Set<string> {
 }
 
 function Live() {
-	const { snapshot: initialSnapshot, story, unlocked } = Route.useLoaderData();
+	const {
+		snapshot: initialSnapshot,
+		highlights,
+		unlocked,
+	} = Route.useLoaderData();
 	const { data: snapshot } = usePolledData(
 		() => getNowSnapshot(),
 		initialSnapshot,
@@ -93,7 +97,15 @@ function Live() {
 				<LiveAudioCard unlocked={unlocked} />
 			</div>
 
-			<LiveStoryCard lines={story} className="mt-4" />
+			{/* A station that has never recorded anything has nothing to highlight,
+			    and the hero card above already says so, far more plainly. */}
+			{highlights.hasAnyDetections ? (
+				<HighlightsCard
+					highlights={highlights.highlights}
+					emptyMessage="No detections recorded in the last 24 hours."
+					className="mt-4"
+				/>
+			) : null}
 
 			{/* `grid-cols-1` rather than a bare `grid`: the implicit track it would
 			    fall back to is sized to max-content, so a long species name in the

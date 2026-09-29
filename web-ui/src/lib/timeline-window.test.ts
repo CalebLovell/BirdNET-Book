@@ -4,7 +4,9 @@ import test from "node:test";
 import {
 	anchorForDay,
 	currentAnchor,
+	daysInRange,
 	isValidAnchor,
+	precedingWindows,
 	previousPeriodStart,
 	shortAnchorLabel,
 	windowFor,
@@ -140,4 +142,22 @@ test("short anchor labels fit a phone's date stepper", () => {
 	);
 	assert.equal(shortAnchorLabel("month", "2026-09"), "Sep 2026");
 	assert.equal(shortAnchorLabel("year", "2026"), "2026");
+});
+
+test("precedingWindows walks back whole periods, nearest first", () => {
+	assert.deepEqual(
+		precedingWindows("week", "2026-W20", 2).map((w) => w.start),
+		["2026-05-04", "2026-04-27"],
+	);
+	assert.deepEqual(
+		precedingWindows("month", "2026-02", 2).map((w) => w.start),
+		["2026-01-01", "2025-12-01"],
+	);
+	assert.deepEqual(precedingWindows("all", "", 4), []);
+});
+
+test("daysInRange counts both ends", () => {
+	assert.equal(daysInRange("2026-02-27", "2026-03-01"), 3);
+	assert.equal(daysInRange("2026-03-01", "2026-03-01"), 1);
+	assert.equal(daysInRange("2026-03-02", "2026-03-01"), 0);
 });

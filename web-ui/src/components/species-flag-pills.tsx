@@ -1,25 +1,40 @@
-import { Gem, Sparkles, Undo2 } from "lucide-react";
+import { AudioLines, Gem, Sparkles, Undo2 } from "lucide-react";
 import type { CSSProperties } from "react";
-
 import {
 	Tooltip,
 	TooltipContent,
 	TooltipTrigger,
 } from "~/components/ui/tooltip.tsx";
+import { formatRatio } from "~/lib/highlights-data.ts";
 
-/** The unit of the period a returning bird skipped, or null. */
-export type ReturnedUnit = "day" | "week" | "month" | "year" | null;
+const FIRST_HEARD = new Intl.DateTimeFormat("en-US", {
+	month: "short",
+	day: "numeric",
+	year: "numeric",
+	timeZone: "UTC",
+});
 
-export function returnedTooltip(returnedUnit: ReturnedUnit): string {
-	if (returnedUnit == null)
-		return "Back after an absence, having missed the previous period.";
-	return `Back after an absence — last heard a ${returnedUnit} before.`;
+/** "First recorded here on Sep 22, 2026." -- the day itself, not the window. */
+export function newTooltip(firstHeard: string | null): string {
+	if (firstHeard == null) return "First recorded here.";
+	return `First recorded here on ${FIRST_HEARD.format(new Date(`${firstHeard}T00:00:00Z`))}.`;
+}
+
+export function returnedTooltip(daysAway: number | null): string {
+	if (daysAway == null) return "Back after time away.";
+	return `Back after ${daysAway} days away.`;
+}
+
+/** "Heard more often than usual (3.2×)." -- the Highlights line's words. */
+export function vocalTooltip(ratio: number): string {
+	return `Heard more often than usual (${formatRatio(ratio)}).`;
 }
 
 // Each status pill wears its own tint over the raised paper, so a glance down a
 // list sorts them by hue -- and none reuses the confidence pill's moss/sand/sage
 // scale, which reads as data rather than as a flag. Blue for a first arrival,
-// rose for a bird back from a long absence, heather for a rare visitor.
+// rose for a bird back from a long absence, heather for a rare visitor,
+// ochre for a bird heard far more than usual.
 const NEW_PILL_STYLE: CSSProperties = {
 	backgroundColor: "color-mix(in oklab, #3f6ea6 20%, var(--paper-raised))",
 	color: "#2a4d78",
@@ -35,35 +50,45 @@ const RARE_PILL_STYLE: CSSProperties = {
 	color: "#463a73",
 };
 
+const VOCAL_PILL_STYLE: CSSProperties = {
+	backgroundColor: "color-mix(in oklab, #b07a1f 22%, var(--paper-raised))",
+	color: "#6e4a10",
+};
+
 /**
- * The flags a species can carry in a window -- New, Returned, Rare -- as pills,
+ * The flags a species can carry in a window -- New, Returned, Rare, Vocal -- as
+ * pills,
  * the same wherever a species row shows them (the species grid, the heat map).
- * The loader gives a species at most one of the three, so this renders one
+ * The loader gives a species at most one of the four, so this renders one
  * pill or none. Needs a TooltipProvider above it.
  */
 export function SpeciesFlagPills({
 	isNew,
 	isReturned,
 	isRare,
-	returnedUnit,
-	newLabel,
+	firstHeard,
+	daysAway,
+	vocalRatio,
 }: {
 	isNew: boolean;
 	isReturned: boolean;
 	isRare: boolean;
-	returnedUnit: ReturnedUnit;
-	/** Names the window in the New tooltip. Null hides the New pill entirely,
-	    which is what "all time" wants: everything is trivially first heard. */
-	newLabel: string | null;
+	/** How long a returning bird was away. Null unless isReturned. */
+	daysAway: number | null;
+	/** How many times its usual rate the bird was heard at, when that makes it
+	    Vocal. Null for no Vocal pill. */
+	vocalRatio: number | null;
+	/** The day a New bird was first recorded, "YYYY-MM-DD". Null unless isNew. */
+	firstHeard: string | null;
 }) {
 	return (
 		<>
-			{isNew && newLabel ? (
+			{isNew ? (
 				<Pill
 					icon={Sparkles}
 					label="New"
 					style={NEW_PILL_STYLE}
-					tooltip={`First recorded here in ${newLabel}`}
+					tooltip={newTooltip(firstHeard)}
 				/>
 			) : null}
 			{isReturned ? (
@@ -71,7 +96,15 @@ export function SpeciesFlagPills({
 					icon={Undo2}
 					label="Returned"
 					style={RETURNED_PILL_STYLE}
-					tooltip={returnedTooltip(returnedUnit)}
+					tooltip={returnedTooltip(daysAway)}
+				/>
+			) : null}
+			{vocalRatio != null ? (
+				<Pill
+					icon={AudioLines}
+					label="Vocal"
+					style={VOCAL_PILL_STYLE}
+					tooltip={vocalTooltip(vocalRatio)}
 				/>
 			) : null}
 			{isRare ? (

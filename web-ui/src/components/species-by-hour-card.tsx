@@ -3,10 +3,7 @@ import { Bird } from "lucide-react";
 import type { ReactNode } from "react";
 
 import { EmptyNote } from "~/components/empty-state.tsx";
-import {
-	type ReturnedUnit,
-	SpeciesFlagPills,
-} from "~/components/species-flag-pills.tsx";
+import { SpeciesFlagPills } from "~/components/species-flag-pills.tsx";
 import { TooltipProvider } from "~/components/ui/tooltip.tsx";
 import { HEAT_COLORS, heatLevel } from "~/lib/heatmap.ts";
 import { comNameToSlug } from "~/lib/species-slug.ts";
@@ -25,11 +22,15 @@ export type SpeciesHourRow = {
 	totalDetections: number;
 	/** The station had never recorded this species before the window opened. */
 	isNew: boolean;
-	/** Back after missing the period before this window. */
+	/** The day a New bird was first recorded. Null unless isNew. */
+	firstHeard: string | null;
+	/** Back after time away before this window. */
 	isReturned: boolean;
 	/** Heard only a handful of times ever at this station. */
 	isRare: boolean;
-	returnedUnit: ReturnedUnit;
+	daysAway: number | null;
+	/** How many times its usual rate, when heard far more than usual. */
+	vocalRatio: number | null;
 };
 
 const HOURS = Array.from({ length: 24 }, (_, hour) => hour);
@@ -93,16 +94,12 @@ function hourTickParts(hour: number): { number: string; meridiem: string } {
  */
 export function SpeciesByHourCard({
 	rows,
-	newLabel = null,
 	emptyMessage,
 	summary,
 	action,
 	className = "",
 }: {
 	rows: SpeciesHourRow[];
-	/** Names the window in the "New" tooltip. Null hides the New pill entirely,
-	 * which is what "all time" wants: everything is trivially first heard. */
-	newLabel?: string | null;
 	emptyMessage: string;
 	/** The window's headline figures, set beside the kicker -- the timeline
 	 * page's detections/species readout. Omitted by callers that show the card
@@ -185,7 +182,6 @@ export function SpeciesByHourCard({
 									key={row.comName}
 									row={row}
 									countWidthCh={countWidthCh}
-									newLabel={newLabel}
 								/>
 							))}
 						</div>
@@ -218,11 +214,9 @@ function HourTick({ hour }: { hour: number }) {
 function SpeciesHourRowView({
 	row,
 	countWidthCh,
-	newLabel,
 }: {
 	row: SpeciesHourRow;
 	countWidthCh: number;
-	newLabel: string | null;
 }) {
 	return (
 		<div className={`${ROW_LAYOUT} border-[var(--line)] border-t`}>
@@ -251,8 +245,9 @@ function SpeciesHourRowView({
 						isNew={row.isNew}
 						isReturned={row.isReturned}
 						isRare={row.isRare}
-						returnedUnit={row.returnedUnit}
-						newLabel={newLabel}
+						daysAway={row.daysAway}
+						vocalRatio={row.vocalRatio}
+						firstHeard={row.firstHeard}
 					/>
 				</div>
 

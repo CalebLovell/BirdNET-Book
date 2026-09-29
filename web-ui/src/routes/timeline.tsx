@@ -3,6 +3,7 @@ import { Bird, LayoutDashboard, Rows3 } from "lucide-react";
 import { z } from "zod";
 import { DetectionsByHourRoseCard } from "~/components/detections-by-hour-rose-card.tsx";
 import { EmptyState } from "~/components/empty-state.tsx";
+import { HighlightsCard } from "~/components/highlights-card.tsx";
 import { PageHeaderCard } from "~/components/page-header-card.tsx";
 import { SpeciesByHourCard } from "~/components/species-by-hour-card.tsx";
 import {
@@ -10,7 +11,6 @@ import {
 	type SpeciesGridItem,
 } from "~/components/species-grid.tsx";
 import { StatusPage } from "~/components/status-page.tsx";
-import { HighlightsCard } from "~/components/timeline/highlights-card.tsx";
 import { PeriodToolbar } from "~/components/timeline/period-toolbar.tsx";
 import { TooltipProvider } from "~/components/ui/tooltip.tsx";
 import { useShareCard } from "~/components/use-share-card.tsx";
@@ -146,8 +146,7 @@ function Timeline() {
 				{data.hasAnyDetections ? (
 					<TimelineCards
 						rows={data.body.rows}
-						previousTotals={data.body.previousTotals}
-						period={period}
+						highlights={data.body.highlights}
 						windowLabel={data.window?.label ?? null}
 						view={view}
 						onViewChange={(next) => show({ view: next })}
@@ -296,15 +295,13 @@ function WindowSummary({ rows }: { rows: TimelineRow[] }) {
  */
 function TimelineCards({
 	rows,
-	previousTotals,
-	period,
+	highlights,
 	windowLabel,
 	view,
 	onViewChange,
 }: {
 	rows: TimelineRow[];
-	previousTotals: TimelineData["previousTotals"];
-	period: TimelinePeriod;
+	highlights: TimelineData["highlights"];
 	windowLabel: string | null;
 	view: TimelineView;
 	onViewChange: (next: TimelineView) => void;
@@ -320,9 +317,11 @@ function TimelineCards({
 		count: row.totalDetections,
 		averageConfidence: row.averageConfidence,
 		isNew: row.isNew,
+		firstHeard: row.firstHeard,
 		isRare: row.isRare,
 		isReturned: row.isReturned,
-		returnedUnit: row.returnedUnit,
+		daysAway: row.daysAway,
+		vocalRatio: row.vocalRatio,
 		hourCounts: row.hourCounts,
 	}));
 
@@ -349,7 +348,6 @@ function TimelineCards({
 		view === "hours" ? (
 			<SpeciesByHourCard
 				rows={rows}
-				newLabel={windowLabel}
 				emptyMessage={emptyMessage}
 				summary={summary}
 				action={toggle}
@@ -358,7 +356,6 @@ function TimelineCards({
 		) : (
 			<SpeciesGrid
 				species={gridItems}
-				newLabel={windowLabel}
 				emptyMessage={emptyMessage}
 				summary={summary}
 				action={toggle}
@@ -385,12 +382,7 @@ function TimelineCards({
 					title="Detections by hour"
 					emptyMessage={emptyMessage}
 				/>
-				<HighlightsCard
-					rows={rows}
-					period={period}
-					previousTotals={previousTotals}
-					emptyMessage={emptyMessage}
-				/>
+				<HighlightsCard highlights={highlights} emptyMessage={emptyMessage} />
 			</div>
 		</div>
 	);

@@ -49,7 +49,7 @@ export function CurrentBirdCard({
 	const elapsedMs = current.ageMs + offsetMs;
 
 	// No figure row: the station's counts live in the cards below -- Top
-	// detections, the log, the Live story -- so repeating them in the masthead
+	// detections, the log, the Highlights -- so repeating them in the masthead
 	// only duplicates what the page already shows.
 	return (
 		<SpeciesHeroCard

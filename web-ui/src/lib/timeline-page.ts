@@ -40,7 +40,7 @@ export type TimelineBody =
 	| {
 			kind: "rows";
 			rows: TimelineRow[];
-			previousTotals: TimelineData["previousTotals"];
+			highlights: TimelineData["highlights"];
 	  }
 	| { kind: "day-out-of-range"; result: DayOutOfRange };
 
@@ -73,9 +73,9 @@ export const getTimelinePage = createServerFn({ method: "GET" })
 			}
 		}
 
-		const { rows, previousTotals, ...nav } = await loadTimelineData({
+		const { rows, highlights, ...nav } = await loadTimelineData({
 			period,
 			anchor,
 		});
-		return { ...nav, body: { kind: "rows", rows, previousTotals } };
+		return { ...nav, body: { kind: "rows", rows, highlights } };
 	});

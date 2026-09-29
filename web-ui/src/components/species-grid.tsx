@@ -2,11 +2,7 @@ import { Link } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 
 import { EmptyNote } from "~/components/empty-state.tsx";
-import {
-	Pill,
-	type ReturnedUnit,
-	SpeciesFlagPills,
-} from "~/components/species-flag-pills.tsx";
+import { Pill, SpeciesFlagPills } from "~/components/species-flag-pills.tsx";
 import { SpeciesHourBars } from "~/components/species-hour-bars.tsx";
 import { SpeciesThumbnail } from "~/components/species-row.tsx";
 import { TooltipProvider } from "~/components/ui/tooltip.tsx";
@@ -20,11 +16,14 @@ export type SpeciesGridItem = {
 	count: number;
 	averageConfidence: number | null;
 	isNew: boolean;
+	/** The day a New bird was first recorded. Null unless isNew. */
+	firstHeard: string | null;
 	isRare: boolean;
 	isReturned: boolean;
-	/** The selected period's unit, or null unless isReturned. Returned always means
-	    absent the one period before this one, so the pill names a single unit. */
-	returnedUnit: ReturnedUnit;
+	/** How long a returning bird was away, or null unless isReturned. */
+	daysAway: number | null;
+	/** How many times its usual rate, when heard far more than usual. */
+	vocalRatio: number | null;
 	/** 24 detection counts, midnight first, for this species in the window.
 	    Absent when the caller has no hourly breakdown; the row then draws no
 	    chart. */
@@ -40,16 +39,12 @@ export type SpeciesGridItem = {
  */
 export function SpeciesGrid({
 	species,
-	newLabel,
 	emptyMessage,
 	summary,
 	action,
 	className = "",
 }: {
 	species: SpeciesGridItem[];
-	/** Names the window in the "New" chip tooltip. Null hides the chip entirely,
-	    which is what "all time" wants: everything is trivially first heard. */
-	newLabel: string | null;
 	emptyMessage: string;
 	/** The window's headline figures, set beside the kicker -- the timeline
 	    page's detections/species readout, kept on both bodies so the view toggle
@@ -95,11 +90,7 @@ export function SpeciesGrid({
 				) : (
 					<ul className="grid grid-cols-1 gap-2 sm:grid-cols-2 sm:gap-4 xl:grid-cols-3">
 						{species.map((item) => (
-							<SpeciesGridRow
-								key={item.comName}
-								item={item}
-								newLabel={newLabel}
-							/>
+							<SpeciesGridRow key={item.comName} item={item} />
 						))}
 					</ul>
 				)}
@@ -108,13 +99,7 @@ export function SpeciesGrid({
 	);
 }
 
-function SpeciesGridRow({
-	item,
-	newLabel,
-}: {
-	item: SpeciesGridItem;
-	newLabel: string | null;
-}) {
+function SpeciesGridRow({ item }: { item: SpeciesGridItem }) {
 	return (
 		<li className="flex min-h-16 min-w-0 flex-col gap-2 rounded-md bg-[var(--meadow)] px-3 py-2 max-[400px]:px-2">
 			<div className="flex min-w-0 items-center gap-3 max-[400px]:gap-2">
@@ -149,8 +134,9 @@ function SpeciesGridRow({
 							isNew={item.isNew}
 							isReturned={item.isReturned}
 							isRare={item.isRare}
-							returnedUnit={item.returnedUnit}
-							newLabel={newLabel}
+							daysAway={item.daysAway}
+							vocalRatio={item.vocalRatio}
+							firstHeard={item.firstHeard}
 						/>
 					</div>
 				</div>
