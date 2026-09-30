@@ -1,8 +1,6 @@
 import {
-	ChartNoAxesColumnIncreasing,
-	Clock3,
+	Bird,
 	ExternalLink,
-	Gauge,
 	Search,
 	ShieldCheck,
 	Shuffle,
@@ -10,15 +8,9 @@ import {
 	Trash2,
 } from "lucide-react";
 import { useMemo, useState } from "react";
-import {
-	type PageHeaderStat,
-	PageHeaderStats,
-} from "~/components/page-header-card.tsx";
-import { RecordingButton } from "~/components/recording-button.tsx";
-import {
-	HeroCardShell,
-	HeroPortrait,
-} from "~/components/species-hero-card.tsx";
+import { ConfidencePill } from "~/components/confidence-pill.tsx";
+import { ClipPlayer } from "~/components/learn/clip-player.tsx";
+import { SpeciesThumbnail } from "~/components/species-row.tsx";
 import { Button } from "~/components/ui/button.tsx";
 import { Input } from "~/components/ui/input.tsx";
 import { formatConfidence } from "~/lib/confidence.ts";
@@ -45,6 +37,11 @@ function formatRecorded(date: string, time: string) {
 			minute: "2-digit",
 		}).format(parsed),
 	};
+}
+
+/** How established the species is here -- the reason it's in the queue. */
+function describeLifetime(count: number) {
+	return count <= 1 ? "First time heard here" : `Heard ${count} times here`;
 }
 
 export function ReviewWorkflow({
@@ -119,111 +116,185 @@ export function ReviewWorkflow({
 			</section>
 		);
 	const recorded = formatRecorded(row.date, row.time);
-	// The three figures that decide the verdict: how sure BirdNET was, how
-	// established the species is at this station, and when it was heard.
-	const stats = [
-		{
-			label: "Confidence",
-			value: formatConfidence(row.confidence),
-			icon: Gauge,
-		},
-		{
-			label: "Lifetime detections",
-			value: row.lifetimeCount,
-			icon: ChartNoAxesColumnIncreasing,
-		},
-		{
-			label: "Recorded",
-			value: recorded.day,
-			icon: Clock3,
-		},
-	] satisfies PageHeaderStat[];
+	const position = rows.indexOf(row);
 	return (
 		<>
-			<HeroCardShell
-				label="Detection under review"
-				portrait={
-					<HeroPortrait imageUrl={row.imageUrl} comName={row.comName} />
-				}
-			>
-				<div className="flex flex-wrap items-start justify-between gap-3">
-					<div className="min-w-0">
-						<div className="island-kicker">
-							Recording {index + 1} of {rows.length}
+			{/* The recording under review takes the width; the rest of the queue sits
+			    beside it so the batch is visible and any bird can be picked next,
+			    instead of one card floating on an empty page. */}
+			{/* Same tracks as the Learn page's game and round rail, so the queue
+			    card sits at the round card's width at every page size. */}
+			<div className="@container/review">
+				<div className="grid @3xl/review:grid-cols-[minmax(0,1fr)_24rem] @7xl/review:grid-cols-[minmax(914px,1fr)_minmax(20rem,38rem)] items-start gap-(--page-gap)">
+					<section
+						aria-label="Detection under review"
+						className="feature-card flex flex-col gap-4 rounded-md p-4"
+					>
+						<div className="flex items-center gap-4 max-[400px]:gap-3">
+							<div className="flex size-20 shrink-0 items-center justify-center overflow-hidden max-[400px]:size-14">
+								{row.imageUrl ? (
+									<img
+										src={row.imageUrl}
+										alt={row.comName}
+										className="max-h-full max-w-full object-contain"
+									/>
+								) : (
+									<Bird className="size-10 text-muted-foreground" />
+								)}
+							</div>
+							<div className="min-w-0 flex-1">
+								<div className="island-kicker">
+									Recording {position + 1} of {rows.length}
+								</div>
+								<h2 className="display-title mt-1 font-bold text-2xl text-[var(--moss)] sm:text-3xl">
+									{row.comName}
+								</h2>
+								<p className="text-[var(--bark)] text-sm italic">
+									{row.sciName}
+								</p>
+							</div>
+							<Button
+								asChild
+								variant="outline"
+								size="xs"
+								className="self-start"
+							>
+								<a
+									href={row.ebirdUrl}
+									target="_blank"
+									rel="noreferrer"
+									aria-label="eBird reference"
+								>
+									<ExternalLink />
+									<span className="max-sm:hidden">eBird reference</span>
+								</a>
+							</Button>
 						</div>
-						<h2 className="display-title mt-1 font-bold text-2xl text-[var(--moss)] sm:text-3xl">
-							{row.comName}
-						</h2>
-						<p className="text-[var(--bark)] text-xs italic">{row.sciName}</p>
-					</div>
-					<Button asChild variant="outline" size="xs">
-						<a href={row.ebirdUrl} target="_blank" rel="noreferrer">
-							<ExternalLink />
-							eBird reference
-						</a>
-					</Button>
-				</div>
 
-				<div className="tabular-data flex flex-wrap items-center gap-2 text-muted-foreground text-sm">
-					<span>A weak match on a species the station rarely hears</span>
-					<RecordingButton
-						audioUrl={row.audioAvailable ? row.audioUrl : null}
-					/>
-				</div>
+						{/* What the verdict rests on, in one line rather than a row of stat
+					    tiles: the score, how new the bird is here, and when it was heard. */}
+						<div className="tabular-data flex flex-wrap items-center gap-x-3 gap-y-1 text-muted-foreground text-sm">
+							<ConfidencePill confidence={row.confidence} />
+							<span>{describeLifetime(row.lifetimeCount)}</span>
+							<span>
+								{recorded.day}, {recorded.clock}
+							</span>
+						</div>
 
-				{!row.audioAvailable ? (
-					<p className="text-destructive text-sm">
-						Audio unavailable. You can delete or skip this orphaned entry.
-					</p>
-				) : null}
+						{/* The evidence itself: hear the call and see its shape. */}
+						{row.audioAvailable ? (
+							<ClipPlayer
+								key={row.rowId}
+								audioUrl={row.audioUrl}
+								className="h-56 max-sm:h-40"
+							/>
+						) : (
+							<p className="grid h-40 place-items-center rounded-md border border-[var(--line)] border-dashed px-4 text-center text-destructive text-sm">
+								Audio unavailable. You can delete or skip this orphaned entry.
+							</p>
+						)}
 
-				<PageHeaderStats stats={stats} inline />
+						{/* The verdict pair reads left to right, and the two ways out sit
+					    apart from them on the right. */}
+						<div className="flex flex-wrap items-center gap-2">
+							<Button
+								size="xs"
+								disabled={!row.audioAvailable || busy}
+								onClick={() => setAction({ kind: "correct", row })}
+							>
+								<ShieldCheck />
+								Correct
+							</Button>
+							<Button
+								variant="outline"
+								size="xs"
+								disabled={!row.audioAvailable || busy}
+								onClick={() => setPicker(row)}
+							>
+								<Shuffle />
+								Recategorize
+							</Button>
+							<div className="ml-auto flex items-center gap-2">
+								<Button
+									variant="ghost"
+									size="xs"
+									disabled={busy}
+									onClick={() => {
+										setSkipped(new Set(skipped).add(row.rowId));
+										// The next bird slides into this slot.
+										setIndex(position);
+									}}
+								>
+									<SkipForward />
+									Skip
+								</Button>
+								<Button
+									variant="destructive"
+									size="xs"
+									disabled={busy}
+									onClick={() => setAction({ kind: "delete", row })}
+								>
+									<Trash2 />
+									Delete
+								</Button>
+							</div>
+						</div>
+					</section>
 
-				{/* Horizontal, at the foot of the card: the verdict pair reads left to
-				    right, and the two ways out sit apart from them on the right. */}
-				<div className="flex flex-wrap items-center gap-2 border-[var(--line)] border-t pt-4">
-					<Button
-						size="xs"
-						disabled={!row.audioAvailable || busy}
-						onClick={() => setAction({ kind: "correct", row })}
+					<section
+						aria-label="Review queue"
+						className="feature-card rounded-md p-4"
 					>
-						<ShieldCheck />
-						Correct
-					</Button>
-					<Button
-						variant="outline"
-						size="xs"
-						disabled={!row.audioAvailable || busy}
-						onClick={() => setPicker(row)}
-					>
-						<Shuffle />
-						Recategorize
-					</Button>
-					<div className="ml-auto flex items-center gap-2">
-						<Button
-							variant="ghost"
-							size="xs"
-							disabled={busy}
-							onClick={() => {
-								setSkipped(new Set(skipped).add(row.rowId));
-								setIndex(0);
-							}}
-						>
-							<SkipForward />
-							Skip
-						</Button>
-						<Button
-							variant="destructive"
-							size="xs"
-							disabled={busy}
-							onClick={() => setAction({ kind: "delete", row })}
-						>
-							<Trash2 />
-							Delete
-						</Button>
-					</div>
+						<div className="flex items-baseline justify-between gap-2">
+							<div className="island-kicker">In the queue</div>
+							<span className="count-figure">
+								{page.total > page.candidates.length
+									? `${rows.length} of ${page.total}`
+									: rows.length}
+							</span>
+						</div>
+						<ol className="-mx-1 mt-3 max-h-[32rem] space-y-0.5 overflow-auto px-1">
+							{rows.map((item, i) => {
+								const current = item === row;
+								return (
+									<li key={item.rowId}>
+										<button
+											type="button"
+											aria-current={current ? "true" : undefined}
+											onClick={() => setIndex(i)}
+											className={`flex w-full items-center gap-3 rounded-md px-2 py-1.5 text-left transition-colors duration-[180ms] ${current ? "bg-[var(--row-selected)]" : "hover:bg-[var(--meadow)]"}`}
+										>
+											<SpeciesThumbnail
+												imageUrl={item.imageUrl}
+												comName={item.comName}
+											/>
+											<span className="min-w-0 flex-1">
+												<span className="block truncate font-medium text-sm">
+													{item.comName}
+												</span>
+												<span className="tabular-data block truncate text-muted-foreground text-xs">
+													{formatRecorded(item.date, item.time).day}
+												</span>
+											</span>
+											<ConfidencePill confidence={item.confidence} />
+										</button>
+									</li>
+								);
+							})}
+						</ol>
+						{page.total > page.candidates.length ? (
+							<Button
+								className="mt-3 w-full"
+								variant="outline"
+								size="xs"
+								onClick={onLoadMore}
+							>
+								Load more
+							</Button>
+						) : null}
+					</section>
 				</div>
-			</HeroCardShell>
+			</div>
 			{picker ? (
 				<div
 					role="dialog"

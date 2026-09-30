@@ -14,7 +14,14 @@ import { usePlayableAudio } from "~/lib/use-playable-audio.ts";
  * `usePlayableAudio` caches the fetched blob for the life of the component, so
  * callers give this a `key` per question -- a remount is what swaps clips.
  */
-export function ClipPlayer({ audioUrl }: { audioUrl: string }) {
+export function ClipPlayer({
+	audioUrl,
+	className = "h-36 max-[400px]:h-28",
+}: {
+	audioUrl: string;
+	/** Sizes the spectrogram; the quiz's height is the default. */
+	className?: string;
+}) {
 	const {
 		audioRef,
 		isPlaying,
@@ -31,7 +38,7 @@ export function ClipPlayer({ audioUrl }: { audioUrl: string }) {
 			<Spectrogram
 				audioUrl={audioUrl}
 				progress={progress}
-				className="h-36 max-[400px]:h-28"
+				className={className}
 			>
 				<button
 					type="button"
