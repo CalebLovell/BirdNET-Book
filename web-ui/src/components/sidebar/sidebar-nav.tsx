@@ -37,7 +37,7 @@ export function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
 	);
 
 	return (
-		<div className="flex flex-col gap-4 px-2">
+		<div className="flex flex-col gap-2 px-2">
 			{/* Two navs rather than one list: everything anyone can open sits up top,
 			    and the three gated pages sit together below the divider, so the lock
 			    icons read as one section rather than as scattered exceptions. */}
