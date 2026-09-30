@@ -69,3 +69,47 @@ export function countVisitsBySpecies(
 	}
 	return total;
 }
+
+/** One species' unbroken stretch of detections, oldest moment first. */
+export type Visit<Moment extends DetectionMoment> = {
+	comName: string;
+	moments: Moment[];
+};
+
+/**
+ * The visits themselves rather than their count, newest first -- ranked by
+ * each visit's latest detection, so a bird still singing stays at the top.
+ * Species are clustered independently, as in countVisitsBySpecies, so a visit
+ * interleaved with another species' calls stays one visit.
+ */
+export function groupVisits<Moment extends DetectionMoment>(
+	moments: Moment[],
+	gapMinutes: number = VISIT_GAP_MINUTES,
+): Visit<Moment>[] {
+	const gapMs = gapMinutes * 60_000;
+	const sorted = moments
+		.map((moment) => ({ moment, time: timestampToMillis(moment.timestamp) }))
+		.filter(({ time }) => Number.isFinite(time))
+		.sort((a, b) => a.time - b.time);
+
+	const visits: { visit: Visit<Moment>; lastTime: number }[] = [];
+	const openBySpecies = new Map<string, (typeof visits)[number]>();
+	for (const { moment, time } of sorted) {
+		const open = openBySpecies.get(moment.comName);
+		if (open && time - open.lastTime <= gapMs) {
+			open.visit.moments.push(moment);
+			open.lastTime = time;
+			continue;
+		}
+		const started = {
+			visit: { comName: moment.comName, moments: [moment] },
+			lastTime: time,
+		};
+		visits.push(started);
+		openBySpecies.set(moment.comName, started);
+	}
+
+	return visits
+		.sort((a, b) => b.lastTime - a.lastTime)
+		.map(({ visit }) => visit);
+}

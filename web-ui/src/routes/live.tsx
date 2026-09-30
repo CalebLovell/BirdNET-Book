@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { HighlightsCard } from "~/components/highlights-card.tsx";
 import { CurrentBirdCard } from "~/components/now/current-bird-card.tsx";
 import { LiveAudioCard } from "~/components/now/live-audio-card.tsx";
+import { LiveSummaryStats } from "~/components/now/live-summary-stats.tsx";
 import { RecentLogCard } from "~/components/now/recent-log-card.tsx";
 import { getLiveHighlights } from "~/lib/live-highlights.ts";
 import { getNowSnapshot } from "~/lib/now.ts";
@@ -92,6 +93,15 @@ function Live() {
 				flash={heroIsNew}
 			/>
 
+			{/* Nothing to sum up on a station that has never heard a bird; the
+			    hero card says so on its own. */}
+			{snapshot.current ? (
+				<LiveSummaryStats
+					summary={snapshot.summary}
+					className="mt-(--page-gap)"
+				/>
+			) : null}
+
 			{/* `grid-cols-1` rather than a bare `grid`: the implicit track it would
 			    fall back to is sized to max-content, so a long species name in the
 			    log pushes the whole page wider than the phone it is on. The rail
@@ -102,7 +112,6 @@ function Live() {
 					recent={snapshot.recent}
 					recentTotal={snapshot.recentTotal}
 					generatedAt={snapshot.generatedAt}
-					totalDetections={snapshot.summary.detections}
 					freshKeys={freshKeys}
 				/>
 

@@ -11,8 +11,10 @@ import {
 import { comNameToSlug } from "~/lib/species-slug.ts";
 import {
 	countVisits,
+	groupVisits,
 	localTimestamp,
 	timestampToMillis,
+	type Visit,
 } from "~/lib/visits.ts";
 import { getSpeciesInfo } from "~/lib/wikipedia.ts";
 
@@ -22,8 +24,13 @@ import { getSpeciesInfo } from "~/lib/wikipedia.ts";
 export const detectedAt = sql<string>`datetime(${detections.Date} || ' ' || ${detections.Time})`;
 export const isLast24h = sql`datetime(${detections.Date} || ' ' || ${detections.Time}) >= datetime('now', '-24 hours', 'localtime')`;
 
+/** The window at a glance, for the figure row above the log. */
 export type NowSummary = {
 	detections: number;
+	species: number;
+	visits: number;
+	/** The species with the most detections in the window; null when empty. */
+	topSpecies: { comName: string; detections: number } | null;
 };
 
 export type CurrentBird = {
@@ -46,14 +53,27 @@ export type CurrentBird = {
 	allTimeCount: number;
 };
 
-export type RecentDetection = {
+/**
+ * One visit in the log: a species' unbroken stretch of detections (see
+ * visits.ts), so a robin singing for twenty minutes is one row, not forty.
+ */
+export type RecentVisit = {
+	/** The species and the visit's first detection, so it stays put as the
+	    visit grows and the page can tell a newly arrived row from one it has
+	    already shown. */
 	key: string;
 	comName: string;
 	sciName: string;
 	speciesSlug: string;
 	imageUrl: string | null;
-	detectedAt: string;
+	/** The visit's first and latest detections, "YYYY-MM-DD HH:MM:SS". */
+	firstAt: string;
+	lastAt: string;
+	/** Age of the latest detection at query time. */
 	ageMs: number;
+	detections: number;
+	/** The visit's most confident detection, and that detection's recording --
+	    the one worth playing. */
 	confidence: number | null;
 	audioUrl: string | null;
 };
@@ -63,11 +83,11 @@ export type NowSnapshot = {
 	generatedAt: string;
 	current: CurrentBird | null;
 	summary: NowSummary;
-	/** The window's detections newest first, less the one the hero is showing:
-	    each bird sits in one place at a time, and moves down into the log when
-	    the next arrives. */
-	recent: RecentDetection[];
-	/** Every row the log can page through: the window's detections, less the
+	/** The window's visits, most recently heard first, less the one the hero
+	    is showing: each bird sits in one place at a time, and moves down into
+	    the log when the next arrives. */
+	recent: RecentVisit[];
+	/** Every row the log can page through: the window's visits, less the
 	    hero's own. */
 	recentTotal: number;
 };
@@ -75,7 +95,7 @@ export type NowSnapshot = {
 /** One page of the log beneath the hero, aged against `generatedAt`. */
 export type RecentPage = {
 	page: number;
-	recent: RecentDetection[];
+	recent: RecentVisit[];
 	recentTotal: number;
 	generatedAt: string;
 };
@@ -169,52 +189,93 @@ async function buildCurrentBird(
 	};
 }
 
+type WindowRow = LatestRow & { timestamp: string };
+
+const detectionColumns = {
+	comName: detections.Com_Name,
+	sciName: detections.Sci_Name,
+	date: detections.Date,
+	detectedAt,
+	confidence: detections.Confidence,
+	fileName: detections.File_Name,
+};
+
+/** The newest detection the station has, whatever its age. */
+async function getLatestRow(): Promise<LatestRow | undefined> {
+	const [latest] = await db
+		.select(detectionColumns)
+		.from(detections)
+		.orderBy(desc(detections.Date), desc(detections.Time))
+		.limit(1);
+	return latest;
+}
+
 /**
- * The hero always shows the station's newest detection, so whenever anything
- * has been heard inside the window, the window's newest row is the hero's and
- * the log starts one row in. With nothing in the window there is nothing to
- * skip, and nothing to list.
+ * Every detection in the window, folded into visits, newest first. `log` is
+ * the same list less the visit the hero is showing -- the one whose latest
+ * detection is the hero's own. A day of detections is a few thousand rows at
+ * most, so clustering them on each poll stays cheap.
  */
-function logTotal(windowCount: number): number {
-	return Math.max(0, windowCount - 1);
+async function getWindowVisits(heroKey: string | undefined) {
+	const rows: WindowRow[] = (
+		await db.select(detectionColumns).from(detections).where(isLast24h)
+	).map((row) => ({ ...row, timestamp: row.detectedAt }));
+
+	const visits = groupVisits(rows);
+	const log = visits.filter(
+		(visit) =>
+			detectionKey(visit.moments[visit.moments.length - 1]) !== heroKey,
+	);
+	return { rows, visits, log };
+}
+
+function summarize(rows: WindowRow[], visitCount: number): NowSummary {
+	const bySpecies = new Map<string, number>();
+	for (const row of rows) {
+		bySpecies.set(row.comName, (bySpecies.get(row.comName) ?? 0) + 1);
+	}
+	let topSpecies: NowSummary["topSpecies"] = null;
+	for (const [comName, count] of bySpecies) {
+		if (!topSpecies || count > topSpecies.detections) {
+			topSpecies = { comName, detections: count };
+		}
+	}
+	return {
+		detections: rows.length,
+		species: bySpecies.size,
+		visits: visitCount,
+		topSpecies,
+	};
 }
 
 /** One page of the log, newest first, aged against `generatedAtMs`. */
-async function getRecentRows(
+function buildRecentPage(
+	log: Visit<WindowRow>[],
 	page: number,
-	windowCount: number,
 	generatedAtMs: number,
-): Promise<RecentDetection[]> {
-	if (logTotal(windowCount) === 0) return [];
-
-	const rows = await db
-		.select({
-			comName: detections.Com_Name,
-			sciName: detections.Sci_Name,
-			date: detections.Date,
-			detectedAt,
-			confidence: detections.Confidence,
-			fileName: detections.File_Name,
-		})
-		.from(detections)
-		.where(isLast24h)
-		.orderBy(desc(detections.Date), desc(detections.Time))
-		.limit(RECENT_PAGE_SIZE)
-		// Past the hero's own row, which leads the window.
-		.offset(1 + (page - 1) * RECENT_PAGE_SIZE);
-
+): Promise<RecentVisit[]> {
+	const start = (page - 1) * RECENT_PAGE_SIZE;
 	return Promise.all(
-		rows.map(async (row) => ({
-			key: detectionKey(row),
-			comName: row.comName,
-			sciName: row.sciName,
-			speciesSlug: comNameToSlug(row.comName),
-			imageUrl: await imageUrlFor(row.sciName, row.comName, "perched"),
-			detectedAt: row.detectedAt,
-			ageMs: generatedAtMs - timestampToMillis(row.detectedAt),
-			confidence: row.confidence,
-			audioUrl: audioUrlFor(row.date, row.comName, row.fileName),
-		})),
+		log.slice(start, start + RECENT_PAGE_SIZE).map(async (visit) => {
+			const first = visit.moments[0];
+			const last = visit.moments[visit.moments.length - 1];
+			const best = visit.moments.reduce((top, moment) =>
+				(moment.confidence ?? -1) > (top.confidence ?? -1) ? moment : top,
+			);
+			return {
+				key: `${visit.comName}-${first.detectedAt}`,
+				comName: visit.comName,
+				sciName: last.sciName,
+				speciesSlug: comNameToSlug(visit.comName),
+				imageUrl: await imageUrlFor(last.sciName, visit.comName, "perched"),
+				firstAt: first.detectedAt,
+				lastAt: last.detectedAt,
+				ageMs: generatedAtMs - timestampToMillis(last.detectedAt),
+				detections: visit.moments.length,
+				confidence: best.confidence,
+				audioUrl: audioUrlFor(best.date, best.comName, best.fileName),
+			};
+		}),
 	);
 }
 
@@ -225,36 +286,21 @@ export const getNowSnapshot = createServerFn({ method: "GET" }).handler(
 		const generatedAtDate = new Date();
 		const generatedAtMs = generatedAtDate.getTime();
 
-		const [[latest], [{ detectionCount }]] = await Promise.all([
-			// The one query deliberately NOT bounded to 24 hours: the hero card
-			// names the most recent detection whatever its age, even if that was
-			// days ago. Every other figure on the page respects the window.
-			db
-				.select({
-					comName: detections.Com_Name,
-					sciName: detections.Sci_Name,
-					date: detections.Date,
-					detectedAt,
-					confidence: detections.Confidence,
-					fileName: detections.File_Name,
-				})
-				.from(detections)
-				.orderBy(desc(detections.Date), desc(detections.Time))
-				.limit(1),
-			db.select({ detectionCount: count() }).from(detections).where(isLast24h),
-		]);
-
-		const [current, recent] = await Promise.all([
+		// The one query deliberately NOT bounded to 24 hours: the hero card
+		// names the most recent detection whatever its age, even if that was
+		// days ago. Every other figure on the page respects the window.
+		const latest = await getLatestRow();
+		const [current, window] = await Promise.all([
 			latest ? buildCurrentBird(latest, generatedAtMs) : null,
-			getRecentRows(1, detectionCount, generatedAtMs),
+			getWindowVisits(latest ? detectionKey(latest) : undefined),
 		]);
 
 		return {
 			generatedAt: localTimestamp(generatedAtDate),
 			current,
-			summary: { detections: detectionCount },
-			recent,
-			recentTotal: logTotal(detectionCount),
+			summary: summarize(window.rows, window.visits.length),
+			recent: await buildRecentPage(window.log, 1, generatedAtMs),
+			recentTotal: window.log.length,
 		};
 	},
 );
@@ -273,18 +319,14 @@ export const getRecentPage = createServerFn({ method: "GET" })
 	}))
 	.handler(async ({ data: { page } }): Promise<RecentPage> => {
 		const generatedAtDate = new Date();
-		const [{ detectionCount }] = await db
-			.select({ detectionCount: count() })
-			.from(detections)
-			.where(isLast24h);
+		const latest = await getLatestRow();
+		const { log } = await getWindowVisits(
+			latest ? detectionKey(latest) : undefined,
+		);
 		return {
 			page,
-			recent: await getRecentRows(
-				page,
-				detectionCount,
-				generatedAtDate.getTime(),
-			),
-			recentTotal: logTotal(detectionCount),
+			recent: await buildRecentPage(log, page, generatedAtDate.getTime()),
+			recentTotal: log.length,
 			generatedAt: localTimestamp(generatedAtDate),
 		};
 	});

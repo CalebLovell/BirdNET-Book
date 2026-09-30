@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { formatTimeAgo, hourLabel } from "./time-ago.ts";
+import { formatClockRange, formatTimeAgo, hourLabel } from "./time-ago.ts";
 
 const SECOND = 1_000;
 const MINUTE = 60 * SECOND;
@@ -56,4 +56,25 @@ test("labels hours in twelve-hour time", () => {
 	assert.equal(hourLabel(6), "6 AM");
 	assert.equal(hourLabel(12), "12 PM");
 	assert.equal(hourLabel(18), "6 PM");
+});
+
+test("a visit inside one minute reads as a single clock time", () => {
+	assert.equal(
+		formatClockRange("2026-07-25 06:02:03", "2026-07-25 06:02:51"),
+		"6:02 AM",
+	);
+});
+
+test("a visit spanning minutes says its meridiem once", () => {
+	assert.equal(
+		formatClockRange("2026-07-25 06:02:03", "2026-07-25 06:24:10"),
+		"6:02–6:24 AM",
+	);
+});
+
+test("a visit across noon keeps both meridiems", () => {
+	assert.equal(
+		formatClockRange("2026-07-25 11:55:00", "2026-07-25 12:05:00"),
+		"11:55 AM–12:05 PM",
+	);
 });

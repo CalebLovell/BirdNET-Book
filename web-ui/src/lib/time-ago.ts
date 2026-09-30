@@ -57,3 +57,18 @@ export function hourLabel(hour: number): string {
 	if (hour === 12) return "12 PM";
 	return `${hour - 12} PM`;
 }
+
+/**
+ * The span of a visit, e.g. "6:02–6:24 AM", or one clock time when it all fell
+ * inside a minute. The meridiem is said once when both ends share it.
+ */
+export function formatClockRange(first: string, last: string): string {
+	const start = formatClockTime(first);
+	const end = formatClockTime(last);
+	if (start === end) return end;
+	const meridiem = /\s?[AaPp]\.?[Mm]\.?$/.exec(end)?.[0];
+	if (meridiem && start.endsWith(meridiem)) {
+		return `${start.slice(0, -meridiem.length)}–${end}`;
+	}
+	return `${start}–${end}`;
+}
