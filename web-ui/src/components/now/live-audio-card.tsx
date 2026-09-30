@@ -1,4 +1,12 @@
-import { AudioWaveform, LockKeyhole, Pause, Play } from "lucide-react";
+import {
+	AudioWaveform,
+	LockKeyhole,
+	Pause,
+	Play,
+	RotateCcw,
+	SlidersHorizontal,
+} from "lucide-react";
+import { Popover } from "radix-ui";
 import { useEffect, useRef } from "react";
 
 import { Button } from "~/components/ui/button.tsx";
@@ -12,18 +20,33 @@ const STREAM_URL = "/api/live-stream";
  * Live listening for the station's feed. Gated: a locked station sees the
  * prompt below and never opens the (also-gated) stream. Unlocked, it plays the
  * proxied Icecast MP3 through a WebAudio graph and paints a scrolling
- * spectrogram in the site palette.
+ * spectrogram in the site palette. It sits in the Live page's side rail, so
+ * it keeps to a short waterfall and one button, with gain and compression
+ * tucked behind the settings glyph.
  */
 export function LiveAudioCard({ unlocked }: { unlocked: boolean }) {
 	if (!unlocked) return <LockedPanel />;
 	return <PlayerPanel />;
 }
 
-function CardShell({ children }: { children: React.ReactNode }) {
+function CardShell({
+	children,
+	status,
+}: {
+	children: React.ReactNode;
+	/** Short note pinned opposite the kicker. It shares the kicker's line (and
+	    never exceeds its height), so showing it doesn't shift the card. */
+	status?: React.ReactNode;
+}) {
 	return (
 		<section aria-label="Live audio" className="feature-card rounded-md p-4">
-			<div className="island-kicker">Listen</div>
-			<div className="mt-4">{children}</div>
+			<div className="flex items-center justify-between gap-3">
+				<div className="island-kicker shrink-0">Listen</div>
+				<output className="min-w-0 truncate text-destructive text-xs leading-4">
+					{status}
+				</output>
+			</div>
+			<div className="mt-3 max-[400px]:mt-2">{children}</div>
 		</section>
 	);
 }
@@ -50,26 +73,27 @@ function PlayerPanel() {
 	const live = useLiveAudio(STREAM_URL);
 	const isPlaying = live.state === "playing";
 	const isOffline = live.state === "offline";
+	const isConnecting = live.state === "connecting";
+	// Offline, or retrying after being offline: the button stays a quiet
+	// outline rather than the green call to action.
+	const isRetry = isOffline || (isConnecting && live.hasFailed);
 
 	return (
-		<CardShell>
+		<CardShell status={isOffline ? "Stream unavailable" : null}>
 			<Spectrogram analyser={live.analyser} active={isPlaying} />
 
-			{isOffline ? (
-				<p className="mt-3 text-destructive text-sm">
-					The live stream is offline. Check that the audio service is running,
-					then try again.
-				</p>
-			) : null}
-
-			<div className="mt-4 flex flex-wrap items-center gap-4">
+			<div className="mt-3 flex items-center gap-2 max-[400px]:mt-2">
 				<Button
 					type="button"
-					icon={isPlaying ? Pause : Play}
+					variant={isRetry ? "outline" : "default"}
+					icon={isPlaying ? Pause : isRetry ? RotateCcw : Play}
+					loading={isConnecting}
 					onClick={() => (isPlaying ? live.pause() : live.play())}
 				>
-					{live.state === "connecting"
-						? "Connecting…"
+					{isConnecting
+						? isRetry
+							? "Retrying…"
+							: "Connecting…"
 						: isPlaying
 							? "Pause"
 							: isOffline
@@ -77,33 +101,54 @@ function PlayerPanel() {
 								: "Listen live"}
 				</Button>
 
-				<label className="flex items-center gap-2 text-sm">
-					<span className="text-muted-foreground">Gain</span>
-					<input
-						type="range"
-						min={100}
-						max={400}
-						step={5}
-						value={live.gainPercent}
-						onChange={(e) => live.setGainPercent(Number(e.target.value))}
-						className="accent-[var(--moss)]"
-						aria-label="Gain"
-					/>
-					<span className="tabular-data w-10 text-right">
-						{live.gainPercent}%
-					</span>
-				</label>
+				<Popover.Root>
+					<Popover.Trigger asChild>
+						<Button
+							type="button"
+							variant="outline"
+							size="icon-xs"
+							icon={SlidersHorizontal}
+							aria-label="Audio settings"
+							className="ml-auto"
+						/>
+					</Popover.Trigger>
+					<Popover.Portal>
+						<Popover.Content
+							align="end"
+							sideOffset={6}
+							className="z-50 flex w-64 flex-col gap-3 rounded-md border border-[var(--line)] bg-[var(--paper-raised)] p-3 text-[var(--ink)] shadow-md"
+						>
+							<label className="flex items-center gap-2 text-sm">
+								<span className="text-muted-foreground">Gain</span>
+								<input
+									type="range"
+									min={100}
+									max={400}
+									step={5}
+									value={live.gainPercent}
+									onChange={(e) => live.setGainPercent(Number(e.target.value))}
+									className="min-w-0 flex-1 accent-[var(--moss)]"
+									aria-label="Gain"
+								/>
+								<span className="tabular-data w-10 text-right">
+									{live.gainPercent}%
+								</span>
+							</label>
 
-				<Toggle
-					variant="outline"
-					size="sm"
-					pressed={live.compression}
-					onPressedChange={live.setCompression}
-					aria-label="Compression"
-				>
-					<AudioWaveform aria-hidden="true" />
-					Compression
-				</Toggle>
+							<Toggle
+								variant="outline"
+								size="sm"
+								pressed={live.compression}
+								onPressedChange={live.setCompression}
+								aria-label="Compression"
+								className="self-start"
+							>
+								<AudioWaveform aria-hidden="true" />
+								Compression
+							</Toggle>
+						</Popover.Content>
+					</Popover.Portal>
+				</Popover.Root>
 			</div>
 
 			{/* The graph reads samples from this element; it carries no controls of
@@ -122,7 +167,7 @@ function PlayerPanel() {
 	);
 }
 
-const SPECTROGRAM_HEIGHT = 160;
+const SPECTROGRAM_HEIGHT = 112;
 
 /** Scrolling waterfall: one new column per frame at the right edge, prior image
     shifted left. Colors come from the live tokens so it tracks the theme. */
@@ -181,9 +226,9 @@ function Spectrogram({
 		// biome-ignore lint/a11y/noAriaHiddenOnFocusable: the spectrogram is a purely decorative live visualization with no accessible content
 		<canvas
 			ref={canvasRef}
-			width={640}
+			width={360}
 			height={SPECTROGRAM_HEIGHT}
-			className="h-40 w-full rounded-md border border-[var(--line)] bg-[var(--paper)]"
+			className="h-28 w-full rounded-md border border-[var(--line)] bg-[var(--paper)]"
 			aria-hidden="true"
 		/>
 	);

@@ -9,6 +9,9 @@ export type LiveAudioState =
 
 const MIN_GAIN_PERCENT = 100;
 const MAX_GAIN_PERCENT = 400;
+/** A dead stream rejects almost instantly; holding "connecting" this long means
+    a retry visibly tries before it reports failure again. */
+const MIN_CONNECTING_MS = 800;
 
 /**
  * Owns the Web Audio graph behind the live panel:
@@ -29,6 +32,29 @@ export function useLiveAudio(streamUrl: string) {
 	const [gainPercent, setGainPercentState] = useState(MIN_GAIN_PERCENT);
 	const [compression, setCompressionState] = useState(false);
 	const [analyser, setAnalyser] = useState<AnalyserNode | null>(null);
+	// True from a failure until audio actually plays, so a retry in progress can
+	// still read as a retry rather than a first connect.
+	const [hasFailed, setHasFailed] = useState(false);
+	const connectStartedAt = useRef(0);
+	const failTimer = useRef<ReturnType<typeof setTimeout> | undefined>(
+		undefined,
+	);
+
+	// Reports "offline", but never sooner than MIN_CONNECTING_MS after the
+	// attempt began, so the spinner doesn't just flicker.
+	const fail = useCallback(() => {
+		clearTimeout(failTimer.current);
+		const wait = connectStartedAt.current + MIN_CONNECTING_MS - Date.now();
+		const goOffline = () => {
+			setState("offline");
+			setHasFailed(true);
+		};
+		if (wait <= 0) {
+			goOffline();
+			return;
+		}
+		failTimer.current = setTimeout(goOffline, wait);
+	}, []);
 
 	// Rebuilds the Gain -> (Compressor?) -> Analyser links for the current
 	// compression setting. Analyser -> destination is wired once at build time.
@@ -74,18 +100,22 @@ export function useLiveAudio(streamUrl: string) {
 	const play = useCallback(async () => {
 		const audio = audioRef.current;
 		if (!audio) return;
+		clearTimeout(failTimer.current);
+		connectStartedAt.current = Date.now();
 		setState("connecting");
 		try {
 			ensureGraph();
 			await ctxRef.current?.resume();
 			// Assigning src here (not in markup) keeps a locked/idle visitor from
-			// ever opening the gated proxy connection.
+			// ever opening the gated proxy connection. After a failure the element
+			// is stuck in its error state, so a retry reloads the source.
 			if (!audio.src) audio.src = streamUrl;
+			else if (audio.error) audio.load();
 			await audio.play();
 		} catch {
-			setState("offline");
+			fail();
 		}
-	}, [ensureGraph, streamUrl]);
+	}, [ensureGraph, fail, streamUrl]);
 
 	const pause = useCallback(() => {
 		audioRef.current?.pause();
@@ -107,6 +137,7 @@ export function useLiveAudio(streamUrl: string) {
 
 	useEffect(() => {
 		return () => {
+			clearTimeout(failTimer.current);
 			ctxRef.current?.close();
 			// Null the refs so a remount rebuilds the graph rather than reusing a
 			// closed context. Harmless today (no StrictMode, and PlayerPanel mounts
@@ -122,6 +153,7 @@ export function useLiveAudio(streamUrl: string) {
 	return {
 		audioRef,
 		state,
+		hasFailed,
 		gainPercent,
 		setGainPercent,
 		compression,
@@ -129,9 +161,16 @@ export function useLiveAudio(streamUrl: string) {
 		analyser,
 		play,
 		pause,
-		onPlaying: () => setState("playing"),
-		onPause: () => setState((s) => (s === "offline" ? s : "paused")),
-		onError: () => setState("offline"),
+		onPlaying: () => {
+			setState("playing");
+			setHasFailed(false);
+		},
+		// A failed load fires "pause" right after "error"; while connecting (the
+		// button is out of service then) it is that, not the listener, so the
+		// pending failure stands.
+		onPause: () =>
+			setState((s) => (s === "offline" || s === "connecting" ? s : "paused")),
+		onError: fail,
 		onWaiting: () => setState((s) => (s === "playing" ? s : "connecting")),
 	};
 }
