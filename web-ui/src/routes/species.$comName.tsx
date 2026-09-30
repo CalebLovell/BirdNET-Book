@@ -697,12 +697,15 @@ function VisitLogCard({
 								<div className="flex min-w-0 flex-1 items-center gap-1.5 text-sm">
 									<Clock3 className="size-3.5 shrink-0 text-[var(--bark)]" />
 									<div className="min-w-0">
-										<time
-											dateTime={visit.date}
-											className="block truncate font-medium"
+										{/* The day links to its Timeline, like the detections
+										    table's Recorded column and the heat map's squares. */}
+										<Link
+											to="/timeline"
+											search={{ period: "day", date: visit.date }}
+											className="block truncate font-medium no-underline hover:underline"
 										>
-											{dateLabel}
-										</time>
+											<time dateTime={visit.date}>{dateLabel}</time>
+										</Link>
 										<div className="tabular-data @min-[26rem]:hidden truncate text-muted-foreground text-xs">
 											{time} · {formatTimeAgo(visit.ageMs + offsetMs)}
 										</div>
