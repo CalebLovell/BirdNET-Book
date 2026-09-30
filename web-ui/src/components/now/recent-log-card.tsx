@@ -144,7 +144,7 @@ export function RecentLogCard({
 									<Link
 										to="/species/$comName"
 										params={{ comName: detection.speciesSlug }}
-										className="block truncate font-medium no-underline hover:underline"
+										className="block max-w-fit truncate font-medium no-underline hover:underline"
 									>
 										{detection.comName}
 									</Link>

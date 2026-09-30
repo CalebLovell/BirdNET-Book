@@ -702,7 +702,7 @@ function VisitLogCard({
 										<Link
 											to="/timeline"
 											search={{ period: "day", date: visit.date }}
-											className="block truncate font-medium no-underline hover:underline"
+											className="block max-w-fit truncate font-medium no-underline hover:underline"
 										>
 											<time dateTime={visit.date}>{dateLabel}</time>
 										</Link>

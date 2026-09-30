@@ -109,7 +109,7 @@ function SpeciesGridRow({ item }: { item: SpeciesGridItem }) {
 					<Link
 						to="/species/$comName"
 						params={{ comName: comNameToSlug(item.comName) }}
-						className="block truncate font-medium no-underline hover:underline"
+						className="block max-w-fit truncate font-medium no-underline hover:underline"
 					>
 						{item.comName}
 					</Link>

@@ -378,7 +378,7 @@ function RoundSummary({
 								<Link
 									to="/species/$comName"
 									params={{ comName: answer.speciesSlug }}
-									className="block truncate font-medium no-underline hover:underline"
+									className="block max-w-fit truncate font-medium no-underline hover:underline"
 								>
 									{answer.comName}
 								</Link>
