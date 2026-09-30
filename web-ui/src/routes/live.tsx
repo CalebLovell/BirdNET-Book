@@ -93,15 +93,6 @@ function Live() {
 				flash={heroIsNew}
 			/>
 
-			{/* Nothing to sum up on a station that has never heard a bird; the
-			    hero card says so on its own. */}
-			{snapshot.current ? (
-				<LiveSummaryStats
-					summary={snapshot.summary}
-					className="mt-(--page-gap)"
-				/>
-			) : null}
-
 			{/* `grid-cols-1` rather than a bare `grid`: the implicit track it would
 			    fall back to is sized to max-content, so a long species name in the
 			    log pushes the whole page wider than the phone it is on. The rail
@@ -116,6 +107,12 @@ function Live() {
 				/>
 
 				<div className="order-first grid grid-cols-1 gap-(--page-gap) lg:order-none">
+					{/* Nothing to sum up on a station that has never heard a bird;
+					    the hero card says so on its own. */}
+					{snapshot.current ? (
+						<LiveSummaryStats summary={snapshot.summary} />
+					) : null}
+
 					<LiveAudioCard unlocked={unlocked} />
 
 					{/* A station that has never recorded anything has nothing to

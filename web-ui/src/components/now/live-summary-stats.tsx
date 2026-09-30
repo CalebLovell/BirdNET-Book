@@ -5,39 +5,33 @@ import {
 	Feather,
 } from "lucide-react";
 
-import { PageHeaderStats } from "~/components/page-header-card.tsx";
+import { Figure } from "~/components/page-header-card.tsx";
 import type { NowSummary } from "~/lib/now.ts";
 
 /**
- * The last 24 hours at a glance, between the hero and the log: how many kinds
- * of bird, how many visits the log below folds them into, how many detections
- * those visits hold, and who was loudest. Follows the poll, so the figures
+ * The last 24 hours at a glance, at the head of the rail above Listen: how
+ * many kinds of bird, how many visits the log folds them into, how many
+ * detections those visits hold, and who was loudest. Two by two at every
+ * width, so the rail stays a narrow column. Follows the poll, so the figures
  * move as birds arrive.
  */
-export function LiveSummaryStats({
-	summary,
-	className,
-}: {
-	summary: NowSummary;
-	className?: string;
-}) {
+export function LiveSummaryStats({ summary }: { summary: NowSummary }) {
 	return (
-		<PageHeaderStats
-			className={className}
-			stats={[
-				{ label: "Species", value: summary.species, icon: Feather },
-				{ label: "Visits", value: summary.visits, icon: Binoculars },
-				{
-					label: "Detections",
-					value: summary.detections,
-					icon: ChartNoAxesColumnIncreasing,
-				},
-				{
-					label: "Most heard",
-					value: summary.topSpecies?.comName ?? "—",
-					icon: Bird,
-				},
-			]}
-		/>
+		<dl className="grid grid-cols-2 gap-(--page-gap)">
+			<Figure compact label="Species" value={summary.species} icon={Feather} />
+			<Figure compact label="Visits" value={summary.visits} icon={Binoculars} />
+			<Figure
+				compact
+				label="Detections"
+				value={summary.detections}
+				icon={ChartNoAxesColumnIncreasing}
+			/>
+			<Figure
+				compact
+				label="Most heard"
+				value={summary.topSpecies?.comName ?? "—"}
+				icon={Bird}
+			/>
+		</dl>
 	);
 }
