@@ -5,7 +5,7 @@
 
 import { audioUrlFor } from "~/lib/audio.ts";
 
-export const QUESTIONS_PER_ROUND = 8;
+export const QUESTIONS_PER_ROUND = 10;
 export const CHOICES_PER_QUESTION = 4;
 
 /** Points awarded by how many guesses a question took; nothing after these. */
@@ -32,6 +32,14 @@ export type LearnChoice = {
 	sciName: string;
 	speciesSlug: string;
 	imageUrl: string | null;
+	/**
+	 * Station-wide totals for the species, filled in by the loader. Deliberately
+	 * nothing about the clip itself -- its time or confidence on every card
+	 * would point straight at the answer.
+	 */
+	detections: number;
+	/** "YYYY-MM-DD" of the species' first detection, or null if unknown. */
+	firstHeard: string | null;
 };
 
 export type LearnQuestion = {
@@ -72,6 +80,8 @@ function toChoice(species: PoolSpecies): LearnChoice {
 		sciName: species.sciName,
 		speciesSlug: species.speciesSlug,
 		imageUrl: species.imageUrl,
+		detections: 0,
+		firstHeard: null,
 	};
 }
 

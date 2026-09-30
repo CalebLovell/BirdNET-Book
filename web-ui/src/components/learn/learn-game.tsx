@@ -5,6 +5,7 @@ import { ConfidencePill } from "~/components/confidence-pill.tsx";
 import { ClipPlayer } from "~/components/learn/clip-player.tsx";
 import { RecordingButton } from "~/components/recording-button.tsx";
 import { Button } from "~/components/ui/button.tsx";
+import { formatDayTitle } from "~/lib/day-title.ts";
 import {
 	type LearnChoice,
 	type LearnQuestion,
@@ -108,117 +109,311 @@ export function LearnGame({
 	);
 
 	return (
-		<section
-			aria-label="Bird call quiz"
-			className="feature-card rounded-md p-4"
-		>
-			{/* The only thing that rides the card's full width -- it labels the card
-			    rather than belonging to the game below it. */}
-			<div className="island-kicker">
-				Bird {index + 1} of {round.questions.length}
-			</div>
-
-			{/* The card spans the page, but the game itself stays a single centered
-			    column: score, progress, clip, choices, in the order you use them. */}
-			<div className="mx-auto mt-(--page-gap) flex w-full max-w-2xl flex-col gap-(--page-gap)">
-				<div className="flex flex-col gap-2">
-					<div className="tabular-data self-end text-muted-foreground text-xs">
-						{runningScore.score} pts
-					</div>
-					<ProgressTrack
-						total={round.questions.length}
-						results={results}
-						current={index}
-					/>
-				</div>
-
-				<fieldset className="flex flex-col items-center gap-2">
-					<legend className="sr-only">Listening prompt</legend>
-					<ClipPlayer key={question.id} audioUrl={question.audioUrl} />
-					<div className="tabular-data text-muted-foreground text-xs">
-						Recorded {formatClockTime(question.detectedAt)} ·{" "}
-						{question.detectedAt.slice(0, 10)}
-					</div>
-				</fieldset>
-
-				<fieldset className="grid min-w-0 gap-2 sm:grid-cols-2">
-					<legend className="sr-only">Bird choices</legend>
-					{question.choices.map((choice, choiceIndex) => (
-						<ChoiceButton
-							key={choice.sciName}
-							choice={choice}
-							shortcut={choiceIndex + 1}
-							state={
-								isSolved && choice.sciName === question.answerSciName
-									? "correct"
-									: wrongGuesses.includes(choice.sciName)
-										? "wrong"
-										: isSolved
-											? "muted"
-											: "open"
-							}
-							onSelect={() => guess(choice)}
-						/>
-					))}
-				</fieldset>
-
-				{/* No reserved height -- this strip is only ever as tall as whatever it
-				    is currently saying. */}
-				<div className="border-[var(--line)] border-t pt-(--page-gap)">
-					{isSolved && answer ? (
-						<div className="flex flex-wrap items-center justify-center gap-4 max-[400px]:gap-2">
-							{/* Wraps on a phone rather than pushing the species link off the
-							    card's edge. */}
-							<div className="flex flex-wrap items-center justify-center gap-2 text-sm">
-								<span className="font-semibold">
-									{wrongGuesses.length === 0
-										? "First try —"
-										: `Got it in ${wrongGuesses.length + 1} —`}
-								</span>
-								<span className="tabular-data">
-									+{pointsForAttempt(wrongGuesses.length + 1)} pts
-								</span>
-								<ConfidencePill confidence={question.confidence} />
-								<Link
-									to="/species/$comName"
-									params={{ comName: answer.speciesSlug }}
-									className="text-sm no-underline hover:underline"
-								>
-									About the {answer.comName}
-								</Link>
-							</div>
-							<Button onClick={advance}>
-								{index + 1 >= round.questions.length ? (
-									<>
-										<Trophy className="size-4" />
-										See your score
-									</>
-								) : (
-									// Trailing, unlike the leading icons elsewhere: the arrow is
-									// pointing at where the button takes you.
-									<>
-										Next bird
-										<ArrowRight className="size-4" />
-									</>
-								)}
-							</Button>
+		// Game card on the left, the round so far in a card of its own on the
+		// right. Once the page is too narrow for both, the rail card drops out
+		// and the score and pip track above the clip stand in for it. Both keep
+		// their natural height -- the rail stops where its rows do.
+		//
+		// On a wide page the split copies the species page's: its left track is
+		// the year heat map's natural width (914px), the right one takes the rest
+		// with a 20rem floor. So the game sits at the heat map's width and the
+		// rail at the visit log's, and the two pages read as one system. Past
+		// 38rem the rail stops growing and the game takes the extra instead.
+		<div className="@container/quiz">
+			<div className="grid @3xl/quiz:grid-cols-[minmax(0,1fr)_24rem] @7xl/quiz:grid-cols-[minmax(914px,1fr)_minmax(20rem,38rem)] items-start gap-(--page-gap)">
+				<section
+					aria-label="Bird call quiz"
+					className="@container/game feature-card flex min-w-0 flex-col gap-(--page-gap) rounded-md p-4"
+				>
+					<header className="-mx-(--page-gap) -mt-(--page-gap) flex min-h-[45px] flex-wrap items-center justify-between gap-x-2 border-b px-(--page-gap) py-2">
+						<h2 className="island-kicker">Mystery call</h2>
+						<div className="tabular-data text-muted-foreground text-xs">
+							Heard {formatClockTime(question.detectedAt)} ·{" "}
+							{formatDayTitle(question.detectedAt.slice(0, 10))}
 						</div>
-					) : (
-						<p className="text-center text-muted-foreground text-sm">
-							Listen, then pick the bird. {POINTS_BY_ATTEMPT[0]} points first
-							try, {POINTS_BY_ATTEMPT[1]} on the second
-							{/* No keyboard to speak of on a touch screen. */}
-							<span className="pointer-coarse:hidden">
-								{" "}
-								— keys 1–4 work too
+					</header>
+
+					<div className="flex @3xl/quiz:hidden flex-col gap-2">
+						<div className="tabular-data flex justify-between text-muted-foreground text-xs">
+							<span>
+								Bird {index + 1} of {round.questions.length}
 							</span>
-							.
-						</p>
-					)}
+							<span>{runningScore.score} pts</span>
+						</div>
+						<ProgressTrack
+							total={round.questions.length}
+							results={results}
+							current={index}
+						/>
+					</div>
+
+					<fieldset className="min-w-0">
+						<legend className="sr-only">Listening prompt</legend>
+						<ClipPlayer key={question.id} audioUrl={question.audioUrl} />
+					</fieldset>
+
+					<fieldset className="grid min-w-0 @xl/game:grid-cols-2 grid-cols-1 gap-4 max-[400px]:gap-2">
+						<legend className="sr-only">Bird choices</legend>
+						{question.choices.map((choice, choiceIndex) => (
+							<ChoiceButton
+								key={choice.sciName}
+								choice={choice}
+								shortcut={choiceIndex + 1}
+								// The clip's own confidence only shows once it can't give
+								// the answer away.
+								confidence={
+									isSolved && choice.sciName === question.answerSciName
+										? question.confidence
+										: null
+								}
+								state={
+									isSolved && choice.sciName === question.answerSciName
+										? "correct"
+										: wrongGuesses.includes(choice.sciName)
+											? "wrong"
+											: isSolved
+												? "muted"
+												: "open"
+								}
+								onSelect={() => guess(choice)}
+							/>
+						))}
+					</fieldset>
+
+					{/* No reserved height -- this strip is only ever as tall as whatever it
+				    is currently saying. */}
+					<div className="border-[var(--line)] border-t pt-(--page-gap)">
+						{isSolved && answer ? (
+							<div className="flex flex-wrap items-center justify-center gap-4 max-[400px]:gap-2">
+								{/* Wraps on a phone rather than pushing the species link off the
+							    card's edge. */}
+								<div className="flex flex-wrap items-center justify-center gap-2 text-sm">
+									<span className="font-semibold">
+										{wrongGuesses.length === 0
+											? "First try —"
+											: `Got it in ${wrongGuesses.length + 1} —`}
+									</span>
+									<span className="tabular-data">
+										+{pointsForAttempt(wrongGuesses.length + 1)} pts
+									</span>
+									<Link
+										to="/species/$comName"
+										params={{ comName: answer.speciesSlug }}
+										className="text-sm no-underline hover:underline"
+									>
+										About the {answer.comName}
+									</Link>
+								</div>
+								<Button onClick={advance}>
+									{index + 1 >= round.questions.length ? (
+										<>
+											<Trophy className="size-4" />
+											See your score
+										</>
+									) : (
+										// Trailing, unlike the leading icons elsewhere: the arrow is
+										// pointing at where the button takes you.
+										<>
+											Next bird
+											<ArrowRight className="size-4" />
+										</>
+									)}
+								</Button>
+							</div>
+						) : (
+							<p className="text-center text-muted-foreground text-sm">
+								Listen, then pick the bird. {POINTS_BY_ATTEMPT[0]} points first
+								try, {POINTS_BY_ATTEMPT[1]} on the second
+								{/* No keyboard to speak of on a touch screen. */}
+								<span className="pointer-coarse:hidden">
+									{" "}
+									— keys 1–4 work too
+								</span>
+								.
+							</p>
+						)}
+					</div>
+				</section>
+
+				<RoundRail
+					questions={round.questions}
+					results={results}
+					current={index}
+					score={runningScore.score}
+					maxScore={round.questions.length * POINTS_BY_ATTEMPT[0]}
+				/>
+			</div>
+		</div>
+	);
+}
+
+/**
+ * The round so far, one row per bird, in the Live page's recent-activity idiom:
+ * a header band, hairline-split rows that run to the card's edges, and a
+ * footer band holding the score. Answered birds show who they were, how the
+ * guess went, when the clip was recorded and a replay button; the current bird
+ * is marked; the rest wait as numbered blanks. Only shown once the card is
+ * wide enough to give it a column of its own; narrower, the pip track above
+ * the clip stands in.
+ */
+function RoundRail({
+	questions,
+	results,
+	current,
+	score,
+	maxScore,
+}: {
+	questions: LearnQuestion[];
+	results: QuestionResult[];
+	current: number;
+	score: number;
+	maxScore: number;
+}) {
+	return (
+		<aside
+			aria-label="This round"
+			className="feature-card @3xl/quiz:flex hidden flex-col rounded-md p-4"
+		>
+			<div className="-mx-(--page-gap) -mt-(--page-gap) flex min-h-[45px] items-center justify-between gap-2 border-b px-(--page-gap)">
+				<div className="island-kicker">This round</div>
+				<div className="tabular-data text-muted-foreground text-xs">
+					Bird {current + 1} of {questions.length}
 				</div>
 			</div>
-		</section>
+
+			<ol className="-mx-(--page-gap) divide-y">
+				{questions.map((question, position) => {
+					const result = results[position];
+					const answer = question.choices.find(
+						(choice) => choice.sciName === question.answerSciName,
+					);
+					const isCurrent = position === current && !result;
+
+					return (
+						<li
+							key={question.id}
+							aria-current={isCurrent ? "step" : undefined}
+							// 54px like the recent-activity rows: the 40px thumbnail and
+							// 7px either side. Blank rows hold the same height, so the
+							// card doesn't grow as the round fills in.
+							className={`flex min-h-[54px] items-center gap-3 px-(--page-gap) py-1.75 ${isCurrent ? "bg-[var(--row-selected)]" : ""}`}
+						>
+							<RailDot
+								position={position}
+								attempts={result?.attempts ?? null}
+							/>
+							{result && answer ? (
+								<AnsweredRailRow
+									answer={answer}
+									attempts={result.attempts}
+									question={question}
+								/>
+							) : (
+								<span
+									className={`text-sm ${isCurrent ? "" : "text-muted-foreground"}`}
+								>
+									{isCurrent ? "Listening…" : "—"}
+								</span>
+							)}
+						</li>
+					);
+				})}
+			</ol>
+
+			<div className="-mx-(--page-gap) mt-auto -mb-(--page-gap) flex items-baseline justify-between gap-2 border-t px-(--page-gap) py-3">
+				<span className="text-muted-foreground text-sm">Score</span>
+				<span className="tabular-data font-semibold text-xl leading-none">
+					{score}
+					<span className="ml-1 font-normal text-muted-foreground text-sm">
+						of {maxScore} pts
+					</span>
+				</span>
+			</div>
+		</aside>
 	);
+}
+
+function AnsweredRailRow({
+	answer,
+	attempts,
+	question,
+}: {
+	answer: LearnChoice;
+	attempts: number;
+	question: LearnQuestion;
+}) {
+	return (
+		<>
+			<ChoiceThumbnail choice={answer} size="md" />
+
+			<div className="min-w-0 flex-1">
+				<Link
+					to="/species/$comName"
+					params={{ comName: answer.speciesSlug }}
+					className="block min-w-0 max-w-fit truncate font-medium text-sm no-underline hover:underline"
+				>
+					{answer.comName}
+				</Link>
+				<div className="truncate text-[var(--bark)] text-xs italic">
+					{answer.sciName}
+				</div>
+			</div>
+
+			<div className="shrink-0 text-right">
+				<div className="tabular-data text-sm">
+					+{pointsForAttempt(attempts)}
+				</div>
+				<div className="tabular-data text-muted-foreground text-xs">
+					{attemptLabel(attempts)}
+				</div>
+			</div>
+
+			<RecordingButton
+				audioUrl={question.audioUrl}
+				speciesName={answer.comName}
+				iconOnly
+			/>
+		</>
+	);
+}
+
+/** The bird's number, coloured like its choice card: green first try, red after. */
+function RailDot({
+	position,
+	attempts,
+}: {
+	position: number;
+	attempts: number | null;
+}) {
+	const color =
+		attempts === null
+			? "bg-muted text-muted-foreground"
+			: attempts === 1
+				? "bg-[color-mix(in_oklab,var(--moss)_12%,var(--paper-raised))] font-semibold text-[var(--moss)]"
+				: "bg-[color-mix(in_oklab,var(--clay)_10%,var(--paper-raised))] font-semibold text-[var(--clay)]";
+	const label = String(position + 1);
+
+	return (
+		<span
+			className={`tabular-data flex size-5 shrink-0 items-center justify-center rounded-full text-[11px] ${color}`}
+		>
+			<span style={{ transform: `translateY(${digitNudge(label)}px)` }}>
+				{label}
+			</span>
+		</span>
+	);
+}
+
+/**
+ * Georgia only has old-style figures: 0-2 sit at x-height, 3-5/7/9 hang
+ * below the baseline and 6/8 rise above it, so centring the line box leaves
+ * the ink off-centre. Measured at 11px (ascent 10, descent 2), this is how
+ * far to shift a number so its ink sits in the middle of the 20px dot.
+ */
+function digitNudge(label: string) {
+	const top = /[68]/.test(label) ? 9 : 6;
+	const bottom = /[34579]/.test(label) ? 2 : 0;
+	return (top - bottom) / 2 - 3.75;
 }
 
 /** One pip per question: filled as answers land, outlined for what's left. */
@@ -271,11 +466,14 @@ function ChoiceButton({
 	choice,
 	shortcut,
 	state,
+	confidence,
 	onSelect,
 }: {
 	choice: LearnChoice;
 	shortcut: number;
 	state: ChoiceState;
+	/** The clip's confidence, passed only to the solved answer's card. */
+	confidence: number | null;
 	onSelect: () => void;
 }) {
 	return (
@@ -283,18 +481,19 @@ function ChoiceButton({
 			type="button"
 			onClick={onSelect}
 			disabled={state !== "open"}
-			className={`flex items-center gap-4 rounded-md border p-4 text-left max-[400px]:gap-2 max-[400px]:p-2 ${CHOICE_STYLES[state]}`}
+			className={`flex items-center gap-4 rounded-md border px-4 py-2 text-left max-[400px]:gap-2 max-[400px]:px-2 ${CHOICE_STYLES[state]}`}
 		>
 			<span className="tabular-data w-4 shrink-0 text-center text-muted-foreground text-xs">
 				{shortcut}
 			</span>
-			<ChoiceThumbnail choice={choice} />
+			<ChoiceThumbnail choice={choice} size="lg" />
 			<span className="min-w-0 flex-1">
 				<span className="block truncate font-medium">{choice.comName}</span>
 				<span className="block truncate text-[var(--bark)] text-xs italic">
 					{choice.sciName}
 				</span>
 			</span>
+			{confidence !== null ? <ConfidencePill confidence={confidence} /> : null}
 			{state === "correct" ? (
 				<Check className="size-4 shrink-0 text-[var(--moss)]" />
 			) : state === "wrong" ? (
@@ -304,9 +503,36 @@ function ChoiceButton({
 	);
 }
 
-function ChoiceThumbnail({ choice }: { choice: LearnChoice }) {
+const THUMBNAIL_SIZES = {
+	sm: "h-6 w-8",
+	md: "size-10",
+	lg: "h-20 w-24 max-[400px]:h-10 max-[400px]:w-13",
+} as const;
+
+function ChoiceThumbnail({
+	choice,
+	size = "md",
+}: {
+	choice: LearnChoice;
+	size?: keyof typeof THUMBNAIL_SIZES;
+}) {
+	if (!choice.imageUrl && size !== "sm") {
+		// At these sizes an empty box reads as broken art; initials read as a
+		// placeholder on purpose.
+		return (
+			<span
+				aria-hidden="true"
+				className={`flex shrink-0 items-center justify-center rounded-md bg-[var(--icon-well)] text-[var(--moss)] text-sm tracking-wide ${THUMBNAIL_SIZES[size]}`}
+			>
+				{initials(choice.comName)}
+			</span>
+		);
+	}
+
 	return (
-		<span className="flex size-10 shrink-0 items-center justify-center overflow-hidden">
+		<span
+			className={`flex shrink-0 items-center justify-center overflow-hidden ${THUMBNAIL_SIZES[size]}`}
+		>
 			{choice.imageUrl ? (
 				<img
 					src={choice.imageUrl}
@@ -314,10 +540,22 @@ function ChoiceThumbnail({ choice }: { choice: LearnChoice }) {
 					className="max-h-full max-w-full object-contain"
 				/>
 			) : (
-				<Bird className="size-5 text-muted-foreground" />
+				<Bird
+					className={`text-muted-foreground ${size === "sm" ? "size-4" : "size-5"}`}
+				/>
 			)}
 		</span>
 	);
+}
+
+/** "Red-bellied Woodpecker" -> "RW": one letter per word, hyphenated words as one. */
+function initials(comName: string): string {
+	return comName
+		.split(/\s+/)
+		.filter(Boolean)
+		.slice(0, 3)
+		.map((word) => word[0]?.toUpperCase() ?? "")
+		.join("");
 }
 
 function attemptLabel(attempts: number): string {
@@ -368,7 +606,7 @@ function RoundSummary({
 				/>
 			</dl>
 
-			<ol className="mt-(--page-gap) space-y-1">
+			<ol className="mt-3 space-y-0.5">
 				{questions.map((question, position) => {
 					const result = results[position];
 					const answer = question.choices.find(

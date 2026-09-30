@@ -160,6 +160,47 @@ async function addMissingImages(round: LearnRound): Promise<LearnRound> {
 	};
 }
 
+/**
+ * Fills in each choice's station totals. Scoped to the round's own species, so
+ * it's one grouped query over a dozen or so names, not the whole table.
+ */
+function addSpeciesStats(round: LearnRound): LearnRound {
+	const names = [
+		...new Set(
+			round.questions.flatMap((question) =>
+				question.choices.map((choice) => choice.comName),
+			),
+		),
+	];
+	if (names.length === 0) return round;
+
+	const rows = sqlite
+		.prepare(
+			`SELECT Com_Name AS comName, COUNT(*) AS detections, MIN(Date) AS firstHeard
+			FROM detections
+			WHERE Com_Name IN (${names.map(() => "?").join(", ")})
+			GROUP BY Com_Name`,
+		)
+		.all(...names) as {
+		comName: string;
+		detections: number;
+		firstHeard: string | null;
+	}[];
+	const stats = new Map(rows.map((row) => [row.comName, row]));
+
+	return {
+		...round,
+		questions: round.questions.map((question) => ({
+			...question,
+			choices: question.choices.map((choice) => ({
+				...choice,
+				detections: stats.get(choice.comName)?.detections ?? 0,
+				firstHeard: stats.get(choice.comName)?.firstHeard ?? null,
+			})),
+		})),
+	};
+}
+
 export type LearnRoundData = {
 	round: LearnRound;
 	/**
@@ -174,7 +215,9 @@ export const getLearnRound = createServerFn({ method: "GET" })
 	.validator((pool: LearnPool) => pool)
 	.handler(async ({ data: pool }): Promise<LearnRoundData> => {
 		const rows = recentClipsPerSpecies(pool).filter(clipFileExists);
-		const round = await addMissingImages(buildRound(groupIntoSpecies(rows)));
+		const round = addSpeciesStats(
+			await addMissingImages(buildRound(groupIntoSpecies(rows))),
+		);
 
 		// A playable round is proof enough; only an empty one pays for the probe.
 		const hasAnyDetections =
