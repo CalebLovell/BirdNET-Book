@@ -25,14 +25,7 @@ import {
 	type PageHeaderStat,
 } from "~/components/page-header-card.tsx";
 import { SpeciesActions } from "~/components/species-actions.tsx";
-import {
-	Pagination,
-	PaginationContent,
-	PaginationItem,
-	PaginationLink,
-	PaginationNext,
-	PaginationPrevious,
-} from "~/components/ui/pagination.tsx";
+import { PageStepper } from "~/components/ui/page-stepper.tsx";
 import { SearchInput } from "~/components/ui/search-input.tsx";
 import { ToggleGroup, ToggleGroupItem } from "~/components/ui/toggle-group.tsx";
 import { getLifeListCards, type LifeListCard } from "~/lib/detections.ts";
@@ -206,7 +199,7 @@ function Species() {
 	);
 
 	return (
-		<div className="page-wrap space-y-(--page-gap) py-4">
+		<div className="page-wrap flex min-h-full flex-col gap-(--page-gap) py-4">
 			<PageHeaderCard
 				title="Species"
 				description="Every species ever recorded at this station."
@@ -279,66 +272,23 @@ function Species() {
 				</div>
 			)}
 
-			{pageCount > 1 && (
-				<Pagination>
-					<PaginationContent>
-						<PaginationItem>
-							<PaginationPrevious
-								href="#"
-								onClick={(e) => {
-									e.preventDefault();
-									navigate({
-										search: (prev) => ({
-											...prev,
-											page: Math.max(1, currentPage - 1),
-										}),
-										replace: true,
-									});
-								}}
-								className={
-									currentPage === 1 ? "pointer-events-none opacity-50" : ""
-								}
-							/>
-						</PaginationItem>
-						{Array.from({ length: pageCount }, (_, i) => i + 1).map((p) => (
-							<PaginationItem key={p}>
-								<PaginationLink
-									href="#"
-									isActive={p === currentPage}
-									onClick={(e) => {
-										e.preventDefault();
-										navigate({
-											search: (prev) => ({ ...prev, page: p }),
-											replace: true,
-										});
-									}}
-								>
-									{p}
-								</PaginationLink>
-							</PaginationItem>
-						))}
-						<PaginationItem>
-							<PaginationNext
-								href="#"
-								onClick={(e) => {
-									e.preventDefault();
-									navigate({
-										search: (prev) => ({
-											...prev,
-											page: Math.min(pageCount, currentPage + 1),
-										}),
-										replace: true,
-									});
-								}}
-								className={
-									currentPage === pageCount
-										? "pointer-events-none opacity-50"
-										: ""
-								}
-							/>
-						</PaginationItem>
-					</PaginationContent>
-				</Pagination>
+			{pageItems.length > 0 && (
+				<SpeciesFooter
+					first={(currentPage - 1) * PAGE_SIZE + 1}
+					last={(currentPage - 1) * PAGE_SIZE + pageItems.length}
+					total={filtered.length}
+					lifeList={cards.length}
+					sort={sort}
+					reverse={reverse}
+					page={currentPage}
+					pageCount={pageCount}
+					onPageChange={(next) =>
+						navigate({
+							search: (prev) => ({ ...prev, page: next }),
+							replace: true,
+						})
+					}
+				/>
 			)}
 		</div>
 	);
@@ -355,6 +305,79 @@ const SORT_META: Record<
 	// Not "A–Z" either -- the default order runs Z first (see `filtered`).
 	alpha: { label: "Name", icon: ArrowDownAZ },
 };
+
+/** How each sort reads in the footer, in its natural and reversed direction. */
+const SORT_PHRASE: Record<SortKey, [string, string]> = {
+	count: ["most recorded first", "least recorded first"],
+	recent: ["most recently heard first", "longest unheard first"],
+	alpha: ["Z to A", "A to Z"],
+};
+
+/**
+ * The grid's footer: the same band the tables end on -- a hairline, then what
+ * the page holds on the left and the stepper held right. The grid has no card
+ * of its own, so the footer is one: a slim card the width of the grid. Shown
+ * on a single page too, so the page keeps one shape as a search narrows it,
+ * and held to the bottom of the page (`mt-auto` in the page's full-height
+ * column) so a short last page doesn't pull it up under the grid.
+ */
+function SpeciesFooter({
+	first,
+	last,
+	total,
+	lifeList,
+	sort,
+	reverse,
+	page,
+	pageCount,
+	onPageChange,
+}: {
+	first: number;
+	last: number;
+	total: number;
+	lifeList: number;
+	sort: SortKey;
+	reverse: boolean;
+	page: number;
+	pageCount: number;
+	onPageChange: (page: number) => void;
+}) {
+	const Icon = SORT_META[sort].icon;
+	return (
+		<div className="feature-card mt-auto flex flex-wrap items-center gap-x-4 gap-y-2 rounded-md px-(--page-gap) py-2 text-sm">
+			<div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 text-muted-foreground">
+				<span>
+					<span className="tabular-data font-semibold text-foreground">
+						{first.toLocaleString()}&ndash;{last.toLocaleString()}
+					</span>{" "}
+					of{" "}
+					<span className="tabular-data font-semibold text-foreground">
+						{total.toLocaleString()}
+					</span>{" "}
+					species
+					{total < lifeList ? (
+						<span className="max-sm:hidden">
+							{" "}
+							&middot; filtered from{" "}
+							<span className="tabular-data">{lifeList.toLocaleString()}</span>
+						</span>
+					) : null}
+				</span>
+				<span className="flex items-center gap-1.5 max-[400px]:hidden">
+					<Icon className="size-3.5" aria-hidden="true" />
+					{SORT_PHRASE[sort][reverse ? 1 : 0]}
+				</span>
+			</div>
+			<PageStepper
+				className="ml-auto"
+				label="Species pages"
+				page={page}
+				pageCount={pageCount}
+				onPageChange={onPageChange}
+			/>
+		</div>
+	);
+}
 
 /**
  * The sort on a narrow screen: a native select dressed like the timeline's
@@ -505,7 +528,7 @@ function SpeciesCard({ card }: { card: LifeListCard }) {
 		: card.lastDetected || "—";
 
 	return (
-		<div className="feature-card feature-card-link relative flex flex-col gap-3 overflow-hidden rounded-md p-4 has-[[data-card-link]:focus-visible]:outline-2 has-[[data-card-link]:focus-visible]:outline-offset-2">
+		<div className="feature-card feature-card-link relative flex flex-col gap-3 overflow-hidden rounded-md p-4 max-[400px]:gap-2 has-[[data-card-link]:focus-visible]:outline-2 has-[[data-card-link]:focus-visible]:outline-offset-2">
 			{/* The whole-card link is an invisible overlay pinned to the card's
 			    edges, so its own focus ring would land under `overflow-hidden` and
 			    never be seen. Instead the card wears the ring on the overlay's
@@ -544,7 +567,7 @@ function SpeciesCard({ card }: { card: LifeListCard }) {
 				)}
 			</div>
 
-			<div className="flex flex-1 flex-col gap-3">
+			<div className="flex flex-1 flex-col gap-3 max-[400px]:gap-2">
 				<div>
 					<h2 className="display-title font-bold text-base">{card.comName}</h2>
 					<p className="text-[var(--bark)] text-xs italic">{card.sciName}</p>
