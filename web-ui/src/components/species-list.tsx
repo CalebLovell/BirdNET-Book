@@ -15,9 +15,9 @@ export type SpeciesListItem = {
 };
 
 /**
- * The ranked species list card, shared by "Top detections" on the today page and
- * "Top species" / "Rarest species" on stats, so every ranked list on the site
- * reads as the same object. Bars scale against the leader of their own list
+ * The ranked species list card, kept for ranked lists like "Top species" /
+ * "Rarest species", so every ranked list on the site reads as the same
+ * object. Bars scale against the leader of their own list
  * rather than a global maximum, which keeps the rare list legible instead of
  * flattening it against the far larger counts of the common birds.
  */

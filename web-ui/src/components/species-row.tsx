@@ -1,10 +1,10 @@
 import { Bird } from "lucide-react";
 
 /**
- * The shared row shell for the ranked/recent species lists. Top detections and
- * Recent activity sit side by side on the now page, so their rows share one
- * height: the taller card (the one with progress bars) sets it, and the shorter
- * one pads out to match rather than drifting out of alignment down the column.
+ * The shared row shell for the ranked species lists. Lists that sit side by
+ * side share one row height: the taller card (the one with progress bars) sets
+ * it, and the shorter one pads out to match rather than drifting out of
+ * alignment down the column.
  */
 export const LIST_ROW =
 	"flex min-h-18 items-center gap-3 rounded-md px-3 py-2 odd:bg-[var(--meadow)] max-[400px]:gap-2 max-[400px]:px-2";

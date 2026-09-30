@@ -5,7 +5,6 @@ import { HighlightsCard } from "~/components/highlights-card.tsx";
 import { CurrentBirdCard } from "~/components/now/current-bird-card.tsx";
 import { LiveAudioCard } from "~/components/now/live-audio-card.tsx";
 import { RecentLogCard } from "~/components/now/recent-log-card.tsx";
-import { SpeciesList } from "~/components/species-list.tsx";
 import { getLiveHighlights } from "~/lib/live-highlights.ts";
 import { getNowSnapshot } from "~/lib/now.ts";
 import { pageTitle } from "~/lib/page-title.ts";
@@ -78,12 +77,12 @@ function Live() {
 	// hero card is showing too.
 	useFavicon(snapshot.current?.imageUrl ?? null);
 
-	// Whenever anything has been heard inside the window, the hero bird is also
-	// the newest row in the log, so its arrival is already tracked and needs no
-	// second mechanism. Outside the window the log is empty, and the hero is
-	// showing an older detection that did not just arrive -- nothing to flash.
-	const newestKey = snapshot.recent[0]?.key;
-	const heroIsNew = newestKey !== undefined && freshKeys.has(newestKey);
+	// The hero is left out of the log, so each tracks its own arrivals: a new
+	// bird flashes in the hero, and the one it replaced flashes again as it
+	// lands at the top of the log.
+	const heroKey = snapshot.current?.key;
+	const freshHeroKeys = useFreshKeys(heroKey ? [heroKey] : []);
+	const heroIsNew = heroKey !== undefined && freshHeroKeys.has(heroKey);
 
 	return (
 		<div className="page-wrap py-4">
@@ -93,35 +92,33 @@ function Live() {
 				flash={heroIsNew}
 			/>
 
-			<div className="mt-4">
-				<LiveAudioCard unlocked={unlocked} />
-			</div>
-
-			{/* A station that has never recorded anything has nothing to highlight,
-			    and the hero card above already says so, far more plainly. */}
-			{highlights.hasAnyDetections ? (
-				<HighlightsCard
-					highlights={highlights.highlights}
-					emptyMessage="No detections recorded in the last 24 hours."
-					className="mt-4"
-				/>
-			) : null}
-
 			{/* `grid-cols-1` rather than a bare `grid`: the implicit track it would
 			    fall back to is sized to max-content, so a long species name in the
-			    log below pushes the whole page wider than the phone it is on. */}
-			<div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
-				<SpeciesList
-					title="Top detections"
-					ariaLabel="Top detections in the last 24 hours"
-					species={snapshot.topSpecies}
-					emptyMessage="No detections recorded in the last 24 hours."
-				/>
+			    log pushes the whole page wider than the phone it is on. The rail
+			    comes first on a phone, so Listen is in reach without scrolling
+			    past the whole log. */}
+			<div className="mt-(--page-gap) grid grid-cols-1 items-start gap-(--page-gap) lg:grid-cols-[minmax(0,5fr)_minmax(0,3fr)]">
 				<RecentLogCard
 					recent={snapshot.recent}
-					offsetMs={offsetMs}
+					recentTotal={snapshot.recentTotal}
+					generatedAt={snapshot.generatedAt}
+					totalDetections={snapshot.summary.detections}
 					freshKeys={freshKeys}
 				/>
+
+				<div className="order-first grid grid-cols-1 gap-(--page-gap) lg:order-none">
+					<LiveAudioCard unlocked={unlocked} />
+
+					{/* A station that has never recorded anything has nothing to
+					    highlight, and the hero card above already says so, far more
+					    plainly. */}
+					{highlights.hasAnyDetections ? (
+						<HighlightsCard
+							highlights={highlights.highlights}
+							emptyMessage="No detections recorded in the last 24 hours."
+						/>
+					) : null}
+				</div>
 			</div>
 		</div>
 	);

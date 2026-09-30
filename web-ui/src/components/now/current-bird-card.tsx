@@ -48,8 +48,8 @@ export function CurrentBirdCard({
 	// `offsetMs` is 0 through hydration and only ages it forward from there.
 	const elapsedMs = current.ageMs + offsetMs;
 
-	// No figure row: the station's counts live in the cards below -- Top
-	// detections, the log, the Highlights -- so repeating them in the masthead
+	// No figure row: the station's counts live in the cards below -- the log
+	// and the Highlights -- so repeating them in the masthead
 	// only duplicates what the page already shows.
 	return (
 		<SpeciesHeroCard
