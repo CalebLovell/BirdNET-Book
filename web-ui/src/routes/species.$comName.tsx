@@ -657,7 +657,7 @@ function VisitLogCard({
 			) : (
 				<ul
 					aria-busy={loading}
-					className={`-mx-(--page-gap) mb-3 space-y-1 transition-opacity ${loading ? "opacity-50" : ""}`}
+					className={`-mx-(--page-gap) space-y-1 transition-opacity ${loading ? "opacity-50" : ""}`}
 				>
 					{visits.map((visit, i) => {
 						const date = new Date(`${visit.date}T00:00:00`);
