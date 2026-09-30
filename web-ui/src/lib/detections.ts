@@ -395,7 +395,8 @@ export const getLifeListCards = createServerFn({ method: "GET" }).handler(
 					comName: row.comName,
 					sciName: row.sciName,
 					allTimeCount: row.allTimeCount,
-					hourCounts: hourCountsByName.get(row.comName) ?? new Array(24).fill(0),
+					hourCounts:
+						hourCountsByName.get(row.comName) ?? new Array(24).fill(0),
 					lastDetected: latest ? `${latest.date} ${latest.time}` : "",
 					audioUrl: latest
 						? audioUrlFor(latest.date, row.comName, latest.fileName)
