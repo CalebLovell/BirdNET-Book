@@ -89,7 +89,7 @@ export function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
 			<nav className="flex flex-col gap-0.5" aria-label="Manage">
 				<Link
 					to="/review"
-					search={{ limit: 20 }}
+					search={{ page: 1 }}
 					activeOptions={{ includeSearch: false }}
 					{...linkProps}
 				>

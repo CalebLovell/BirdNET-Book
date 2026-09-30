@@ -12,6 +12,7 @@ import { ebirdUrlFor } from "~/lib/ebird.ts";
 import { illustrationUrlFor } from "~/lib/illustrations.ts";
 import {
 	parseSpeciesCatalog,
+	REVIEW_PAGE_SIZE,
 	type ReviewSearch,
 	recategorizedFileName,
 	type SpeciesOption,
@@ -35,7 +36,9 @@ export type ReviewCandidate = {
 	imageUrl: string | null;
 };
 export type ReviewPage = {
-	limit: number;
+	/** One-based; held to the pages that exist. */
+	page: number;
+	pageSize: number;
 	/** Strict lifetime-count cutoff applied to this queue. */
 	rareSpeciesMax: number;
 	/** Recordings meeting the review criteria, of which `candidates` is a page. */
@@ -134,6 +137,7 @@ export function loadReviewPage(
 	extractedRoot: string,
 	search: ReviewSearch,
 	rareSpeciesMax = DEFAULT_REVIEW_RARE_SPECIES_MAX,
+	pageSize = REVIEW_PAGE_SIZE,
 ): ReviewPage {
 	const queue = rareAndUnsure(reviewsTableExists(database));
 	const totals = database
@@ -141,17 +145,22 @@ export function loadReviewPage(
 			`SELECT COUNT(*) AS n, COUNT(DISTINCT comName) AS species FROM (${queue})`,
 		)
 		.get(rareSpeciesMax);
+	const total = Number(totals?.n ?? 0);
+	// Clearing the last rows of the last page leaves the URL on a page that no
+	// longer exists; show the one before it rather than an empty queue.
+	const page = Math.min(search.page, Math.max(1, Math.ceil(total / pageSize)));
 	// Rarest species first, then weakest recording: the bird you have heard once
 	// is the one where a mistake matters most.
 	const rows = database
 		.prepare(
-			`${queue} ORDER BY lifetimeCount ASC, comName ASC, confidence IS NOT NULL, confidence ASC, date DESC, time DESC LIMIT ?`,
+			`${queue} ORDER BY lifetimeCount ASC, comName ASC, confidence IS NOT NULL, confidence ASC, date DESC, time DESC LIMIT ? OFFSET ?`,
 		)
-		.all(rareSpeciesMax, search.limit) as RawCandidate[];
+		.all(rareSpeciesMax, pageSize, (page - 1) * pageSize) as RawCandidate[];
 	return {
-		limit: search.limit,
+		page,
+		pageSize,
 		rareSpeciesMax,
-		total: Number(totals?.n ?? 0),
+		total,
 		speciesTotal: Number(totals?.species ?? 0),
 		candidates: rows.map((row) => {
 			const clip = {

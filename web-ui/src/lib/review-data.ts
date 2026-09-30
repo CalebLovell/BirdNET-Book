@@ -1,19 +1,20 @@
 import { commonNameSafe } from "~/lib/audio.ts";
 
-export type ReviewSearch = { limit: number };
+export type ReviewSearch = { page: number };
+/** Queue rows per page: ten 54px rows fill the rail beside the recording. */
+export const REVIEW_PAGE_SIZE = 10;
 export type SpeciesOption = { sciName: string; comName: string };
 
 export function normalizeReviewSearch(
 	input: Record<string, unknown>,
 ): ReviewSearch {
-	const limit =
-		typeof input.limit === "number" &&
-		Number.isSafeInteger(input.limit) &&
-		input.limit >= 20 &&
-		input.limit % 20 === 0
-			? input.limit
-			: 20;
-	return { limit };
+	const page =
+		typeof input.page === "number" &&
+		Number.isSafeInteger(input.page) &&
+		input.page >= 1
+			? input.page
+			: 1;
+	return { page };
 }
 
 export function parseSpeciesCatalog(text: string): SpeciesOption[] {

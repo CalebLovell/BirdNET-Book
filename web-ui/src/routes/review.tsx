@@ -115,7 +115,10 @@ function ReviewContent({
 					{error}
 				</p>
 			) : null}
+			{/* Keyed by page so a new page starts on its first bird with nothing
+			    skipped. */}
 			<ReviewWorkflow
+				key={page.page}
 				page={page}
 				species={species}
 				busy={busy}
@@ -124,11 +127,7 @@ function ReviewContent({
 					run(() => recategorize({ data: { rowId, ...item } }))
 				}
 				onDelete={(rowId) => run(() => remove({ data: { rowId } }))}
-				onLoadMore={() =>
-					navigate({
-						search: { ...search, limit: Math.min(200, search.limit + 20) },
-					})
-				}
+				onPageChange={(next) => navigate({ search: { ...search, page: next } })}
 			/>
 		</div>
 	);

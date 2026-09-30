@@ -6,13 +6,13 @@ import {
 	recategorizedFileName,
 } from "./review-data.ts";
 
-test("normalizes the review batch size", () => {
-	assert.deepEqual(normalizeReviewSearch({ limit: 40 }), { limit: 40 });
-	assert.deepEqual(normalizeReviewSearch({ limit: 220 }), { limit: 220 });
-	// Off the 20-step grid, below the floor, or absent: back to one batch.
-	assert.deepEqual(normalizeReviewSearch({ limit: 999 }), { limit: 20 });
-	assert.deepEqual(normalizeReviewSearch({ limit: 5 }), { limit: 20 });
-	assert.deepEqual(normalizeReviewSearch({}), { limit: 20 });
+test("normalizes the review queue page", () => {
+	assert.deepEqual(normalizeReviewSearch({ page: 3 }), { page: 3 });
+	// Fractional, below the first page, not a number, or absent: page one.
+	assert.deepEqual(normalizeReviewSearch({ page: 2.5 }), { page: 1 });
+	assert.deepEqual(normalizeReviewSearch({ page: 0 }), { page: 1 });
+	assert.deepEqual(normalizeReviewSearch({ page: "2" }), { page: 1 });
+	assert.deepEqual(normalizeReviewSearch({}), { page: 1 });
 });
 
 test("parses and sorts the BirdNET species catalog", () => {

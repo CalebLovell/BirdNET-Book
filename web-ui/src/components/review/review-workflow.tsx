@@ -9,13 +9,18 @@ import {
 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { ConfidencePill } from "~/components/confidence-pill.tsx";
+import { IndexDot } from "~/components/index-dot.tsx";
 import { ClipPlayer } from "~/components/learn/clip-player.tsx";
 import { SpeciesThumbnail } from "~/components/species-row.tsx";
 import { Button } from "~/components/ui/button.tsx";
 import { Input } from "~/components/ui/input.tsx";
+import { PageStepper } from "~/components/ui/page-stepper.tsx";
 import { formatConfidence } from "~/lib/confidence.ts";
 import type { ReviewCandidate, ReviewPage } from "~/lib/review.server.ts";
 import type { SpeciesOption } from "~/lib/review-data.ts";
+
+/** A queue row's height: the 40px thumbnail and 7px above and below it. */
+const ROW_HEIGHT_PX = 54;
 
 type Action =
 	| { kind: "correct"; row: ReviewCandidate }
@@ -51,7 +56,7 @@ export function ReviewWorkflow({
 	onCorrect,
 	onRecategorize,
 	onDelete,
-	onLoadMore,
+	onPageChange,
 }: {
 	page: ReviewPage;
 	species: SpeciesOption[];
@@ -59,7 +64,7 @@ export function ReviewWorkflow({
 	onCorrect: (rowId: number) => Promise<void>;
 	onRecategorize: (rowId: number, species: SpeciesOption) => Promise<void>;
 	onDelete: (rowId: number) => Promise<void>;
-	onLoadMore: () => void;
+	onPageChange: (page: number) => void;
 }) {
 	const [index, setIndex] = useState(0);
 	const [skipped, setSkipped] = useState<Set<number>>(new Set());
@@ -68,6 +73,14 @@ export function ReviewWorkflow({
 	const [query, setQuery] = useState("");
 	const rows = page.candidates.filter((row) => !skipped.has(row.rowId));
 	const row = rows[Math.min(index, Math.max(0, rows.length - 1))];
+	const pageCount = Math.max(1, Math.ceil(page.total / page.pageSize));
+	const paged = pageCount > 1;
+	/** A recording's place in the whole queue, counted from one. Skipping a
+	    bird hides it without renumbering the rest. */
+	const queueNumber = (item: ReviewCandidate) =>
+		(page.page - 1) * page.pageSize + page.candidates.indexOf(item) + 1;
+	/** The page's largest number, so every dot on it is the same width. */
+	const widest = (page.page - 1) * page.pageSize + page.candidates.length;
 	const matches = useMemo(() => {
 		const q = query.trim().toLowerCase();
 		return (
@@ -101,16 +114,18 @@ export function ReviewWorkflow({
 				/>
 				<h2 className="display-title mt-2 font-bold text-xl">All caught up</h2>
 				<p className="mt-1 text-muted-foreground text-sm">
-					No more recordings in this batch.
+					{page.page < pageCount
+						? "Nothing left on this page."
+						: "No more recordings in the queue."}
 				</p>
-				{page.total > page.candidates.length ? (
+				{page.page < pageCount ? (
 					<Button
 						className="mt-4"
 						variant="outline"
 						size="xs"
-						onClick={onLoadMore}
+						onClick={() => onPageChange(page.page + 1)}
 					>
-						Load more
+						Next page
 					</Button>
 				) : null}
 			</section>
@@ -144,7 +159,7 @@ export function ReviewWorkflow({
 							</div>
 							<div className="min-w-0 flex-1">
 								<div className="island-kicker">
-									Recording {position + 1} of {rows.length}
+									Recording {queueNumber(row)} of {page.total}
 								</div>
 								<h2 className="display-title mt-1 font-bold text-2xl text-[var(--moss)] sm:text-3xl">
 									{row.comName}
@@ -241,57 +256,83 @@ export function ReviewWorkflow({
 						</div>
 					</section>
 
+					{/* Set like Today's Recent activity log: a header band, hairline-
+					    divided rows bled to the card's edges, and a footer band for
+					    the pager. */}
 					<section
 						aria-label="Review queue"
-						className="feature-card rounded-md p-4"
+						className="@container feature-card flex flex-col rounded-md p-4"
 					>
-						<div className="flex items-baseline justify-between gap-2">
+						<div className="-mx-(--page-gap) -mt-(--page-gap) flex min-h-[45px] items-center justify-between gap-2 border-b px-(--page-gap)">
 							<div className="island-kicker">In the queue</div>
-							<span className="count-figure">
-								{page.total > page.candidates.length
-									? `${rows.length} of ${page.total}`
-									: rows.length}
-							</span>
+							<span className="count-figure">{page.total}</span>
 						</div>
-						<ol className="-mx-1 mt-3 max-h-[32rem] space-y-0.5 overflow-auto px-1">
+						{/* Paged, the list holds a full page's height, so a short last
+						    page never pulls the pager up from under the cursor. */}
+						<ol
+							style={
+								paged ? { minHeight: page.pageSize * ROW_HEIGHT_PX } : undefined
+							}
+							className="-mx-(--page-gap) divide-y"
+						>
 							{rows.map((item, i) => {
 								const current = item === row;
+								const when = formatRecorded(item.date, item.time);
 								return (
 									<li key={item.rowId}>
+										{/* Under 26rem the date and time take the binomial's
+										    line rather than a column of their own, so the row
+										    keeps two lines either way. */}
 										<button
 											type="button"
 											aria-current={current ? "true" : undefined}
 											onClick={() => setIndex(i)}
-											className={`flex w-full items-center gap-3 rounded-md px-2 py-1.5 text-left transition-colors duration-[180ms] ${current ? "bg-[var(--row-selected)]" : "hover:bg-[var(--meadow)]"}`}
+											className={`flex min-h-[54px] w-full items-center @min-[26rem]:gap-3 gap-2 px-(--page-gap) py-1.75 text-left transition-colors duration-[180ms] ${current ? "bg-[var(--row-selected)]" : "hover:bg-[var(--meadow)]"}`}
 										>
+											<IndexDot index={queueNumber(item)} widest={widest} />
 											<SpeciesThumbnail
 												imageUrl={item.imageUrl}
 												comName={item.comName}
 											/>
 											<span className="min-w-0 flex-1">
-												<span className="block truncate font-medium text-sm">
+												<span className="block truncate font-medium">
 													{item.comName}
 												</span>
-												<span className="tabular-data block truncate text-muted-foreground text-xs">
-													{formatRecorded(item.date, item.time).day}
+												<span className="@min-[26rem]:block hidden truncate text-[var(--bark)] text-xs italic">
+													{item.sciName}
+												</span>
+												<span className="tabular-data block @min-[26rem]:hidden truncate text-muted-foreground text-xs">
+													{when.day} · {when.clock}
 												</span>
 											</span>
-											<ConfidencePill confidence={item.confidence} />
+											<span className="@min-[26rem]:block hidden shrink-0 text-right">
+												<span className="tabular-data block text-sm">
+													{when.day}
+												</span>
+												<span className="tabular-data block text-muted-foreground text-xs">
+													{when.clock}
+												</span>
+											</span>
+											<ConfidencePill
+												confidence={item.confidence}
+												className="shrink-0"
+											/>
 										</button>
 									</li>
 								);
 							})}
 						</ol>
-						{page.total > page.candidates.length ? (
-							<Button
-								className="mt-3 w-full"
-								variant="outline"
-								size="xs"
-								onClick={onLoadMore}
-							>
-								Load more
-							</Button>
-						) : null}
+						{/* Shown even on a single page, so the card keeps one shape as
+						    the queue grows and shrinks. */}
+						<div className="-mx-(--page-gap) mt-auto -mb-(--page-gap) flex shrink-0 items-center border-t px-(--page-gap) py-2">
+							<PageStepper
+								className="ml-auto"
+								label="Review queue pages"
+								page={page.page}
+								pageCount={pageCount}
+								onPageChange={onPageChange}
+							/>
+						</div>
 					</section>
 				</div>
 			</div>
