@@ -94,9 +94,8 @@ function Live() {
 
 			{/* `grid-cols-1` rather than a bare `grid`: the implicit track it would
 			    fall back to is sized to max-content, so a long species name in the
-			    log pushes the whole page wider than the phone it is on. The rail
-			    comes first on a phone, so Listen is in reach without scrolling
-			    past the whole log. */}
+			    log pushes the whole page wider than the phone it is on. On a phone
+			    the log leads, with Listen and Highlights stacked below it. */}
 			<div className="mt-(--page-gap) grid grid-cols-1 items-start gap-(--page-gap) lg:grid-cols-[minmax(0,5fr)_minmax(0,3fr)]">
 				<RecentLogCard
 					recent={snapshot.recent}
@@ -105,7 +104,7 @@ function Live() {
 					freshKeys={freshKeys}
 				/>
 
-				<div className="order-first grid grid-cols-1 gap-(--page-gap) lg:order-none">
+				<div className="grid grid-cols-1 gap-(--page-gap)">
 					<LiveAudioCard unlocked={unlocked} />
 
 					{/* A station that has never recorded anything has nothing to
