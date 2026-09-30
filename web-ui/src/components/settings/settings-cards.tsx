@@ -176,7 +176,7 @@ function Field({
 }
 
 function twoColumns(children: ReactNode) {
-	return <div className="grid gap-4 sm:grid-cols-2">{children}</div>;
+	return <div className="grid gap-(--page-gap) sm:grid-cols-2">{children}</div>;
 }
 
 /**
@@ -204,7 +204,7 @@ export function SettingsCards({
 	return (
 		// One card per row, always. Side by side, cards of unequal height left
 		// ragged gaps and no reliable reading order down the page.
-		<div className="space-y-4">
+		<div className="space-y-(--page-gap)">
 			<StationCard
 				initial={data.station}
 				timezones={data.supportedTimezones}
@@ -540,7 +540,7 @@ function PrivacyCard({
 					}
 				/>
 			</Field>
-			<p className="rounded-md bg-muted p-4 text-muted-foreground text-xs leading-relaxed">
+			<p className="rounded-md bg-muted p-(--page-gap) text-muted-foreground text-xs leading-relaxed">
 				Matching chunks and their neighbors are suppressed. This reduces
 				incidental speech capture, but it cannot guarantee that speech is never
 				recorded.
@@ -785,7 +785,7 @@ function StorageCard({
 		>
 			<fieldset className="space-y-2">
 				<legend className="mb-1.5 font-medium text-sm">Disk-full action</legend>
-				<label className="flex cursor-pointer gap-3 rounded-md border p-4">
+				<label className="flex cursor-pointer gap-3 rounded-md border p-(--page-gap)">
 					<input
 						type="radio"
 						name="full-disk-action"
@@ -803,7 +803,7 @@ function StorageCard({
 						</span>
 					</span>
 				</label>
-				<label className="flex cursor-pointer gap-3 rounded-md border p-4">
+				<label className="flex cursor-pointer gap-3 rounded-md border p-(--page-gap)">
 					<input
 						type="radio"
 						name="full-disk-action"

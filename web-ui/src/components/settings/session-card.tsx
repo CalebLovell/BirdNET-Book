@@ -62,7 +62,7 @@ export function SessionCard({
 			aria-labelledby="settings-access"
 			className="feature-card overflow-hidden rounded-md"
 		>
-			<header className="flex items-center gap-3 border-b p-4">
+			<header className="flex items-center gap-3 border-b p-(--page-gap) max-[400px]:gap-2">
 				<div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-[var(--icon-well)]">
 					<KeyRound aria-hidden="true" className="size-4 text-[var(--moss)]" />
 				</div>
@@ -80,7 +80,7 @@ export function SessionCard({
 				</div>
 			</header>
 
-			<div className="flex flex-1 flex-col gap-4 p-4">
+			<div className="flex flex-1 flex-col gap-(--page-gap) p-(--page-gap)">
 				{isDefaultPassword ? (
 					// biome-ignore lint/a11y/useSemanticElements: <output> means the result of a calculation; this is a persistent configuration warning
 					<div

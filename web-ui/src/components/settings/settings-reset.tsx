@@ -43,7 +43,7 @@ export function SettingsReset({ onReset }: { onReset: () => Promise<string> }) {
 					role="alertdialog"
 					aria-modal="true"
 					aria-labelledby="settings-reset-title"
-					className="fixed inset-0 z-50 grid place-items-center bg-black/20 p-4"
+					className="fixed inset-0 z-50 grid place-items-center bg-black/20 p-(--page-gap)"
 				>
 					<div className="feature-card w-full max-w-md rounded-md p-4 shadow-xl">
 						<h2 id="settings-reset-title" className="font-semibold text-lg">
@@ -55,7 +55,7 @@ export function SettingsReset({ onReset }: { onReset: () => Promise<string> }) {
 							writes. Any RTSP streams you have configured are cleared and the
 							station returns to microphone input. This cannot be undone.
 						</p>
-						<p className="mt-4 rounded-md bg-muted p-4 text-muted-foreground text-xs leading-relaxed">
+						<p className="mt-4 rounded-md bg-muted p-(--page-gap) text-muted-foreground text-xs leading-relaxed">
 							Your Station card is left as it is. Its name, coordinates, and
 							timezone have no default to return to, and blanking them would put
 							the station at 0,0 and break geographic species filtering.

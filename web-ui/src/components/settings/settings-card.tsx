@@ -80,7 +80,7 @@ export function SettingsCard({
 				{/* Centred, not top-aligned: the disc reads against the whole title
 				    block, and hanging it off the first line left it sitting a few
 				    pixels high of the space it occupies. */}
-				<header className="flex items-center gap-3 border-b p-4">
+				<header className="flex items-center gap-3 border-b p-(--page-gap) max-[400px]:gap-2">
 					<div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-[var(--icon-well)]">
 						<Icon aria-hidden="true" className="size-4 text-[var(--moss)]" />
 					</div>
@@ -107,10 +107,10 @@ export function SettingsCard({
 				{/* One padded box, not a body and a footer. Save sits at the bottom
 				    right of the content it saves, with no rule between them -- the
 				    card is a single thought, and the divider was cutting it in two. */}
-				<div className="flex flex-1 flex-col gap-4 p-4">
-					<div className="flex-1 space-y-4">{children}</div>
+				<div className="flex flex-1 flex-col gap-(--page-gap) p-(--page-gap)">
+					<div className="flex-1 space-y-(--page-gap)">{children}</div>
 
-					<div className="flex items-center justify-between gap-4">
+					<div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
 						<div
 							aria-live="polite"
 							className={`flex min-w-0 items-center gap-2 text-xs ${
@@ -140,7 +140,7 @@ export function SettingsCard({
 								</>
 							) : null}
 						</div>
-						<div className="flex shrink-0 items-center gap-2">
+						<div className="ml-auto flex shrink-0 items-center gap-2">
 							{restart}
 							<Button type="submit" icon={Save} disabled={saveDisabled}>
 								Save

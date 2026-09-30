@@ -95,15 +95,20 @@ export function StationLocation({
 				icon={Crosshair}
 				loading={state.kind === "locating"}
 				onClick={locate}
+				// Icon-only on the smallest phones: beside it, the label squeezed
+				// the card's title to a word per line.
+				className="max-[400px]:w-6 max-[400px]:px-0"
 			>
-				{state.kind === "locating" ? "Locating…" : "Use my location"}
+				<span className="max-[400px]:sr-only">
+					{state.kind === "locating" ? "Locating…" : "Use my location"}
+				</span>
 			</Button>
 			{open ? (
 				<div
 					role="dialog"
 					aria-modal="true"
 					aria-labelledby="station-location-title"
-					className="fixed inset-0 z-50 grid place-items-center bg-black/20 p-4"
+					className="fixed inset-0 z-50 grid place-items-center bg-black/20 p-(--page-gap)"
 				>
 					<div className="feature-card w-full max-w-md rounded-md p-4 text-left shadow-xl">
 						<h2 id="station-location-title" className="font-semibold text-lg">
@@ -113,7 +118,7 @@ export function StationLocation({
 						</h2>
 						{state.kind === "found" ? (
 							<>
-								<dl className="tabular-data mt-4 grid grid-cols-2 gap-4 rounded-md bg-muted p-4 text-sm">
+								<dl className="tabular-data mt-4 grid grid-cols-2 gap-4 rounded-md bg-muted p-(--page-gap) text-sm">
 									<div>
 										<dt className="island-kicker">Latitude</dt>
 										<dd className="mt-1 font-semibold">

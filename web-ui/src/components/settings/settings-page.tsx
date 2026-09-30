@@ -80,7 +80,7 @@ export function SettingsPage({
 				}
 			>
 				{reset ? (
-					<div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-[var(--line)] border-t pt-4">
+					<div className="mt-(--page-gap) flex flex-wrap items-center justify-between gap-3 border-[var(--line)] border-t pt-(--page-gap)">
 						<p
 							aria-live="polite"
 							className={`flex items-center gap-2 text-xs ${
