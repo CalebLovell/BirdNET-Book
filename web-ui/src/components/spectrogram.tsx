@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { type ReactNode, useEffect, useRef, useState } from "react";
 
 import { fftMagnitudes } from "~/lib/fft.ts";
 
@@ -29,9 +29,16 @@ type RenderState = "loading" | "ready" | "empty";
 export function Spectrogram({
 	audioUrl,
 	className,
+	progress = null,
+	children,
 }: {
 	audioUrl: string;
 	className?: string;
+	/** How far through the clip playback is, 0-1; draws a playhead when set. */
+	progress?: number | null;
+	/** Laid over the middle of the plot -- a play control, say. The status
+	 * line moves to the bottom edge so the two don't collide. */
+	children?: ReactNode;
 }) {
 	const canvasRef = useRef<HTMLCanvasElement>(null);
 	const [state, setState] = useState<RenderState>("loading");
@@ -94,8 +101,22 @@ export function Spectrogram({
 					transition: "opacity 200ms ease",
 				}}
 			/>
+			{progress !== null && state === "ready" ? (
+				<div
+					aria-hidden="true"
+					className="pointer-events-none absolute inset-y-0 w-px bg-[var(--ink)]"
+					style={{ left: `${clamp01(progress) * 100}%` }}
+				/>
+			) : null}
+			{children ? (
+				<div className="absolute inset-0 grid place-items-center">
+					{children}
+				</div>
+			) : null}
 			{state !== "ready" ? (
-				<div className="absolute inset-0 grid place-items-center text-muted-foreground text-xs">
+				<div
+					className={`pointer-events-none absolute inset-x-0 text-center text-muted-foreground text-xs ${children ? "bottom-2" : "top-1/2 -translate-y-1/2"}`}
+				>
 					{state === "loading"
 						? "Rendering spectrogram…"
 						: "Spectrogram unavailable"}
