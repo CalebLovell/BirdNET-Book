@@ -55,7 +55,6 @@ async function renderTable(
 				rows={rows}
 				page={1}
 				pageCount={1}
-				total={rows.length}
 				selected={new Set()}
 				sort="species"
 				direction="asc"
@@ -74,124 +73,78 @@ async function renderTable(
 	return renderToStaticMarkup(<RouterProvider router={router} />);
 }
 
-test("renders Installed species with five sortable, unified columns", async () => {
+test("renders Installed species as the detections table's grid", async () => {
 	const markup = await renderTable();
-	const desktopTable = markup.match(/<table[\s\S]*<\/table>/)?.[0] ?? "";
+	const table = markup.match(/<table[\s\S]*<\/table>/)?.[0] ?? "";
 
-	for (const slot of [
-		"table",
-		"table-header",
-		"table-body",
-		"table-row",
-		"table-head",
-		"table-cell",
-		"badge",
-	]) {
-		assert.match(desktopTable, new RegExp(`data-slot="${slot}"`));
-	}
-	assert.equal(desktopTable.match(/data-slot="table-head"/g)?.length, 5);
-	assert.equal(desktopTable.match(/data-slot="table-cell"/g)?.length, 20);
-	assert.equal(desktopTable.match(/font-semibold/g)?.length, 5);
+	// One table at every width -- no separate small-screen list.
+	assert.doesNotMatch(markup, /data-slot="species-control-list"/);
+	assert.doesNotMatch(markup, /lg:hidden|lg:block/);
+	assert.match(table, /role="table"[^>]*style="--cols-sm:/);
+	assert.match(table, /grid-cols-\(--cols-sm\)/);
+
 	for (const heading of ["Species", "Scientific name", "Count", "Status"]) {
-		assert.match(desktopTable, new RegExp(`>${heading}(?:<|$)`));
+		assert.match(table, new RegExp(`<button[^>]*>${heading}<svg`));
 	}
+	assert.match(table, /aria-sort="ascending"[^>]*><button[^>]*>Species/);
+	assert.match(table, /aria-sort="none"[^>]*><button[^>]*>Status/);
+	assert.match(table, /opacity-35/);
+
+	// Row numbers, the species link, and every status badge.
+	assert.match(table, /<span class="min-w-0 truncate">4<\/span>/);
+	assert.match(
+		table,
+		/<a href="\/species\/coyote" class="font-medium no-underline hover:underline">Coyote<\/a>/,
+	);
 	for (const status of [
 		"Automatic",
 		"Custom",
 		"Always detect",
 		"Never detect",
 	]) {
-		assert.match(markup, new RegExp(`>${status}<`));
+		assert.match(table, new RegExp(`>${status}<`));
 	}
-	assert.match(markup, /bg-muted text-muted-foreground/);
-	assert.match(markup, /var\(--sage\)/);
-	assert.match(markup, /var\(--sand\)/);
-	assert.match(markup, /var\(--clay\)/);
-	assert.doesNotMatch(desktopTable, /<select/);
-	assert.doesNotMatch(markup, />Policy</);
-	assert.match(markup, /aria-sort="none"[^>]*><button[^>]*>Scientific name/);
-	assert.match(markup, /aria-sort="none"[^>]*><button[^>]*>Status/);
-	assert.match(markup, /hover:bg-muted\/50/);
-	assert.match(markup, /opacity-35/);
-	assert.match(
-		markup,
-		/<a href="\/species\/coyote" class="font-medium no-underline hover:underline">Coyote<\/a>/,
-	);
-	// The complete desktop table remains available; narrow containers switch
-	// the whole presentation rather than dropping individual columns.
-	assert.doesNotMatch(desktopTable, /<colgroup/);
-	assert.doesNotMatch(
-		desktopTable,
-		/data-slot="table-(head|cell)"[^>]*@min-\[/,
-	);
-	assert.doesNotMatch(
-		desktopTable,
-		/data-slot="table-(head|cell)"[^>]*class="hidden/,
-	);
-	// Only the two ends are pinned -- the shared selection column and status --
-	// and both are pinned by min-width, not just width, so they hold when the
-	// table overflows. Everything between divides up the rest under auto layout,
-	// so no middle column carries a width of its own.
-	assert.match(
-		desktopTable,
-		/data-slot="table-head" class="[^"]*\bw-10 min-w-10\b[^"]*"[^>]*><input aria-label="Select all species/,
-	);
-	assert.match(
-		desktopTable,
-		/data-slot="table-head" class="[^"]*\bw-36 min-w-36\b[^"]*" aria-sort="none"[^>]*><button[^>]*>Status/,
-	);
-	assert.doesNotMatch(
-		desktopTable,
-		/data-slot="table-head" class="[^"]*\bw-\d+[^"]*" aria-sort="ascending"/,
-	);
-	assert.match(
-		desktopTable,
-		/data-slot="table-head" class="[^"]*pl-0[^"]*" aria-sort="ascending"/,
-	);
-	assert.match(
-		markup,
-		/data-slot="table-head" class="[^"]*pl-1[^"]*" aria-sort="none"/,
-	);
-	assert.match(desktopTable, /data-slot="table-cell" class="[^"]*pl-0[^"]*"/);
-	assert.match(desktopTable, /data-slot="table-cell" class="[^"]*pl-1[^"]*"/);
+	assert.match(table, /var\(--sage\)/);
+	assert.match(table, /var\(--sand\)/);
+	assert.match(table, /var\(--clay\)/);
 });
 
-test("renders every species field and selection in a vertical small-screen list", async () => {
+test("narrow, headings give way to one sort menu and two columns sit out", async () => {
 	const markup = await renderTable();
 
-	// `lg:`, the width the sidebar leaves at, so the two changes land together --
-	// and the same width the detections table uses.
+	assert.match(markup, /<select aria-label="Sort species by"/);
+	assert.match(markup, /aria-label="Sort descending"/);
 	assert.match(
 		markup,
-		/data-slot="species-control-list" class="[^"]*lg:hidden[^"]*"/,
+		/class="[^"]*hidden @min-\[54rem\]:block"[^>]*><em[^>]*>Canis latrans/,
 	);
+	assert.match(markup, /class="[^"]*hidden @min-\[36rem\]:block[^"]*"[^>]*>4</);
+	// The select-all checkbox stays at every width.
 	assert.match(
 		markup,
-		/data-slot="table-container" class="[^"]*hidden[^"]*lg:block[^"]*"/,
+		/<th[^>]*class="(?![^"]*hidden)[^"]*"[^>]*><input aria-label="Select all species on this page"/,
 	);
-	assert.match(markup, /aria-label="Select Coyote"/);
-	assert.match(markup, />Coyote</);
-	assert.match(markup, />Canis latrans</);
-	assert.match(markup, />Scientific name</);
-	assert.match(markup, />Count</);
-	assert.match(markup, />4</);
-	assert.match(markup, />Automatic</);
-	assert.match(markup, /aria-label="Sort species by"/);
-	assert.match(markup, /aria-label="Sort species descending"/);
 });
 
-test("left-aligns selection controls within their column", async () => {
-	const markup = await renderTable();
+test("marks selected rows and pages with the shared stepper", async () => {
+	const markup = await renderTable({
+		selected: new Set(["Canis latrans"]),
+		page: 2,
+		pageCount: 3,
+	});
 
-	assert.match(
-		markup,
-		/data-slot="table-head" class="[^"]*text-left[^"]*"[^>]*><input aria-label="Select all species on this page"/,
-	);
-	assert.match(
-		markup,
-		/data-slot="table-cell" class="[^"]*text-left[^"]*"[^>]*><input aria-label="Select Coyote"/,
-	);
-	assert.doesNotMatch(markup, /class="mx-auto block size-3\.5/);
+	assert.match(markup, /data-state="selected"/);
+	assert.match(markup, /bg-\[var\(--row-selected\)\]/);
+	assert.match(markup, /aria-label="Species pages"/);
+	assert.doesNotMatch(markup, /Showing/);
+	// Numbers count on across pages.
+	assert.match(markup, />51<\/span>/);
+});
+
+test("says so when the search matches nothing", async () => {
+	const markup = await renderTable({ rows: [] });
+	assert.match(markup, /No installed species match that search\./);
+	assert.doesNotMatch(markup, /<table/);
 });
 
 test("sorts scientific names and statuses in their natural orders", () => {

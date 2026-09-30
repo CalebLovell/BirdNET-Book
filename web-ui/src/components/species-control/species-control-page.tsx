@@ -27,6 +27,7 @@ import {
 } from "~/lib/species-control-workspace.ts";
 import { SpeciesControlDialog } from "./species-control-dialogs.tsx";
 import {
+	SPECIES_CONTROL_PAGE_SIZE,
 	SpeciesControlTable,
 	type SpeciesControlViewRow,
 	sortSpeciesControlRows,
@@ -168,9 +169,15 @@ export function SpeciesControlPage({
 		() => sortSpeciesControlRows(searched, search.sort, search.direction),
 		[searched, search.sort, search.direction],
 	);
-	const pageCount = Math.max(1, Math.ceil(sorted.length / 50));
+	const pageCount = Math.max(
+		1,
+		Math.ceil(sorted.length / SPECIES_CONTROL_PAGE_SIZE),
+	);
 	const safePage = Math.min(search.page, pageCount);
-	const pagedRows = sorted.slice((safePage - 1) * 50, safePage * 50);
+	const pagedRows = sorted.slice(
+		(safePage - 1) * SPECIES_CONTROL_PAGE_SIZE,
+		safePage * SPECIES_CONTROL_PAGE_SIZE,
+	);
 	useEffect(() => {
 		if (search.page !== safePage) {
 			onSearchChange({ ...search, page: safePage });
@@ -326,7 +333,7 @@ export function SpeciesControlPage({
 		// the card's pager hold their place and only the rows move. `h-full`
 		// measures against `main`, which the shell already bounds to the viewport.
 		<div className="page-wrap flex h-full min-h-0 flex-col gap-(--page-gap) py-4">
-			<div className="@container shrink-0 space-y-4">
+			<div className="@container shrink-0 space-y-(--page-gap)">
 				<PageHeaderCard
 					title={SPECIES_CONTROL_PAGE_TITLE}
 					description={SPECIES_CONTROL_PAGE_DESCRIPTION}
@@ -334,7 +341,7 @@ export function SpeciesControlPage({
 
 				<div
 					data-layout="species-control-toolbar"
-					className="flex @min-[38rem]:flex-row flex-col @min-[38rem]:flex-wrap @min-[38rem]:items-center gap-3"
+					className="flex @min-[38rem]:flex-row flex-col @min-[38rem]:flex-wrap @min-[38rem]:items-center gap-(--page-gap)"
 				>
 					<SearchInput
 						aria-label="Search installed species"
@@ -367,13 +374,18 @@ export function SpeciesControlPage({
 				) : null}
 			</div>
 
+			{/* The detections card: the table's rows and footer run out to its
+			    edges and take its padding as their own inset, so the right padding
+			    is the narrower card edge and there is none at the bottom -- the
+			    header strip above the table takes the difference back on the
+			    right. With nothing to list, it keeps its natural size. */}
 			<section
 				aria-label="Installed species"
-				className="@container feature-card flex min-h-0 flex-1 flex-col rounded-md p-4"
+				className={`@container feature-card flex min-h-0 flex-col overflow-hidden rounded-md p-(--page-gap) [--card-edge:min(var(--page-gap),0.75rem)] ${pagedRows.length ? "flex-1 pr-(--card-edge) pb-0" : "shrink-0"}`}
 			>
 				<div
 					data-layout="installed-species-header"
-					className="mb-3 flex shrink-0 @min-[38rem]:flex-row flex-col @min-[38rem]:items-center @min-[38rem]:justify-between gap-3"
+					className="mb-(--page-gap) flex shrink-0 @min-[38rem]:flex-row flex-col @min-[38rem]:items-center @min-[38rem]:justify-between @min-[38rem]:gap-3 gap-2 pr-[calc(var(--page-gap)-var(--card-edge))]"
 				>
 					<div className="flex items-center gap-1.5">
 						<div className="island-kicker">Installed species</div>
@@ -418,7 +430,6 @@ export function SpeciesControlPage({
 					rows={pagedRows}
 					page={safePage}
 					pageCount={pageCount}
-					total={sorted.length}
 					selected={selected}
 					sort={search.sort}
 					direction={search.direction}

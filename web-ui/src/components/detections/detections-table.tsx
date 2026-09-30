@@ -7,15 +7,7 @@ import {
 	type RowSelectionState,
 	useReactTable,
 } from "@tanstack/react-table";
-import {
-	ArrowDown,
-	ArrowRight,
-	ArrowUp,
-	Calendar,
-	ChevronDown,
-	Trash2,
-	X,
-} from "lucide-react";
+import { ArrowRight, Calendar, Trash2, X } from "lucide-react";
 import { type CSSProperties, useEffect, useState } from "react";
 import { useDebouncedCallback } from "use-debounce";
 import { ConfidencePill } from "~/components/confidence-pill.tsx";
@@ -32,6 +24,7 @@ import {
 	TableHeader,
 	TableRow,
 } from "~/components/ui/table.tsx";
+import { SortButton, SortMenu } from "~/components/ui/table-sort.tsx";
 import { audioUrlFor } from "~/lib/audio.ts";
 import {
 	DETECTION_SORTS,
@@ -182,86 +175,6 @@ const SORT_LABELS: Record<DetectionWorkspaceSort, string> = {
 	scientific: "Scientific name",
 	confidence: "Confidence",
 };
-
-/**
- * The narrow table's header: which column orders the rows and which way, as
- * one joined control in the family of the pager and the date range -- a native
- * menu (so a phone opens its own picker) and the direction beside it.
- */
-function SortMenu({
-	search,
-	onSort,
-	onFlip,
-}: {
-	search: DetectionWorkspaceSearch;
-	onSort: (sort: DetectionWorkspaceSort) => void;
-	onFlip: () => void;
-}) {
-	const DirectionIcon = search.direction === "asc" ? ArrowUp : ArrowDown;
-	return (
-		// Held to the right edge, over the column of times and the play buttons
-		// it orders, rather than hard against the checkbox.
-		<div className="ml-auto flex h-7 w-fit overflow-hidden rounded-md border border-input bg-card font-normal text-sm">
-			<div className="relative flex">
-				<select
-					aria-label="Sort detections by"
-					value={search.sort}
-					// Picking a column sorts by it newest/highest first, as clicking its
-					// heading does; the arrow beside it is for turning that around.
-					onChange={(event) =>
-						search.sort !== event.target.value &&
-						onSort(event.target.value as DetectionWorkspaceSort)
-					}
-					className="h-full cursor-pointer appearance-none bg-transparent pr-7 pl-2.5 transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none"
-				>
-					{DETECTION_SORTS.map((sort) => (
-						<option key={sort} value={sort}>
-							{SORT_LABELS[sort]}
-						</option>
-					))}
-				</select>
-				<ChevronDown
-					className="pointer-events-none absolute top-1/2 right-2 size-3.5 -translate-y-1/2 text-muted-foreground"
-					aria-hidden="true"
-				/>
-			</div>
-			<button
-				type="button"
-				aria-label={`Sort ${search.direction === "asc" ? "descending" : "ascending"}`}
-				title={search.direction === "asc" ? "Ascending" : "Descending"}
-				onClick={onFlip}
-				className="flex w-7 shrink-0 items-center justify-center border-input border-l text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
-			>
-				<DirectionIcon className="size-4" aria-hidden="true" />
-			</button>
-		</div>
-	);
-}
-
-function SortButton({
-	label,
-	sort,
-	search,
-	onSort,
-}: {
-	label: string;
-	sort: DetectionWorkspaceSort;
-	search: DetectionWorkspaceSearch;
-	onSort: (sort: DetectionWorkspaceSort) => void;
-}) {
-	const isActive = search.sort === sort;
-	const Icon = isActive && search.direction === "asc" ? ArrowUp : ArrowDown;
-	return (
-		<button
-			type="button"
-			className="inline-flex items-center gap-1 hover:text-foreground"
-			onClick={() => onSort(sort)}
-		>
-			{label}
-			<Icon className={isActive ? "size-3.5" : "size-3.5 opacity-35"} />
-		</button>
-	);
-}
 
 // One bordered control for the whole range, built like the timeline's window
 // stepper: segments joined by hairlines, each showing the date in the station's
@@ -572,7 +485,8 @@ export function DetectionsTable({
 				<SortButton
 					label="Species"
 					sort="species"
-					search={search}
+					activeSort={search.sort}
+					direction={search.direction}
 					onSort={sortBy}
 				/>
 			),
@@ -595,7 +509,8 @@ export function DetectionsTable({
 				<SortButton
 					label="Scientific name"
 					sort="scientific"
-					search={search}
+					activeSort={search.sort}
+					direction={search.direction}
 					onSort={sortBy}
 				/>
 			),
@@ -611,7 +526,8 @@ export function DetectionsTable({
 				<SortButton
 					label="Recorded"
 					sort="recorded"
-					search={search}
+					activeSort={search.sort}
+					direction={search.direction}
 					onSort={sortBy}
 				/>
 			),
@@ -641,7 +557,8 @@ export function DetectionsTable({
 					<SortButton
 						label="Confidence"
 						sort="confidence"
-						search={search}
+						activeSort={search.sort}
+						direction={search.direction}
 						onSort={sortBy}
 					/>
 				</div>
@@ -783,7 +700,15 @@ export function DetectionsTable({
 									AUDIO_EDGE,
 								)}
 							>
-								<SortMenu search={search} onSort={sortBy} onFlip={flipSort} />
+								<SortMenu
+									label="Sort detections by"
+									sorts={DETECTION_SORTS}
+									labels={SORT_LABELS}
+									sort={search.sort}
+									direction={search.direction}
+									onSort={sortBy}
+									onFlip={flipSort}
+								/>
 							</TableHead>
 						</TableRow>
 					))}
