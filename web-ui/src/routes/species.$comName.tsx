@@ -8,7 +8,6 @@ import { useServerFn } from "@tanstack/react-start";
 import {
 	CalendarDays,
 	ChartNoAxesColumnIncreasing,
-	Clock3,
 	Gauge,
 	Sunrise,
 } from "lucide-react";
@@ -657,7 +656,7 @@ function VisitLogCard({
 			) : (
 				<ul
 					aria-busy={loading}
-					className={`-mx-(--page-gap) space-y-1 transition-opacity ${loading ? "opacity-50" : ""}`}
+					className={`-mx-(--page-gap) divide-y transition-opacity ${loading ? "opacity-50" : ""}`}
 				>
 					{visits.map((visit, i) => {
 						const date = new Date(`${visit.date}T00:00:00`);
@@ -666,6 +665,7 @@ function VisitLogCard({
 							day: "numeric",
 							year: "numeric",
 						});
+						const weekday = date.toLocaleDateString([], { weekday: "long" });
 						const time = formatVisitTime(visit.time);
 
 						return (
@@ -680,35 +680,38 @@ function VisitLogCard({
 								// under the date and the button drops its label. The row
 								// keeps its height either way: two lines on both layouts.
 								//
-								// The zebra bands run out to the card's edges (the list
+								// The dividers run out to the card's edges (the list
 								// bleeds through the card's padding), and the row's own
 								// padding hands that page gap back (the card's own padding, which
 								// halves on the smallest phones) so the content lines up with
 								// the header and footer and never pokes past the card's border.
-								className="flex items-center @min-[26rem]:gap-3 gap-2 px-(--page-gap) py-1.75 odd:bg-[var(--meadow)] even:bg-transparent"
+								className="flex items-center @min-[26rem]:gap-3 gap-2 px-(--page-gap) py-1.75"
 							>
+								{/* A dot that stretches to a capsule for longer numbers,
+								    every one on the page as wide as the widest, so the
+								    dates beside them line up. */}
 								<span
 									aria-hidden
-									style={{ minWidth: indexWidth }}
-									className="tabular-data shrink-0 font-bold text-foreground text-xs"
+									style={{ minWidth: `calc(${indexWidth} + 0.75rem)` }}
+									className="tabular-data inline-flex h-6 min-w-6 shrink-0 items-center justify-center rounded-full bg-muted px-1.5 font-medium text-foreground text-xs"
 								>
 									{(firstIndex + i).toLocaleString()}
 								</span>
-								<div className="flex min-w-0 flex-1 items-center gap-1.5 text-sm">
-									<Clock3 className="size-3.5 shrink-0 text-[var(--bark)]" />
-									<div className="min-w-0">
-										{/* The day links to its Timeline, like the detections
+								<div className="min-w-0 flex-1 text-sm">
+									{/* The day links to its Timeline, like the detections
 										    table's Recorded column and the heat map's squares. */}
-										<Link
-											to="/timeline"
-											search={{ period: "day", date: visit.date }}
-											className="block max-w-fit truncate font-medium no-underline hover:underline"
-										>
-											<time dateTime={visit.date}>{dateLabel}</time>
-										</Link>
-										<div className="tabular-data @min-[26rem]:hidden truncate text-muted-foreground text-xs">
-											{time} · {formatTimeAgo(visit.ageMs + offsetMs)}
-										</div>
+									<Link
+										to="/timeline"
+										search={{ period: "day", date: visit.date }}
+										className="block max-w-fit truncate font-medium no-underline hover:underline"
+									>
+										<time dateTime={visit.date}>{dateLabel}</time>
+									</Link>
+									<div className="@min-[26rem]:block hidden truncate text-muted-foreground text-xs">
+										{weekday}
+									</div>
+									<div className="tabular-data @min-[26rem]:hidden truncate text-muted-foreground text-xs">
+										{time} · {formatTimeAgo(visit.ageMs + offsetMs)}
 									</div>
 								</div>
 

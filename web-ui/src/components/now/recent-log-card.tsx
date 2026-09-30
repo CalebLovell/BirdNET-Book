@@ -25,8 +25,8 @@ const ROW_HEIGHT_PX = 54;
 
 /**
  * The window's visits, most recently heard first, set like the species page's visit
- * log: a header band that links on to today's Timeline, zebra rows bled to the card's
- * edges, and a layout that answers to the card's own width rather than the
+ * log: a header band that links on to today's Timeline, hairline-divided rows bled to
+ * the card's edges, and a layout that answers to the card's own width rather than the
  * screen's -- the card spans the page on a phone and takes the wider track
  * beside the rail at lg.
  *
@@ -122,7 +122,7 @@ export function RecentLogCard({
 					style={
 						paged ? { minHeight: RECENT_PAGE_SIZE * ROW_HEIGHT_PX } : undefined
 					}
-					className={`-mx-(--page-gap) transition-opacity ${paged ? "" : "-mb-(--page-gap)"} ${loading ? "opacity-50" : ""}`}
+					className={`-mx-(--page-gap) divide-y transition-opacity ${paged ? "" : "-mb-(--page-gap)"} ${loading ? "opacity-50" : ""}`}
 				>
 					{shown.recent.map((visit) => {
 						const clock = formatClockRange(visit.firstAt, visit.lastAt);
@@ -136,10 +136,10 @@ export function RecentLogCard({
 								// and time take the binomial's line and the button drops its
 								// label. Two lines either way, so the row keeps its height.
 								//
-								// The zebra runs out to the card's edges and the row's own
+								// The dividers run out to the card's edges and the row's own
 								// padding hands the page gap back, so the content lines up
 								// with the header's.
-								className={`flex items-center @min-[26rem]:gap-3 gap-2 px-(--page-gap) py-1.75 odd:bg-[var(--meadow)] even:bg-transparent ${shown.page === 1 && freshKeys.has(visit.key) ? "flash-in" : ""}`}
+								className={`flex items-center @min-[26rem]:gap-3 gap-2 px-(--page-gap) py-1.75 ${shown.page === 1 && freshKeys.has(visit.key) ? "flash-in" : ""}`}
 							>
 								<SpeciesThumbnail
 									imageUrl={visit.imageUrl}
