@@ -1,12 +1,11 @@
 import { Link } from "@tanstack/react-router";
 import type { ReactNode } from "react";
-
+import { ConfidencePill } from "~/components/confidence-pill.tsx";
 import { EmptyNote } from "~/components/empty-state.tsx";
-import { Pill, SpeciesFlagPills } from "~/components/species-flag-pills.tsx";
+import { SpeciesFlagPills } from "~/components/species-flag-pills.tsx";
 import { SpeciesHourBars } from "~/components/species-hour-bars.tsx";
 import { SpeciesThumbnail } from "~/components/species-row.tsx";
 import { TooltipProvider } from "~/components/ui/tooltip.tsx";
-import { confidenceStyle, formatConfidence } from "~/lib/confidence.ts";
 import { comNameToSlug } from "~/lib/species-slug.ts";
 
 export type SpeciesGridItem = {
@@ -123,13 +122,7 @@ function SpeciesGridRow({ item }: { item: SpeciesGridItem }) {
 				<div className="flex shrink-0 flex-col items-end gap-1.5">
 					<span className="count-figure">{item.count.toLocaleString()}</span>
 					<div className="flex flex-wrap items-center justify-end gap-1.5">
-						{item.averageConfidence != null ? (
-							<Pill
-								label={formatConfidence(item.averageConfidence)}
-								style={confidenceStyle(item.averageConfidence)}
-								tabular
-							/>
-						) : null}
+						<ConfidencePill confidence={item.averageConfidence} average />
 						<SpeciesFlagPills
 							isNew={item.isNew}
 							isReturned={item.isReturned}

@@ -1,10 +1,6 @@
 import { AudioLines, Gem, Sparkles, Undo2 } from "lucide-react";
 import type { CSSProperties } from "react";
-import {
-	Tooltip,
-	TooltipContent,
-	TooltipTrigger,
-} from "~/components/ui/tooltip.tsx";
+import { Pill } from "~/components/pill.tsx";
 import { formatRatio } from "~/lib/highlights-data.ts";
 
 const FIRST_HEARD = new Intl.DateTimeFormat("en-US", {
@@ -60,7 +56,7 @@ const VOCAL_PILL_STYLE: CSSProperties = {
  * pills,
  * the same wherever a species row shows them (the species grid, the heat map).
  * The loader gives a species at most one of the four, so this renders one
- * pill or none. Needs a TooltipProvider above it.
+ * pill or none.
  */
 export function SpeciesFlagPills({
 	isNew,
@@ -116,45 +112,5 @@ export function SpeciesFlagPills({
 				/>
 			) : null}
 		</>
-	);
-}
-
-/**
- * One pill. Every pill -- confidence, New, Returned, Rare -- shares this size,
- * radius and weight so a cluster reads as one family; only the tint and the
- * optional icon set them apart. The flag pills carry a tooltip explaining what
- * they mean; the confidence pill is a bare number, so it takes no tooltip and
- * renders without one.
- */
-export function Pill({
-	icon: Icon,
-	label,
-	style,
-	tooltip,
-	tabular = false,
-}: {
-	icon?: React.ComponentType<{ className?: string }>;
-	label: string;
-	style: CSSProperties;
-	tooltip?: string;
-	tabular?: boolean;
-}) {
-	const pill = (
-		<span
-			className={`inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 font-semibold text-[11px] leading-none ${tabular ? "tabular-data" : ""}`}
-			style={style}
-		>
-			{Icon ? <Icon className="size-2.5" /> : null}
-			{label}
-		</span>
-	);
-
-	if (!tooltip) return pill;
-
-	return (
-		<Tooltip>
-			<TooltipTrigger asChild>{pill}</TooltipTrigger>
-			<TooltipContent>{tooltip}</TooltipContent>
-		</Tooltip>
 	);
 }
