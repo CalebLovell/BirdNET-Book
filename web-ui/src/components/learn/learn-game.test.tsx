@@ -54,7 +54,10 @@ test("stacks the clip above the choices in a centered column", () => {
 		/>,
 	);
 
-	assert.match(markup, /mx-auto mt-4 flex w-full max-w-2xl flex-col/);
+	assert.match(
+		markup,
+		/mx-auto mt-\(--page-gap\) flex w-full max-w-2xl flex-col/,
+	);
 	assert.doesNotMatch(markup, /lg:grid-cols-/);
 	assert.match(
 		markup,

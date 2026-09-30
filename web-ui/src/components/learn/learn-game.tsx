@@ -120,7 +120,7 @@ export function LearnGame({
 
 			{/* The card spans the page, but the game itself stays a single centered
 			    column: score, progress, clip, choices, in the order you use them. */}
-			<div className="mx-auto mt-4 flex w-full max-w-2xl flex-col gap-4">
+			<div className="mx-auto mt-(--page-gap) flex w-full max-w-2xl flex-col gap-(--page-gap)">
 				<div className="flex flex-col gap-2">
 					<div className="tabular-data self-end text-muted-foreground text-xs">
 						{runningScore.score} pts
@@ -164,10 +164,12 @@ export function LearnGame({
 
 				{/* No reserved height -- this strip is only ever as tall as whatever it
 				    is currently saying. */}
-				<div className="border-[var(--line)] border-t pt-4">
+				<div className="border-[var(--line)] border-t pt-(--page-gap)">
 					{isSolved && answer ? (
-						<div className="flex flex-wrap items-center justify-center gap-4">
-							<div className="flex items-center gap-2 text-sm">
+						<div className="flex flex-wrap items-center justify-center gap-4 max-[400px]:gap-2">
+							{/* Wraps on a phone rather than pushing the species link off the
+							    card's edge. */}
+							<div className="flex flex-wrap items-center justify-center gap-2 text-sm">
 								<span className="font-semibold">
 									{wrongGuesses.length === 0
 										? "First try —"
@@ -204,7 +206,13 @@ export function LearnGame({
 					) : (
 						<p className="text-center text-muted-foreground text-sm">
 							Listen, then pick the bird. {POINTS_BY_ATTEMPT[0]} points first
-							try, {POINTS_BY_ATTEMPT[1]} on the second — keys 1–4 work too.
+							try, {POINTS_BY_ATTEMPT[1]} on the second
+							{/* No keyboard to speak of on a touch screen. */}
+							<span className="pointer-coarse:hidden">
+								{" "}
+								— keys 1–4 work too
+							</span>
+							.
 						</p>
 					)}
 				</div>
@@ -275,7 +283,7 @@ function ChoiceButton({
 			type="button"
 			onClick={onSelect}
 			disabled={state !== "open"}
-			className={`flex items-center gap-4 rounded-md border p-4 text-left ${CHOICE_STYLES[state]}`}
+			className={`flex items-center gap-4 rounded-md border p-4 text-left max-[400px]:gap-2 max-[400px]:p-2 ${CHOICE_STYLES[state]}`}
 		>
 			<span className="tabular-data w-4 shrink-0 text-center text-muted-foreground text-xs">
 				{shortcut}
@@ -338,7 +346,7 @@ function RoundSummary({
 		>
 			<div className="island-kicker">Round complete</div>
 
-			<div className="mt-4 flex flex-wrap items-baseline gap-x-4 gap-y-1">
+			<div className="mt-(--page-gap) flex flex-wrap items-baseline gap-x-4 gap-y-1 max-[400px]:gap-x-2">
 				<div className="tabular-data font-semibold text-4xl leading-none">
 					{score.score}
 					<span className="text-muted-foreground text-xl">
@@ -348,7 +356,7 @@ function RoundSummary({
 				<div className="display-title text-xl">{roundVerdict(score)}</div>
 			</div>
 
-			<dl className="mt-4 grid grid-cols-3 gap-2 text-center">
+			<dl className="mt-(--page-gap) grid grid-cols-3 gap-2 text-center">
 				<SummaryStat
 					label="First try"
 					value={`${score.firstTry}/${score.answered}`}
@@ -360,7 +368,7 @@ function RoundSummary({
 				/>
 			</dl>
 
-			<ol className="mt-4 space-y-1">
+			<ol className="mt-(--page-gap) space-y-1">
 				{questions.map((question, position) => {
 					const result = results[position];
 					const answer = question.choices.find(
@@ -371,7 +379,7 @@ function RoundSummary({
 					return (
 						<li
 							key={question.id}
-							className="flex items-center gap-4 rounded-md px-4 py-2 odd:bg-[var(--meadow)]"
+							className="flex items-center gap-4 rounded-md px-4 py-2 odd:bg-[var(--meadow)] max-[400px]:gap-2 max-[400px]:px-2"
 						>
 							<ChoiceThumbnail choice={answer} />
 							<div className="min-w-0 flex-1">
@@ -396,7 +404,7 @@ function RoundSummary({
 				})}
 			</ol>
 
-			<div className="mt-4 flex justify-end">
+			<div className="mt-(--page-gap) flex justify-end">
 				<Button onClick={onPlayAgain} disabled={isLoadingNextRound}>
 					<RotateCcw className="size-4" />
 					{isLoadingNextRound ? "Dealing a new round…" : "Play again"}
@@ -414,7 +422,7 @@ function SummaryStat({
 	value: string | number;
 }) {
 	return (
-		<div className="rounded-md border border-[var(--line)] p-4">
+		<div className="rounded-md border border-[var(--line)] p-4 max-[400px]:p-2">
 			<dt className="island-kicker">{label}</dt>
 			<dd className="tabular-data mt-1 font-semibold text-2xl leading-none">
 				{value}

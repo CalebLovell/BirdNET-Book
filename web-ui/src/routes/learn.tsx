@@ -68,7 +68,7 @@ function Learn() {
 				/>
 			)}
 
-			<div className="mt-4 w-full">
+			<div className="mt-(--page-gap) w-full">
 				{round.questions.length === 0 ? (
 					<EmptyPool
 						speciesInPool={round.speciesInPool}
