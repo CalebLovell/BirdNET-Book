@@ -9,7 +9,8 @@ import {
 	Undo2,
 	VolumeX,
 } from "lucide-react";
-import type { ReactNode } from "react";
+import { Link } from "@tanstack/react-router";
+import { Fragment, type ReactNode } from "react";
 
 import { EmptyNote } from "~/components/empty-state.tsx";
 import type {
@@ -17,6 +18,7 @@ import type {
 	HighlightBird,
 	SpeciesHighlightKind,
 } from "~/lib/highlights-data.ts";
+import { comNameToSlug } from "~/lib/species-slug.ts";
 import { hourLabel } from "~/lib/time-ago.ts";
 
 /**
@@ -177,13 +179,40 @@ function BirdNames({
 	birds: HighlightBird[];
 	total: number;
 }) {
-	const named = birds.map((bird) =>
-		bird.note ? `${bird.comName} (${bird.note})` : bird.comName,
+	const rest = total - birds.length;
+	return (
+		<>
+			{birds.map((bird, i) => (
+				<Fragment key={bird.comName}>
+					{i === 0
+						? null
+						: rest === 0 && i === birds.length - 1
+							? " and "
+							: ", "}
+					<BirdName bird={bird} />
+				</Fragment>
+			))}
+			{rest > 0 ? ` and ${rest} more` : null}
+		</>
 	);
-	const rest = total - named.length;
-	if (rest > 0) return <>{`${named.join(", ")} and ${rest} more`}</>;
-	if (named.length === 1) return <>{named[0]}</>;
-	return <>{`${named.slice(0, -1).join(", ")} and ${named.at(-1)}`}</>;
+}
+
+/** A named bird, linked to its species page in the sentence's own colour --
+ * underlined only on hover, like species links elsewhere -- then what earned
+ * it its place. */
+function BirdName({ bird }: { bird: HighlightBird }) {
+	return (
+		<>
+			<Link
+				to="/species/$comName"
+				params={{ comName: comNameToSlug(bird.comName) }}
+				className="text-[inherit]! no-underline hover:underline"
+			>
+				{bird.comName}
+			</Link>
+			{bird.note ? ` (${bird.note})` : null}
+		</>
+	);
 }
 
 /** A figure inside a note's sentence, set as a count so it reads like the
