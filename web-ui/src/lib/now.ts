@@ -24,13 +24,8 @@ import { getSpeciesInfo } from "~/lib/wikipedia.ts";
 export const detectedAt = sql<string>`datetime(${detections.Date} || ' ' || ${detections.Time})`;
 export const isLast24h = sql`datetime(${detections.Date} || ' ' || ${detections.Time}) >= datetime('now', '-24 hours', 'localtime')`;
 
-/** The window at a glance, for the figure row above the log. */
 export type NowSummary = {
 	detections: number;
-	species: number;
-	visits: number;
-	/** The species with the most detections in the window; null when empty. */
-	topSpecies: { comName: string; detections: number } | null;
 };
 
 export type CurrentBird = {
@@ -229,25 +224,6 @@ async function getWindowVisits(heroKey: string | undefined) {
 	return { rows, visits, log };
 }
 
-function summarize(rows: WindowRow[], visitCount: number): NowSummary {
-	const bySpecies = new Map<string, number>();
-	for (const row of rows) {
-		bySpecies.set(row.comName, (bySpecies.get(row.comName) ?? 0) + 1);
-	}
-	let topSpecies: NowSummary["topSpecies"] = null;
-	for (const [comName, count] of bySpecies) {
-		if (!topSpecies || count > topSpecies.detections) {
-			topSpecies = { comName, detections: count };
-		}
-	}
-	return {
-		detections: rows.length,
-		species: bySpecies.size,
-		visits: visitCount,
-		topSpecies,
-	};
-}
-
 /** One page of the log, newest first, aged against `generatedAtMs`. */
 function buildRecentPage(
 	log: Visit<WindowRow>[],
@@ -298,7 +274,7 @@ export const getNowSnapshot = createServerFn({ method: "GET" }).handler(
 		return {
 			generatedAt: localTimestamp(generatedAtDate),
 			current,
-			summary: summarize(window.rows, window.visits.length),
+			summary: { detections: window.rows.length },
 			recent: await buildRecentPage(window.log, 1, generatedAtMs),
 			recentTotal: window.log.length,
 		};

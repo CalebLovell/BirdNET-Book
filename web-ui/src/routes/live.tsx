@@ -4,7 +4,6 @@ import { useEffect, useRef, useState } from "react";
 import { HighlightsCard } from "~/components/highlights-card.tsx";
 import { CurrentBirdCard } from "~/components/now/current-bird-card.tsx";
 import { LiveAudioCard } from "~/components/now/live-audio-card.tsx";
-import { LiveSummaryStats } from "~/components/now/live-summary-stats.tsx";
 import { RecentLogCard } from "~/components/now/recent-log-card.tsx";
 import { getLiveHighlights } from "~/lib/live-highlights.ts";
 import { getNowSnapshot } from "~/lib/now.ts";
@@ -107,12 +106,6 @@ function Live() {
 				/>
 
 				<div className="order-first grid grid-cols-1 gap-(--page-gap) lg:order-none">
-					{/* Nothing to sum up on a station that has never heard a bird;
-					    the hero card says so on its own. */}
-					{snapshot.current ? (
-						<LiveSummaryStats summary={snapshot.summary} />
-					) : null}
-
 					<LiveAudioCard unlocked={unlocked} />
 
 					{/* A station that has never recorded anything has nothing to

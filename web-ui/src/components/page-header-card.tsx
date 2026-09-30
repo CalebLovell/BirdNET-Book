@@ -1,5 +1,4 @@
 import type { ComponentType, ReactNode } from "react";
-import { cn } from "~/lib/utils.ts";
 
 /**
  * One figure in a masthead: an icon, a label, and a single value. That is the
@@ -119,39 +118,25 @@ export function PageHeaderStats({
 	);
 }
 
-export function Figure({
+function Figure({
 	label,
 	value,
 	icon: Icon,
 	inline = false,
-	compact = false,
-}: PageHeaderStat & {
-	inline?: boolean;
-	/** For a figure squeezed into a narrow grid, like the Live rail two by
-	    two: the icon steps aside when the card is too narrow to spare it, and
-	    a long value -- a species name -- wraps to a second line rather than
-	    being cut off. */
-	compact?: boolean;
-}) {
+}: PageHeaderStat & { inline?: boolean }) {
 	return (
 		<div
-			className={cn(
+			className={
 				inline
 					? "flex items-center gap-4 overflow-hidden"
-					: "feature-card flex items-center gap-4 overflow-hidden rounded-md p-4 max-[400px]:gap-3",
-				compact && "@container/figure",
-			)}
+					: "feature-card flex items-center gap-4 overflow-hidden rounded-md p-4 max-[400px]:gap-3"
+			}
 		>
-			<div
-				className={cn(
-					"flex size-8 shrink-0 items-center justify-center rounded-full bg-[var(--icon-well)] text-[var(--moss)]",
-					compact && "@max-[11rem]/figure:hidden",
-				)}
-			>
+			<div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-[var(--icon-well)] text-[var(--moss)]">
 				<Icon aria-hidden="true" className="size-4" />
 			</div>
 			<div className="min-w-0 flex-1">
-				<dt className={cn("island-kicker", compact && "truncate")}>{label}</dt>
+				<dt className="island-kicker">{label}</dt>
 				{/* One treatment for every value, number or string alike: sans,
 				    tabular, text-xl. Floored at that line box so a figure that falls
 				    back to a string -- an em dash on an empty period, say -- keeps the
@@ -159,13 +144,7 @@ export function Figure({
 				    under the cursor. */}
 				{/* A size down on phones, where each figure has a whole row to itself
 				    and text-xl read as louder than the cards around it. */}
-				<dd
-					className={cn(
-						"tabular-data mt-2 min-h-[1.75rem] font-semibold",
-						compact ? "line-clamp-2 break-words" : "truncate",
-						"text-xl leading-tight max-[400px]:mt-1 max-[400px]:min-h-6 max-[400px]:text-lg",
-					)}
-				>
+				<dd className="tabular-data mt-2 min-h-[1.75rem] truncate font-semibold text-xl leading-tight max-[400px]:mt-1 max-[400px]:min-h-6 max-[400px]:text-lg">
 					{typeof value === "number" ? value.toLocaleString() : value}
 				</dd>
 			</div>
