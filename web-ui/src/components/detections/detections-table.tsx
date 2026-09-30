@@ -19,6 +19,7 @@ import {
 import { type CSSProperties, useEffect, useState } from "react";
 import { useDebouncedCallback } from "use-debounce";
 import { ConfidencePill } from "~/components/confidence-pill.tsx";
+import { IndexDot } from "~/components/index-dot.tsx";
 import { RecordingButton } from "~/components/recording-button.tsx";
 import { PageStepper } from "~/components/ui/page-stepper.tsx";
 import { SearchInput } from "~/components/ui/search-input.tsx";
@@ -108,10 +109,12 @@ const COLUMN_VISIBILITY: Record<string, string> = {
 };
 const HEADER_CLASSES: Record<string, string> = {
 	select: `${SELECT_COLUMN_WIDTH} w-[calc(var(--page-gap)*1.5+0.875rem)] min-w-[calc(var(--page-gap)*1.5+0.875rem)]`,
+	index: "text-center",
 	confidence: "text-right",
 	audio: `${AUDIO_EDGE} text-right @min-[36rem]:w-32 @min-[36rem]:min-w-32`,
 };
 const CELL_CLASSES: Record<string, string> = {
+	index: "text-center",
 	species: "min-w-0 truncate",
 	// Narrow, the stacked time and day sit against the play button, under the
 	// right-aligned sort menu; one line again, they read left to right.
@@ -130,12 +133,13 @@ const GRID_ROW = "col-span-full grid grid-cols-subgrid items-center";
 // name at the narrow widths, where it truncates; at the widest every column
 // holds its content on one line and the four between the ends share the rest.
 function gridColumns(canDelete: boolean): CSSProperties {
-	const select = canDelete ? "max-content " : "";
+	// The row number follows the checkbox at every width, sized to its widest.
+	const lead = canDelete ? "max-content max-content " : "max-content ";
 	const fill = "minmax(max-content, 1fr)";
 	return {
-		"--cols-sm": `${select}minmax(0, 1fr) max-content max-content`,
-		"--cols-md": `${select}minmax(0, 1fr) ${fill} ${fill} max-content`,
-		"--cols-lg": `${select}repeat(4, ${fill}) max-content`,
+		"--cols-sm": `${lead}minmax(0, 1fr) max-content max-content`,
+		"--cols-md": `${lead}minmax(0, 1fr) ${fill} ${fill} max-content`,
+		"--cols-lg": `${lead}repeat(4, ${fill}) max-content`,
 	} as CSSProperties;
 }
 
@@ -539,8 +543,28 @@ export function DetectionsTable({
 		enableHiding: false,
 	};
 
+	// Row numbers count on across pages rather than restarting at 1, so a row's
+	// number says where it sits in the whole filtered list -- the same dots as
+	// the species visit log's.
+	const firstIndex = (search.page - 1) * search.pageSize + 1;
+	const lastIndex = firstIndex + page.rows.length - 1;
+	const indexColumn: ColumnDef<DetectionTableRow> = {
+		id: "index",
+		header: () => (
+			<>
+				<span aria-hidden="true">#</span>
+				<span className="sr-only">Row</span>
+			</>
+		),
+		cell: ({ row }) => (
+			<IndexDot index={firstIndex + row.index} widest={lastIndex} />
+		),
+		enableHiding: false,
+	};
+
 	const columns: ColumnDef<DetectionTableRow>[] = [
 		...(canDelete ? [selectColumn] : []),
+		indexColumn,
 		{
 			accessorKey: "Com_Name",
 			id: "species",
@@ -775,16 +799,14 @@ export function DetectionsTable({
 							key={row.id}
 							role="row"
 							data-state={row.getIsSelected() && "selected"}
-							// Zebra fill in place of the shared row's hairline -- the same
-							// idiom the list above and the Now page use. `border-none` drops
-							// that rule; selection is a conditional class rather than stacking
-							// `data-[state=selected]:` over `odd:`, so intent wins over
-							// Tailwind's own ordering, matching the list's choice.
+							// Plain card-white rows split by the shared row's hairline -- the
+							// same idiom as the Now page's recent log and the species visit
+							// log. Selection is a conditional class rather than stacking
+							// `data-[state=selected]:` over the fill, so intent wins over
+							// Tailwind's own ordering.
 							className={cn(
 								GRID_ROW,
-								row.getIsSelected()
-									? "border-none bg-[var(--row-selected)]"
-									: "border-none odd:bg-[var(--meadow)]",
+								row.getIsSelected() ? "bg-[var(--row-selected)]" : "bg-card",
 							)}
 						>
 							{row.getVisibleCells().map((cell, index) => (

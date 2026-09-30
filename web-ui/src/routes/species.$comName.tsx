@@ -19,6 +19,7 @@ import { ConfidencePill } from "~/components/confidence-pill.tsx";
 import { DetectionsByHourCard } from "~/components/detections-by-hour-card.tsx";
 import { DetectionsByMonthCard } from "~/components/detections-by-month-card.tsx";
 import { EmptyNote } from "~/components/empty-state.tsx";
+import { IndexDot } from "~/components/index-dot.tsx";
 import {
 	PageHeaderCard,
 	type PageHeaderStat,
@@ -626,10 +627,9 @@ function VisitLogCard({
 	const loading = !current;
 	const visits = shown.visits;
 	// Each row's place in the bird's whole history, 1 = newest, so the number
-	// keeps counting across pages. The column is sized to the widest number
-	// on this page, so the dates line up without a gap for digits never shown.
+	// keeps counting across pages.
 	const firstIndex = (shown.page - 1) * VISITS_PAGE_SIZE + 1;
-	const indexWidth = `${(firstIndex + visits.length - 1).toLocaleString().length}ch`;
+	const lastIndex = firstIndex + visits.length - 1;
 
 	return (
 		<section
@@ -687,16 +687,7 @@ function VisitLogCard({
 								// the header and footer and never pokes past the card's border.
 								className="flex items-center @min-[26rem]:gap-3 gap-2 px-(--page-gap) py-1.75"
 							>
-								{/* A dot that stretches to a capsule for longer numbers,
-								    every one on the page as wide as the widest, so the
-								    dates beside them line up. */}
-								<span
-									aria-hidden
-									style={{ minWidth: `calc(${indexWidth} + 0.75rem)` }}
-									className="tabular-data inline-flex h-6 min-w-6 shrink-0 items-center justify-center rounded-full bg-muted px-1.5 font-medium text-foreground text-xs"
-								>
-									{(firstIndex + i).toLocaleString()}
-								</span>
+								<IndexDot index={firstIndex + i} widest={lastIndex} />
 								<div className="min-w-0 flex-1 text-sm">
 									{/* The day links to its Timeline, like the detections
 										    table's Recorded column and the heat map's squares. */}
