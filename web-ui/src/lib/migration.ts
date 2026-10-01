@@ -14,17 +14,6 @@ import {
 	RESIDENT_MIN_DAYS,
 } from "~/lib/migration-data.ts";
 import { timestampToMillis } from "~/lib/visits.ts";
-import { getSpeciesInfo } from "~/lib/wikipedia.ts";
-
-/** The same illustration-then-Wikipedia lookup the ranked stats lists use. */
-async function imageUrlFor(
-	sciName: string,
-	comName: string,
-): Promise<string | null> {
-	return (
-		illustrationUrlFor(sciName) ?? (await getSpeciesInfo(comName)).imageUrl
-	);
-}
 
 type MarkerRow = {
 	comName: string;
@@ -130,7 +119,7 @@ export async function getQuietSpecies(): Promise<QuietSpecies[]> {
 		rows.map(async (row) => ({
 			...row,
 			...(markers.get(row.comName) ?? NO_MARKER),
-			imageUrl: await imageUrlFor(row.sciName, row.comName),
+			imageUrl: illustrationUrlFor(row.sciName),
 		})),
 	);
 }
@@ -180,7 +169,7 @@ export async function getNewArrivals(): Promise<ArrivalSpecies[]> {
 		rows.map(async (row) => ({
 			...row,
 			...(markers.get(row.comName) ?? NO_MARKER),
-			imageUrl: await imageUrlFor(row.sciName, row.comName),
+			imageUrl: illustrationUrlFor(row.sciName),
 		})),
 	);
 }

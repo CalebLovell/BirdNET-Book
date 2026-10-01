@@ -1,9 +1,8 @@
 import { Link } from "@tanstack/react-router";
-import { Bird } from "lucide-react";
 import type { ReactNode } from "react";
-
 import { EmptyNote } from "~/components/empty-state.tsx";
 import { SpeciesFlagPills } from "~/components/species-flag-pills.tsx";
+import { SpeciesImage } from "~/components/species-image.tsx";
 import { TooltipProvider } from "~/components/ui/tooltip.tsx";
 import { HEAT_COLORS, heatLevel } from "~/lib/heatmap.ts";
 import { comNameToSlug } from "~/lib/species-slug.ts";
@@ -227,16 +226,12 @@ function SpeciesHourRowView({
 			>
 				<div className="flex min-w-0 items-center gap-2">
 					<div className="flex size-6 shrink-0 items-center justify-center">
-						{row.imageUrl ? (
-							<img
-								src={row.imageUrl}
-								alt={row.comName}
-								className="max-h-full max-w-full object-contain"
-								loading="lazy"
-							/>
-						) : (
-							<Bird className="size-3.5 text-muted-foreground" />
-						)}
+						<SpeciesImage
+							imageUrl={row.imageUrl}
+							alt={row.comName}
+							glyphClassName="size-3.5"
+							loading="lazy"
+						/>
 					</div>
 					<div className="min-w-0 truncate font-semibold text-sm group-hover:underline">
 						{row.comName}

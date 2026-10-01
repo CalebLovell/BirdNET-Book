@@ -1,5 +1,4 @@
 import {
-	Bird,
 	ExternalLink,
 	Search,
 	ShieldCheck,
@@ -11,6 +10,7 @@ import { useMemo, useState } from "react";
 import { ConfidencePill } from "~/components/confidence-pill.tsx";
 import { IndexDot } from "~/components/index-dot.tsx";
 import { ClipPlayer } from "~/components/learn/clip-player.tsx";
+import { SpeciesImage } from "~/components/species-image.tsx";
 import { SpeciesThumbnail } from "~/components/species-row.tsx";
 import { Button } from "~/components/ui/button.tsx";
 import { Input } from "~/components/ui/input.tsx";
@@ -147,15 +147,11 @@ export function ReviewWorkflow({
 					>
 						<div className="flex items-center gap-4 max-[400px]:gap-3">
 							<div className="flex size-20 shrink-0 items-center justify-center overflow-hidden max-[400px]:size-14">
-								{row.imageUrl ? (
-									<img
-										src={row.imageUrl}
-										alt={row.comName}
-										className="max-h-full max-w-full object-contain"
-									/>
-								) : (
-									<Bird className="size-10 text-muted-foreground" />
-								)}
+								<SpeciesImage
+									imageUrl={row.imageUrl}
+									alt={row.comName}
+									glyphClassName="size-10"
+								/>
 							</div>
 							<div className="min-w-0 flex-1">
 								<div className="island-kicker">

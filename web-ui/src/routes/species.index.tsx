@@ -25,6 +25,7 @@ import {
 	type PageHeaderStat,
 } from "~/components/page-header-card.tsx";
 import { SpeciesActions } from "~/components/species-actions.tsx";
+import { SpeciesImage } from "~/components/species-image.tsx";
 import { PageStepper } from "~/components/ui/page-stepper.tsx";
 import { SearchInput } from "~/components/ui/search-input.tsx";
 import { ToggleGroup, ToggleGroupItem } from "~/components/ui/toggle-group.tsx";
@@ -553,18 +554,12 @@ function SpeciesCard({ card }: { card: LifeListCard }) {
 			</div>
 
 			<div className="flex h-40 w-full items-center justify-center overflow-hidden">
-				{card.imageUrl ? (
-					<img
-						src={card.imageUrl}
-						alt={card.comName}
-						className="max-h-full max-w-40 object-contain"
-						loading="lazy"
-					/>
-				) : (
-					<div className="flex size-full items-center justify-center bg-muted text-muted-foreground">
-						<Bird className="size-12" />
-					</div>
-				)}
+				<SpeciesImage
+					imageUrl={card.imageUrl}
+					alt={card.comName}
+					glyphClassName="size-16"
+					loading="lazy"
+				/>
 			</div>
 
 			<div className="flex flex-1 flex-col gap-3 max-[400px]:gap-2">

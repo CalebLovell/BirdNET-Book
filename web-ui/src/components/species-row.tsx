@@ -1,4 +1,4 @@
-import { Bird } from "lucide-react";
+import { SpeciesImage } from "~/components/species-image.tsx";
 
 /**
  * The shared row shell for the ranked species lists. Lists that sit side by
@@ -18,16 +18,12 @@ export function SpeciesThumbnail({
 }) {
 	return (
 		<div className="flex size-10 shrink-0 items-center justify-center overflow-hidden">
-			{imageUrl ? (
-				<img
-					src={imageUrl}
-					alt=""
-					title={comName}
-					className="max-h-full max-w-full object-contain"
-				/>
-			) : (
-				<Bird className="size-5 text-muted-foreground" />
-			)}
+			<SpeciesImage
+				imageUrl={imageUrl}
+				alt=""
+				title={comName}
+				glyphClassName="size-5"
+			/>
 		</div>
 	);
 }

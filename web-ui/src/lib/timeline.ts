@@ -25,7 +25,6 @@ import {
 	type TimelineWindow,
 	windowFor,
 } from "~/lib/timeline-window.ts";
-import { getSpeciesInfo } from "~/lib/wikipedia.ts";
 
 /**
  * Calendar windows, not rolling ones: "Weekly" means a specific Mon-Sun week
@@ -365,7 +364,6 @@ export async function loadTimelineData({
 
 	const withImages = await Promise.all(
 		Array.from(bySpecies.values()).map(async (entry) => {
-			const { imageUrl: wikiImageUrl } = await getSpeciesInfo(entry.comName);
 			const totalDetections = entry.hourCounts.reduce((a, b) => a + b, 0);
 			// New, Rare, Returned and Vocal divide the species between them rather
 			// than stacking: a first-ever arrival is "New"; failing that, a bird
@@ -395,7 +393,7 @@ export async function loadTimelineData({
 			return {
 				comName: entry.comName,
 				sciName: entry.sciName,
-				imageUrl: illustrationUrlFor(entry.sciName) ?? wikiImageUrl,
+				imageUrl: illustrationUrlFor(entry.sciName),
 				ebirdUrl: ebirdUrlFor(entry.sciName, entry.comName),
 				totalDetections,
 				hourCounts: entry.hourCounts,

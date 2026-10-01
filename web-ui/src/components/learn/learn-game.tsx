@@ -1,9 +1,10 @@
 import { Link } from "@tanstack/react-router";
-import { ArrowRight, Bird, Check, RotateCcw, Trophy, X } from "lucide-react";
+import { ArrowRight, Check, RotateCcw, Trophy, X } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { ConfidencePill } from "~/components/confidence-pill.tsx";
 import { ClipPlayer } from "~/components/learn/clip-player.tsx";
 import { RecordingButton } from "~/components/recording-button.tsx";
+import { SpeciesImage } from "~/components/species-image.tsx";
 import { Button } from "~/components/ui/button.tsx";
 import { formatDayTitle } from "~/lib/day-title.ts";
 import {
@@ -509,6 +510,12 @@ const THUMBNAIL_SIZES = {
 	lg: "h-20 w-24 max-[400px]:h-10 max-[400px]:w-13",
 } as const;
 
+const GLYPH_SIZES: Record<keyof typeof THUMBNAIL_SIZES, string> = {
+	sm: "size-4",
+	md: "size-5",
+	lg: "size-10 @max-[20rem]/choice:size-6 max-[400px]:size-5",
+};
+
 function ChoiceThumbnail({
 	choice,
 	size = "md",
@@ -516,46 +523,17 @@ function ChoiceThumbnail({
 	choice: LearnChoice;
 	size?: keyof typeof THUMBNAIL_SIZES;
 }) {
-	if (!choice.imageUrl && size !== "sm") {
-		// At these sizes an empty box reads as broken art; initials read as a
-		// placeholder on purpose.
-		return (
-			<span
-				aria-hidden="true"
-				className={`flex shrink-0 items-center justify-center rounded-md bg-[var(--icon-well)] text-[var(--moss)] text-sm tracking-wide ${THUMBNAIL_SIZES[size]}`}
-			>
-				{initials(choice.comName)}
-			</span>
-		);
-	}
-
 	return (
 		<span
 			className={`flex shrink-0 items-center justify-center overflow-hidden ${THUMBNAIL_SIZES[size]}`}
 		>
-			{choice.imageUrl ? (
-				<img
-					src={choice.imageUrl}
-					alt=""
-					className="max-h-full max-w-full object-contain"
-				/>
-			) : (
-				<Bird
-					className={`text-muted-foreground ${size === "sm" ? "size-4" : "size-5"}`}
-				/>
-			)}
+			<SpeciesImage
+				imageUrl={choice.imageUrl}
+				alt=""
+				glyphClassName={GLYPH_SIZES[size]}
+			/>
 		</span>
 	);
-}
-
-/** "Red-bellied Woodpecker" -> "RW": one letter per word, hyphenated words as one. */
-function initials(comName: string): string {
-	return comName
-		.split(/\s+/)
-		.filter(Boolean)
-		.slice(0, 3)
-		.map((word) => word[0]?.toUpperCase() ?? "")
-		.join("");
 }
 
 function attemptLabel(attempts: number): string {

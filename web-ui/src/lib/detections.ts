@@ -28,7 +28,6 @@ import {
 } from "~/lib/detection-workspace.ts";
 import { ebirdUrlFor } from "~/lib/ebird.ts";
 import { illustrationUrlFor } from "~/lib/illustrations.ts";
-import { getSpeciesInfo } from "~/lib/wikipedia.ts";
 
 const isToday = sql`${detections.Date} = date('now', 'localtime')`;
 const isLastHour = sql`datetime(${detections.Date} || ' ' || ${detections.Time}) >= datetime('now', '-1 hour', 'localtime')`;
@@ -390,7 +389,6 @@ export const getLifeListCards = createServerFn({ method: "GET" }).handler(
 		return Promise.all(
 			totals.map(async (row) => {
 				const latest = latestByName.get(row.comName);
-				const { imageUrl: wikiImageUrl } = await getSpeciesInfo(row.comName);
 				return {
 					comName: row.comName,
 					sciName: row.sciName,
@@ -401,7 +399,7 @@ export const getLifeListCards = createServerFn({ method: "GET" }).handler(
 					audioUrl: latest
 						? audioUrlFor(latest.date, row.comName, latest.fileName)
 						: null,
-					imageUrl: illustrationUrlFor(row.sciName) ?? wikiImageUrl,
+					imageUrl: illustrationUrlFor(row.sciName),
 					ebirdUrl: ebirdUrlFor(row.sciName, row.comName),
 				};
 			}),

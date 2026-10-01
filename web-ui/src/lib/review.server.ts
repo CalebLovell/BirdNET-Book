@@ -18,7 +18,6 @@ import {
 	type SpeciesOption,
 } from "~/lib/review-data.ts";
 import { DEFAULT_REVIEW_RARE_SPECIES_MAX } from "~/lib/settings-data.ts";
-import { getSpeciesInfo } from "~/lib/wikipedia.ts";
 
 export type ReviewCandidate = {
 	rowId: number;
@@ -32,7 +31,7 @@ export type ReviewCandidate = {
 	audioUrl: string;
 	audioAvailable: boolean;
 	ebirdUrl: string;
-	/** Bundled illustration where there is one; see `attachSpeciesImages`. */
+	/** The bundled illustration, or null for the generic bird glyph. */
 	imageUrl: string | null;
 };
 export type ReviewPage = {
@@ -177,31 +176,6 @@ export function loadReviewPage(
 				imageUrl: illustrationUrlFor(row.sciName),
 			};
 		}),
-	};
-}
-
-/**
- * Fills in a Wikipedia thumbnail for the candidates the bundled illustration set
- * doesn't cover -- which is most of them here, since the review queues surface
- * the rarest species first. Kept out of `loadReviewPage` so the query itself
- * stays synchronous; `getSpeciesInfo` memoizes, so a queue costs at most one
- * network call per species per server lifetime.
- */
-export async function attachSpeciesImages(
-	page: ReviewPage,
-): Promise<ReviewPage> {
-	return {
-		...page,
-		candidates: await Promise.all(
-			page.candidates.map(async (candidate) =>
-				candidate.imageUrl
-					? candidate
-					: {
-							...candidate,
-							imageUrl: (await getSpeciesInfo(candidate.comName)).imageUrl,
-						},
-			),
-		),
 	};
 }
 

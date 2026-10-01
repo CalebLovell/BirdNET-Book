@@ -20,7 +20,6 @@ import {
 	type TrendPoint,
 } from "~/lib/trend.ts";
 import { localTimestamp, timestampToMillis } from "~/lib/visits.ts";
-import { getSpeciesInfo } from "~/lib/wikipedia.ts";
 
 export type { HourActivity };
 export type Visit = {
@@ -265,7 +264,6 @@ export const getSpeciesDetail = createServerFn({ method: "GET" })
 				history,
 				detectionTrend,
 				hourActivity,
-				{ imageUrl: wikiImageUrl },
 				logVisits,
 			] = await Promise.all([
 				db
@@ -306,7 +304,6 @@ export const getSpeciesDetail = createServerFn({ method: "GET" })
 				getYearTrend(year, filter),
 				getMonthlyTrend(filter),
 				getHourActivity(filter),
-				getSpeciesInfo(comName),
 				// Page one is already in hand as `recentVisits`; only a deeper page
 				// costs a second query.
 				logPage === 1 ? null : getVisitPage(comName, logPage, generatedAtDate),
@@ -316,7 +313,7 @@ export const getSpeciesDetail = createServerFn({ method: "GET" })
 			const detail: SpeciesDetail = {
 				comName,
 				sciName: totals.sciName,
-				imageUrl: illustrationUrlFor(totals.sciName, "flight") ?? wikiImageUrl,
+				imageUrl: illustrationUrlFor(totals.sciName, "flight"),
 				ebirdUrl: ebirdUrlFor(totals.sciName, comName),
 				totalDetections: totals.totalDetections,
 				availableYears,

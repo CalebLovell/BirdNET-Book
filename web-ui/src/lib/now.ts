@@ -4,10 +4,7 @@ import { and, avg, count, desc, sql } from "drizzle-orm";
 import { db } from "~/db/index.ts";
 import { detections } from "~/db/schema.ts";
 import { audioUrlFor } from "~/lib/audio.ts";
-import {
-	type IllustrationPose,
-	illustrationUrlFor,
-} from "~/lib/illustrations.ts";
+import { illustrationUrlFor } from "~/lib/illustrations.ts";
 import { comNameToSlug } from "~/lib/species-slug.ts";
 import {
 	countVisits,
@@ -16,7 +13,6 @@ import {
 	timestampToMillis,
 	type Visit,
 } from "~/lib/visits.ts";
-import { getSpeciesInfo } from "~/lib/wikipedia.ts";
 
 // Every figure on the Today page reads from one rolling 24-hour window rather
 // than the calendar day, so no two cards can disagree -- and so the page still
@@ -95,20 +91,6 @@ export type RecentPage = {
 	generatedAt: string;
 };
 
-// The bundled kachō-e illustration when there is one, else Wikipedia's
-// thumbnail. getSpeciesInfo memoizes per species, so polling this every ten
-// seconds costs one network call per species per server lifetime.
-async function imageUrlFor(
-	sciName: string,
-	comName: string,
-	pose: IllustrationPose,
-): Promise<string | null> {
-	return (
-		illustrationUrlFor(sciName, pose) ??
-		(await getSpeciesInfo(comName)).imageUrl
-	);
-}
-
 /** Rows per page of the log beneath the hero. */
 export const RECENT_PAGE_SIZE = 15;
 
@@ -160,7 +142,7 @@ async function buildCurrentBird(
 			.select({ timestamp: detectedAt })
 			.from(detections)
 			.where(and(isLast24h, isSameSpecies)),
-		imageUrlFor(latest.sciName, latest.comName, "flight"),
+		illustrationUrlFor(latest.sciName, "flight"),
 	]);
 
 	return {
@@ -243,7 +225,7 @@ function buildRecentPage(
 				comName: visit.comName,
 				sciName: last.sciName,
 				speciesSlug: comNameToSlug(visit.comName),
-				imageUrl: await imageUrlFor(last.sciName, visit.comName, "perched"),
+				imageUrl: illustrationUrlFor(last.sciName, "perched"),
 				firstAt: first.detectedAt,
 				lastAt: last.detectedAt,
 				ageMs: generatedAtMs - timestampToMillis(last.detectedAt),

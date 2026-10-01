@@ -16,7 +16,6 @@ import {
 	type PoolSpecies,
 } from "~/lib/learn-round.ts";
 import { comNameToSlug } from "~/lib/species-slug.ts";
-import { getSpeciesInfo } from "~/lib/wikipedia.ts";
 
 // A weak detection is usually a smear of wind or traffic that happens to score
 // as a bird -- unfair to quiz someone on. Only clips the analyzer felt good
@@ -112,8 +111,7 @@ function groupIntoSpecies(rows: ClipRow[]): PoolSpecies[] {
 				comName: row.comName,
 				sciName: row.sciName,
 				speciesSlug: comNameToSlug(row.comName),
-				// Only the bundled illustrations here -- Wikipedia lookups are network
-				// calls, so they wait until we know which species the round uses.
+				// The bundled illustration, or null for the generic bird glyph.
 				imageUrl: illustrationUrlFor(row.sciName),
 				clips: [],
 			};
@@ -128,36 +126,6 @@ function groupIntoSpecies(rows: ClipRow[]): PoolSpecies[] {
 	}
 
 	return [...bySpecies.values()];
-}
-
-/** Fills in Wikipedia thumbnails for the species this round actually shows. */
-async function addMissingImages(round: LearnRound): Promise<LearnRound> {
-	const needed = new Map<string, string>();
-	for (const question of round.questions) {
-		for (const choice of question.choices) {
-			if (!choice.imageUrl) needed.set(choice.sciName, choice.comName);
-		}
-	}
-
-	const resolved = new Map(
-		await Promise.all(
-			[...needed].map(
-				async ([sciName, comName]) =>
-					[sciName, (await getSpeciesInfo(comName)).imageUrl] as const,
-			),
-		),
-	);
-
-	return {
-		...round,
-		questions: round.questions.map((question) => ({
-			...question,
-			choices: question.choices.map((choice) => ({
-				...choice,
-				imageUrl: choice.imageUrl ?? resolved.get(choice.sciName) ?? null,
-			})),
-		})),
-	};
 }
 
 /**
@@ -215,9 +183,7 @@ export const getLearnRound = createServerFn({ method: "GET" })
 	.validator((pool: LearnPool) => pool)
 	.handler(async ({ data: pool }): Promise<LearnRoundData> => {
 		const rows = recentClipsPerSpecies(pool).filter(clipFileExists);
-		const round = addSpeciesStats(
-			await addMissingImages(buildRound(groupIntoSpecies(rows))),
-		);
+		const round = addSpeciesStats(buildRound(groupIntoSpecies(rows)));
 
 		// A playable round is proof enough; only an empty one pays for the probe.
 		const hasAnyDetections =

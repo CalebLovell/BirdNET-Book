@@ -1,6 +1,7 @@
 // Locally-bundled kachō-e style illustrations pulled from Twarner491/AvianVisitors
 // (see public/illustrations/ATTRIBUTION.md) for the species detected in this
-// project's own birds.db. Preferred over the Wikipedia thumbnail when present.
+// project's own birds.db. A species without one shows the generic bird glyph
+// (see SpeciesImage) -- never a photo from elsewhere.
 const AVAILABLE_SLUGS = new Set([
 	"agelaius-phoeniceus",
 	"archilochus-colubris",

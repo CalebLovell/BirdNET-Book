@@ -13,7 +13,9 @@ Design System" canvas on claude.ai.
   around it. Page content fills the remaining width; no max-width column.
 - **Show the bird.** Any list of species uses the species-row idiom:
   `SpeciesThumbnail` + `illustrationUrlFor(sciName)`, common name over an
-  italic binomial, `odd:bg-[var(--meadow)]` zebra, no label→value rows.
+  italic binomial, `odd:bg-[var(--meadow)]` zebra, no label→value rows. A
+  species without a bundled illustration gets the plain muted bird glyph
+  (`SpeciesImage`), never a photo, initials or a tinted box.
 - **One instrument.** Every figure is the same size, face and weight
   (`PageHeaderCard` stats: kicker label + 20px semibold tabular value).
 - **Stable under the cursor.** Fixed slots and floored line boxes, so data

@@ -3,7 +3,6 @@ import { openWritableDetectionsDb, sqlite } from "~/db/index.ts";
 import { extractedDir } from "~/lib/audio.server.ts";
 import { requireUnlocked } from "~/lib/auth.ts";
 import {
-	attachSpeciesImages,
 	correctDetection,
 	deleteDetectionDirectly,
 	loadReviewPage,
@@ -20,13 +19,11 @@ export const getReviewPage = createServerFn({ method: "GET" })
 	.middleware([requireUnlocked])
 	.validator((input: Record<string, unknown>) => normalizeReviewSearch(input))
 	.handler(async ({ data }) =>
-		attachSpeciesImages(
-			loadReviewPage(
-				sqlite,
-				extractedDir(),
-				data,
-				await readReviewRareSpeciesMax(),
-			),
+		loadReviewPage(
+			sqlite,
+			extractedDir(),
+			data,
+			await readReviewRareSpeciesMax(),
 		),
 	);
 export const getReviewSpecies = createServerFn({ method: "GET" })

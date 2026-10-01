@@ -1,5 +1,4 @@
 import { Link } from "@tanstack/react-router";
-import { Bird } from "lucide-react";
 import type { CSSProperties, ReactNode } from "react";
 
 import { ConfidencePill } from "~/components/confidence-pill.tsx";
@@ -8,6 +7,7 @@ import {
 	PageHeaderStats,
 } from "~/components/page-header-card.tsx";
 import { RecordingButton } from "~/components/recording-button.tsx";
+import { SpeciesImage } from "~/components/species-image.tsx";
 
 /**
  * The one masthead shape shared by the Today page's hero and the species
@@ -79,15 +79,11 @@ export function HeroPortrait({
 		// left edge per species, which the Today hero would jump through on every
 		// poll.
 		<div className="flex h-32 w-full shrink-0 items-center justify-center overflow-hidden sm:h-36">
-			{imageUrl ? (
-				<img
-					src={imageUrl}
-					alt={comName}
-					className="max-h-full max-w-full object-contain"
-				/>
-			) : (
-				<Bird className="size-16 text-muted-foreground" />
-			)}
+			<SpeciesImage
+				imageUrl={imageUrl}
+				alt={comName}
+				glyphClassName="size-16"
+			/>
 		</div>
 	);
 }

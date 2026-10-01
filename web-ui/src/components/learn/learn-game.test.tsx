@@ -112,10 +112,11 @@ test("the rail counts the birds now that the title doesn't", () => {
 	assert.match(render(), /Bird 1 of 1<\/div>/);
 });
 
-test("choices without art show the bird's initials, not an empty box", () => {
+test("choices without art show the generic bird glyph, never initials", () => {
 	const markup = render();
-	assert.match(markup, />NC<\/span>/);
-	assert.match(markup, />HF<\/span>/);
+	assert.doesNotMatch(markup, />NC<\/span>/);
+	assert.doesNotMatch(markup, />HF<\/span>/);
+	assert.match(markup, /lucide-bird/);
 });
 
 test("the rail marks the current bird and leaves the rest blank", () => {

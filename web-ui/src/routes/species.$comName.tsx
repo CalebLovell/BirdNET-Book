@@ -30,6 +30,7 @@ import {
 	HERO_CARD_SHELL,
 	SpeciesHeroCard,
 } from "~/components/species-hero-card.tsx";
+import { SpeciesImage } from "~/components/species-image.tsx";
 import { StatusPage } from "~/components/status-page.tsx";
 import { Button } from "~/components/ui/button.tsx";
 import { PageStepper } from "~/components/ui/page-stepper.tsx";
@@ -216,13 +217,13 @@ function UndetectedSpecies({
 			/>
 			<section className="feature-card rounded-md p-4">
 				<div className="flex flex-wrap items-start gap-5 max-[400px]:gap-2">
-					{illustration ? (
-						<img
-							src={illustration}
+					<div className="flex size-32 shrink-0 items-center justify-center">
+						<SpeciesImage
+							imageUrl={illustration}
 							alt=""
-							className="size-32 shrink-0 object-contain"
+							glyphClassName="size-16"
 						/>
-					) : null}
+					</div>
 					<div className="min-w-0 flex-1">
 						<h2 className="display-title font-semibold text-xl">{comName}</h2>
 						<p className="mt-0.5 text-muted-foreground text-sm italic">
