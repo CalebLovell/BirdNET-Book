@@ -15,6 +15,11 @@ import {
 	type SpeciesGridItem,
 } from "~/components/species-grid.tsx";
 import { StatusPage } from "~/components/status-page.tsx";
+import {
+	DAY_STARTS,
+	type DayStart,
+	DayStartToggle,
+} from "~/components/timeline/day-start-toggle.tsx";
 import { PeriodToolbar } from "~/components/timeline/period-toolbar.tsx";
 import { Button } from "~/components/ui/button.tsx";
 import { TooltipProvider } from "~/components/ui/tooltip.tsx";
@@ -25,6 +30,7 @@ import { formatDayTitle } from "~/lib/day-title.ts";
 import { pageTitle } from "~/lib/page-title.ts";
 import { formatShareCard } from "~/lib/share-card.ts";
 import type { HourActivity } from "~/lib/stats-data.ts";
+import { formatSunClock, type WindowSun } from "~/lib/sun-times.ts";
 import type { TimelineData, TimelineRow } from "~/lib/timeline.ts";
 import {
 	type DayOutOfRange,
@@ -56,12 +62,16 @@ const TIMELINE_VIEWS = ["hours", "grid"] as const;
 type TimelineView = (typeof TIMELINE_VIEWS)[number];
 const DEFAULT_VIEW: TimelineView = "hours";
 
+/** Where the heat map's day begins. Midnight unless asked; see DayStartToggle. */
+const DEFAULT_START: DayStart = "midnight";
+
 const timelineSearchSchema = z.object({
 	period: z
 		.enum(TIMELINE_PERIODS)
 		.default(DEFAULT_PERIOD)
 		.catch(DEFAULT_PERIOD),
 	view: z.enum(TIMELINE_VIEWS).default(DEFAULT_VIEW).catch(DEFAULT_VIEW),
+	start: z.enum(DAY_STARTS).default(DEFAULT_START).catch(DEFAULT_START),
 	/**
 	 * Which window of the period to show, in that period's own notation (see
 	 * TimelineAnchor). Absent means the one containing today, so a bare
@@ -96,7 +106,11 @@ export const Route = createFileRoute("/timeline")({
 	validateSearch: timelineSearchSchema,
 	search: {
 		middlewares: [
-			stripSearchParams({ period: DEFAULT_PERIOD, view: DEFAULT_VIEW }),
+			stripSearchParams({
+				period: DEFAULT_PERIOD,
+				view: DEFAULT_VIEW,
+				start: DEFAULT_START,
+			}),
 		],
 	},
 	loaderDeps: ({ search }) => ({
@@ -122,7 +136,7 @@ const DAY_TITLE = new Intl.DateTimeFormat("en-US", {
 function Timeline() {
 	const data = Route.useLoaderData();
 	const search = Route.useSearch();
-	const { period, view } = search;
+	const { period, view, start } = search;
 	const anchor = resolveAnchor(period, search.date);
 	const navigate = Route.useNavigate();
 
@@ -130,6 +144,7 @@ function Timeline() {
 		period?: TimelinePeriod;
 		date?: string;
 		view?: TimelineView;
+		start?: DayStart;
 	}) => navigate({ search: (prev) => ({ ...prev, ...next }), replace: true });
 
 	// A date the station could never have recorded is the one case with nothing
@@ -157,6 +172,9 @@ function Timeline() {
 					<TimelineCards
 						rows={data.body.rows}
 						highlights={data.body.highlights}
+						sun={data.body.sun}
+						start={start}
+						onStartChange={(next) => show({ start: next })}
 						jumpTo={jumpTarget(period, data)}
 						windowLabel={data.window?.label ?? null}
 						view={view}
@@ -352,6 +370,9 @@ function TimelineCards({
 	windowLabel,
 	view,
 	onViewChange,
+	sun,
+	start,
+	onStartChange,
 }: {
 	rows: TimelineRow[];
 	highlights: TimelineData["highlights"];
@@ -360,6 +381,10 @@ function TimelineCards({
 	windowLabel: string | null;
 	view: TimelineView;
 	onViewChange: (next: TimelineView) => void;
+	/** The window's average sunrise and sunset, or why there are none. */
+	sun: WindowSun;
+	start: DayStart;
+	onStartChange: (next: DayStart) => void;
 }) {
 	const emptyMessage = windowLabel
 		? `No detections recorded for ${windowLabel}.`
@@ -406,6 +431,27 @@ function TimelineCards({
 	) : undefined;
 	const summary = hasRows ? <WindowSummary rows={rows} /> : undefined;
 
+	// The heat map's own toggles: where its day starts, then the view. The
+	// day-start pill goes when the card is too narrow for the hour columns
+	// (see species-by-hour-card's HOURS_LAYOUT) -- with no hours on show it
+	// would have nothing to move.
+	const heatMapActions = hasRows ? (
+		<div className="flex items-center gap-2">
+			<div className="@min-[56rem]/card:flex hidden">
+				<DayStartToggle value={start} sun={sun} onChange={onStartChange} />
+			</div>
+			{toggle}
+		</div>
+	) : undefined;
+	const heatMapSun =
+		start === "sunrise" && sun.available
+			? {
+					startHour: sun.sunriseHour,
+					sunsetHour: sun.sunsetHour,
+					caption: `${sun.days > 1 ? "Average sunrise" : "Sunrise"} ${formatSunClock(sun.sunriseMinutes)} · sunset ${formatSunClock(sun.sunsetMinutes)}`,
+				}
+			: undefined;
+
 	// The window's day for the side column's rose: every species summed, hour by
 	// hour.
 	const hourActivity: HourActivity[] = Array.from(
@@ -423,7 +469,8 @@ function TimelineCards({
 				emptyMessage={emptyMessage}
 				emptyAction={emptyAction}
 				summary={summary}
-				action={toggle}
+				action={heatMapActions}
+				sun={heatMapSun}
 				className={BODY_CARD_WIDTH}
 			/>
 		) : (

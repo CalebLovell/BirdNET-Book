@@ -27,7 +27,7 @@ test("one loader serves every period", async () => {
 	// strips the param so only non-default periods carry ?period= (alongside any
 	// other defaulted params, like the view, that ride the same call).
 	assert.match(source, /const DEFAULT_PERIOD: TimelinePeriod = "day"/);
-	assert.match(source, /stripSearchParams\(\{ period: DEFAULT_PERIOD[,}]/);
+	assert.match(source, /stripSearchParams\(\{\s*period: DEFAULT_PERIOD[,}]/);
 });
 
 test("every period draws the same body", async () => {
