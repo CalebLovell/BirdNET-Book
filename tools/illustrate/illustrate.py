@@ -436,6 +436,14 @@ def cmd_generate(args):
         print('Nothing to paint: every pose has an attempt that is unverified or passed. '
               'Use --again to paint more.')
         return
+    # Without a photo the model paints the species from memory and drifts
+    # toward a generic bird, so every species needs one first.
+    missing = sorted({sp['slug'] for sp, _ in todo if not anatomy_reference(sp['slug'])})
+    if missing and not args.no_reference:
+        sys.exit(
+            f'No reference photo for: {", ".join(missing)}. Add references/<slug>.jpg '
+            '(public domain or CC0, logged in references/SOURCES.md) first.'
+        )
     print(f'{len(todo)} paintings to make with {args.model}.')
     if args.dry_run:
         for sp, pose in todo[:3]:
@@ -721,6 +729,9 @@ def main(argv=None):
     generate.add_argument('--model', default=PAINT_MODEL)
     generate.add_argument('--resolution', default='1K', choices=['1K', '2K'], help='size of the painting (1K is plenty for the 800px canvas)')
     generate.add_argument('--dry-run', action='store_true', help='show the prompts, call nothing')
+    generate.add_argument(
+        '--no-reference', action='store_true', help='paint even without a reference photo',
+    )
     generate.set_defaults(run=cmd_generate)
 
     verify = commands.add_parser('verify', help='blind-check unverified attempts')

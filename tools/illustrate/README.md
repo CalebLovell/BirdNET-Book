@@ -30,6 +30,12 @@ background-removal model, about 1 GB.
 From `tools/illustrate`, with `<slug>` from `python illustrate.py species`
 (for example `cardinalis-cardinalis`):
 
+0. Add a reference photo as `references/<slug>.jpg`: public domain or CC0
+   only (Wikimedia Commons filtered by licence; US Fish & Wildlife and
+   National Park Service photos are public domain). Pick a clear side view
+   showing every field mark, crop it to the bird, and log it in
+   `references/SOURCES.md`. `generate` refuses a species without one:
+   from memory alone the model drifts toward a generic bird.
 1. `python illustrate.py generate <slug> --pose perched` paints one perched
    attempt into `work/<slug>/perched-NN.png`. Look at it. To paint another,
    add `--again`.
@@ -69,8 +75,9 @@ They're optional when going one bird at a time.
     rather than on a twig.
   - `"colour"`: saturation at cutout, for a species that comes back too
     vivid. 1 is as painted.
-- **`references/<slug>.jpg`** is optional: a photo of one species for
-  anatomy. Only use photos you're free to use.
+- **`references/<slug>.jpg`** is required: a public-domain or CC0 photo of
+  the species, sent with every painting of it for anatomy and markings.
+  Sources are logged in `references/SOURCES.md`.
 
 ## What we learned getting the style right
 

@@ -13,6 +13,7 @@ const NEW_SLUGS = new Set([
 	"cardinalis-cardinalis",
 	"cyanocitta-cristata",
 	"haemorhous-mexicanus",
+	"sitta-carolinensis",
 	"spinus-tristis",
 ]);
 

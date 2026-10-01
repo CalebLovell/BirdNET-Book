@@ -274,6 +274,18 @@ class SpeciesTest(unittest.TestCase):
         self.assertEqual([s["kind"] for s in found], ["bird", "mammal"])
         self.assertEqual([s["colour"] for s in found], [None, None])
 
+    def test_painting_needs_a_reference_photo(self):
+        """Catches a species being painted from memory, which drifts off the real bird."""
+        with tempfile.TemporaryDirectory() as tmp:
+            db = Path(tmp) / "birds.db"
+            with closing(sqlite3.connect(db)) as con:
+                con.execute("CREATE TABLE detections (Sci_Name TEXT, Com_Name TEXT)")
+                con.execute("INSERT INTO detections VALUES ('Genus nophoto', 'No Photo Bird')")
+                con.commit()
+            with self.assertRaises(SystemExit) as stopped:
+                illustrate.main(["--db", str(db), "generate", "genus-nophoto", "--dry-run"])
+        self.assertIn("No reference photo for: genus-nophoto", str(stopped.exception))
+
     def test_a_species_can_keep_its_own_colour(self):
         """Catches the Blue Jay losing the 0.75 toning it was approved at."""
         notes = illustrate.load_notes()
