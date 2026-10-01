@@ -528,7 +528,7 @@ function SpeciesCard({ card }: { card: LifeListCard }) {
 		: card.lastDetected || "—";
 
 	return (
-		<div className="feature-card feature-card-link relative flex flex-col gap-3 overflow-hidden rounded-md p-4 max-[400px]:gap-2 has-[[data-card-link]:focus-visible]:outline-2 has-[[data-card-link]:focus-visible]:outline-offset-2">
+		<div className="feature-card feature-card-link relative flex flex-col gap-3 overflow-hidden rounded-md p-4 has-[[data-card-link]:focus-visible]:outline-2 has-[[data-card-link]:focus-visible]:outline-offset-2 max-[400px]:gap-2">
 			{/* The whole-card link is an invisible overlay pinned to the card's
 			    edges, so its own focus ring would land under `overflow-hidden` and
 			    never be seen. Instead the card wears the ring on the overlay's

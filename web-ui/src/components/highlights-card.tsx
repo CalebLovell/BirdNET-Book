@@ -1,3 +1,4 @@
+import { Link } from "@tanstack/react-router";
 import {
 	AudioLines,
 	Clock,
@@ -9,7 +10,6 @@ import {
 	Undo2,
 	VolumeX,
 } from "lucide-react";
-import { Link } from "@tanstack/react-router";
 import { Fragment, type ReactNode } from "react";
 
 import { EmptyNote } from "~/components/empty-state.tsx";
