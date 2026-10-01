@@ -44,11 +44,7 @@ export function DayStartToggle({
 	const effective = sun.available ? value : "midnight";
 
 	return (
-		<div
-			role="group"
-			aria-label="Start the day at"
-			className="flex shrink-0 overflow-hidden rounded-full border border-[var(--line)] bg-card"
-		>
+		<div className="flex shrink-0 overflow-hidden rounded-full border border-[var(--line)] bg-card">
 			{DAY_STARTS.map((option) => {
 				const { label, icon: Icon } = META[option];
 				const active = option === effective;
