@@ -83,12 +83,15 @@ function hourTickParts(hour: number): { number: string; meridiem: string } {
 export function SpeciesByHourCard({
 	rows,
 	emptyMessage,
+	emptyAction,
 	summary,
 	action,
 	className = "",
 }: {
 	rows: SpeciesHourRow[];
 	emptyMessage: string;
+	/** A way out of an empty window, set on its own line under the message. */
+	emptyAction?: ReactNode;
 	/** The window's headline figures, set beside the kicker -- the timeline
 	 * page's detections/species readout. Omitted by callers that show the card
 	 * on its own. */
@@ -138,7 +141,10 @@ export function SpeciesByHourCard({
 				</div>
 
 				{isEmpty ? (
-					<EmptyNote>{emptyMessage}</EmptyNote>
+					<>
+						<EmptyNote>{emptyMessage}</EmptyNote>
+						{emptyAction ? <div className="mt-3">{emptyAction}</div> : null}
+					</>
 				) : (
 					// p-1/-m-1 give the row links' focus ring room against the edge.
 					<div className="-m-1 p-1">

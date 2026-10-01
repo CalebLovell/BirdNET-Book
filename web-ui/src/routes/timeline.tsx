@@ -1,5 +1,9 @@
-import { createFileRoute, stripSearchParams } from "@tanstack/react-router";
-import { Bird, LayoutDashboard, Rows3 } from "lucide-react";
+import {
+	createFileRoute,
+	Link,
+	stripSearchParams,
+} from "@tanstack/react-router";
+import { ArrowRight, Bird, LayoutDashboard, Rows3 } from "lucide-react";
 import { z } from "zod";
 import { DetectionsByHourRoseCard } from "~/components/detections-by-hour-rose-card.tsx";
 import { EmptyState } from "~/components/empty-state.tsx";
@@ -12,8 +16,10 @@ import {
 } from "~/components/species-grid.tsx";
 import { StatusPage } from "~/components/status-page.tsx";
 import { PeriodToolbar } from "~/components/timeline/period-toolbar.tsx";
+import { Button } from "~/components/ui/button.tsx";
 import { TooltipProvider } from "~/components/ui/tooltip.tsx";
 import { useShareCard } from "~/components/use-share-card.tsx";
+import { formatDate } from "~/lib/date-format.ts";
 import { getDayShareCard } from "~/lib/day-share.ts";
 import { formatDayTitle } from "~/lib/day-title.ts";
 import { pageTitle } from "~/lib/page-title.ts";
@@ -31,7 +37,11 @@ import {
 	type TimelinePeriod,
 } from "~/lib/timeline-periods.ts";
 import { formatTimelineShareCard } from "~/lib/timeline-share.ts";
-import { currentAnchor, isValidAnchor } from "~/lib/timeline-window.ts";
+import {
+	currentAnchor,
+	isValidAnchor,
+	windowFor,
+} from "~/lib/timeline-window.ts";
 import { cn } from "~/lib/utils.ts";
 
 const DEFAULT_PERIOD: TimelinePeriod = "day";
@@ -147,6 +157,7 @@ function Timeline() {
 					<TimelineCards
 						rows={data.body.rows}
 						highlights={data.body.highlights}
+						jumpTo={jumpTarget(period, data)}
 						windowLabel={data.window?.label ?? null}
 						view={view}
 						onViewChange={(next) => show({ view: next })}
@@ -160,6 +171,47 @@ function Timeline() {
 			</div>
 		</TooltipProvider>
 	);
+}
+
+const PERIOD_NOUNS: Record<Exclude<TimelinePeriod, "all">, string> = {
+	day: "day",
+	week: "week",
+	month: "month",
+	year: "year",
+};
+
+type JumpTarget = {
+	anchor: string;
+	direction: "last" | "next";
+	noun: string;
+	label: string;
+};
+
+/**
+ * Where an empty window points: the nearest one that heard something, earlier
+ * first -- usually that's today, or this week, before the station has woken
+ * up. Null when the window has rows, or for All Time, which is never empty
+ * while the station has recorded anything.
+ */
+function jumpTarget(
+	period: TimelinePeriod,
+	data: TimelinePageData,
+): JumpTarget | null {
+	if (period === "all" || data.body.kind !== "rows") return null;
+	if (data.body.rows.length > 0) return null;
+	const [anchor, direction] = data.prevAnchor
+		? [data.prevAnchor, "last" as const]
+		: data.nextAnchor
+			? [data.nextAnchor, "next" as const]
+			: [null, null];
+	if (!anchor || !direction) return null;
+	return {
+		anchor,
+		direction,
+		noun: PERIOD_NOUNS[period],
+		label:
+			period === "day" ? formatDate(anchor) : windowFor(period, anchor).label,
+	};
 }
 
 /**
@@ -296,12 +348,15 @@ function WindowSummary({ rows }: { rows: TimelineRow[] }) {
 function TimelineCards({
 	rows,
 	highlights,
+	jumpTo,
 	windowLabel,
 	view,
 	onViewChange,
 }: {
 	rows: TimelineRow[];
 	highlights: TimelineData["highlights"];
+	/** The nearest window with detections, offered when this one has none. */
+	jumpTo: JumpTarget | null;
 	windowLabel: string | null;
 	view: TimelineView;
 	onViewChange: (next: TimelineView) => void;
@@ -309,6 +364,23 @@ function TimelineCards({
 	const emptyMessage = windowLabel
 		? `No detections recorded for ${windowLabel}.`
 		: "No detections recorded in this window.";
+	// Only the body card carries the way out, as a button on its own line so
+	// it reads as the next step rather than the tail of a sentence; the two
+	// cards beside it just say they're empty.
+	const emptyAction = jumpTo ? (
+		<Button asChild size="sm" icon={ArrowRight} iconPosition="end">
+			<Link
+				to="/timeline"
+				search={(prev) => ({ ...prev, date: jumpTo.anchor })}
+				// Forced: the global link colour (moss) is unlayered and would
+				// otherwise beat the button's paper text on its moss fill.
+				className="text-primary-foreground! no-underline hover:text-primary-foreground!"
+			>
+				{jumpTo.direction === "last" ? "Last" : "Next"} {jumpTo.noun} with
+				detections: {jumpTo.label}
+			</Link>
+		</Button>
+	) : undefined;
 
 	const gridItems: SpeciesGridItem[] = rows.map((row) => ({
 		comName: row.comName,
@@ -349,6 +421,7 @@ function TimelineCards({
 			<SpeciesByHourCard
 				rows={rows}
 				emptyMessage={emptyMessage}
+				emptyAction={emptyAction}
 				summary={summary}
 				action={toggle}
 				className={BODY_CARD_WIDTH}
@@ -357,6 +430,7 @@ function TimelineCards({
 			<SpeciesGrid
 				species={gridItems}
 				emptyMessage={emptyMessage}
+				emptyAction={emptyAction}
 				summary={summary}
 				action={toggle}
 				className={BODY_CARD_WIDTH}

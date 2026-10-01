@@ -40,12 +40,15 @@ export type SpeciesGridItem = {
 export function SpeciesGrid({
 	species,
 	emptyMessage,
+	emptyAction,
 	summary,
 	action,
 	className = "",
 }: {
 	species: SpeciesGridItem[];
 	emptyMessage: string;
+	/** A way out of an empty window, set on its own line under the message. */
+	emptyAction?: ReactNode;
 	/** The window's headline figures, set beside the kicker -- the timeline
 	    page's detections/species readout, kept on both bodies so the view toggle
 	    doesn't drop it. Omitted by callers that show the card on its own. */
@@ -90,7 +93,10 @@ export function SpeciesGrid({
 				</div>
 
 				{species.length === 0 ? (
-					<EmptyNote>{emptyMessage}</EmptyNote>
+					<>
+						<EmptyNote>{emptyMessage}</EmptyNote>
+						{emptyAction ? <div className="mt-3">{emptyAction}</div> : null}
+					</>
 				) : (
 					<ul className="grid grid-cols-1 gap-2 sm:grid-cols-2 sm:gap-4 xl:grid-cols-3">
 						{species.map((item) => (
