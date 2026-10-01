@@ -157,7 +157,6 @@ class ExtrapolationTests(unittest.TestCase):
         self.assertEqual(by_month[6]["Dark-eyed Junco"], 0)
         self.assertGreater(by_month[6]["House Wren"], 20)
         self.assertEqual(by_month[1]["House Wren"], 0)
-        self.assertEqual(by_month[1]["Snowy Tree Cricket"], 0)
 
     def test_may_dawn_chorus_dwarfs_midwinter(self):
         """Catches a flat year with no seasonal swing in volume."""

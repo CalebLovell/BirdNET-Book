@@ -5,7 +5,7 @@ The most recent twelve weeks are real: scripts/test_data/
 backyard_detections.csv.gz is one backyard station's actual detections
 (July-September), exported from its birds.db. They are replayed exactly as
 recorded -- the true dawn chorus, the species BirdNET actually confuses,
-frogs and insects that slip past the bird filter, a handful of one-off
+the odd mammal that slips past the bird filter, a handful of one-off
 rarities, a recorder outage, and mid-record changes to the station's own
 settings (Overlap moves from 0 to 1.2 and 1.25).
 
@@ -19,10 +19,9 @@ it:
   * each species' abundance is fitted to its real count, then carried
     through the year by a seasonal presence curve: residents peak in their
     singing season, summer breeders arrive and leave on schedule, passage
-    migrants come through in spring and fall, crickets fall silent in
-    October;
+    migrants come through in spring and fall;
   * species a July-September recording can't contain, but this yard would
-    have -- winter sparrows and kinglets, spring warblers, spring peepers --
+    have -- winter sparrows and kinglets, spring warblers --
     are added at modest levels;
   * overall volume meets the real data's own level at both seams, dips in
     midwinter, peaks in the May dawn chorus, and has weather-length quiet
@@ -233,32 +232,24 @@ REAL_SPECIES_PRESENCE = {
     'Green-winged Teal': window(245, 110, ramp=20),
     'White-throated Sparrow': window(265, 130, ramp=14),
 
-    # --- not birds ------------------------------------------------------
-    'Snowy Tree Cricket': window(215, 290, ramp=12),
-    'Carolina Ground Cricket': window(225, 300, ramp=12),
-    'Greater Angle-wing': window(225, 290, ramp=10),
-    'Eastern Narrow-mouthed Toad': window(140, 265, ramp=12),
-    'Great Plains Narrow-mouthed Toad': window(140, 265, ramp=12),
-    'Green Frog': window(110, 250, ramp=12),
+    # --- mammals --------------------------------------------------------
     'Eastern Chipmunk': passage((65, 150), (230, 300), fall_scale=1.0),
 }
 
 # Real species with too few detections of their own to resample times from,
 # that should borrow the night's rather than the day's.
-NOCTURNAL = {'Barred Owl', 'Coyote', 'Great Plains Narrow-mouthed Toad', 'Green Frog'}
+NOCTURNAL = {'Barred Owl', 'Coyote'}
 
 
 class AddedSpecies:
     """A species a July-September recording can't contain, added outright."""
 
-    def __init__(self, common, sci, presence, peak_per_day, night=False):
+    def __init__(self, common, sci, presence, peak_per_day):
         self.common = common
         self.sci = sci
         self.presence = presence
         # Detections on a typical day at its peak.
         self.peak_per_day = peak_per_day
-        # Borrows the real nocturnal species' times rather than the birds'.
-        self.night = night
 
 
 ADDED_SPECIES = [
@@ -279,11 +270,6 @@ ADDED_SPECIES = [
     AddedSpecies('Tennessee Warbler', 'Leiothlypis peregrina', window(122, 142, ramp=6), 3),
     AddedSpecies('Magnolia Warbler', 'Setophaga magnolia', window(125, 145, ramp=6), 2),
     AddedSpecies('Black-throated Green Warbler', 'Setophaga virens', window(118, 140, ramp=6), 2),
-
-    # --- spring frogs ---------------------------------------------------
-    AddedSpecies('Spring Peeper', 'Pseudacris crucifer', window(65, 130, ramp=10), 18, night=True),
-    AddedSpecies('American Toad', 'Anaxyrus americanus', window(95, 150, ramp=8), 7, night=True),
-    AddedSpecies('Gray Treefrog', 'Dryophytes versicolor', window(115, 180, ramp=10), 5, night=True),
 ]
 
 
@@ -383,8 +369,7 @@ def build_profiles(recorded: list[dict]) -> list[Profile]:
 
     night_pool = sample(
         row for (common, _), rows in by_species.items()
-        if common in NOCTURNAL or common == 'Eastern Narrow-mouthed Toad'
-        for row in rows
+        if common in NOCTURNAL for row in rows
     )
     day_pool = sample(
         row for (common, _), rows in by_species.items() if common not in NOCTURNAL for row in rows
@@ -415,7 +400,7 @@ def build_profiles(recorded: list[dict]) -> list[Profile]:
         peak = max(added.presence(doy) * volume(doy) / PEAK_VOLUME for doy in range(1, 366))
         profiles.append(Profile(
             added.common, added.sci, added.presence, added.peak_per_day / peak,
-            night_pool if added.night else day_pool, all_confidences,
+            day_pool, all_confidences,
         ))
     return profiles
 
