@@ -57,80 +57,56 @@ def load_seeder():
 seeder = load_seeder()
 
 
-class SeasonalityTests(unittest.TestCase):
-    """The generated history is the only sample data the UI's long time ranges have.
+class ReplayTests(unittest.TestCase):
+    """The replayed history is the only sample data the UI has.
 
-    These lock in the shape a year of birding actually has, so a change that
-    flattens it (every species present every day, one flat activity curve)
-    fails here rather than quietly making the charts meaningless."""
+    These lock in what makes it useful: it ends today, never in the future,
+    and keeps the real station's times of day and species mix."""
 
-    JANUARY = 15
-    JUNE = 166
+    NOW = datetime(2030, 3, 10, 9, 30, 0)
 
-    def species(self, common_name):
-        for candidate in seeder.SPECIES:
-            if candidate.common == common_name:
-                return candidate
-        self.fail(f"{common_name} is no longer in the species list")
+    def setUp(self):
+        self.rows = seeder.generate_rows(now=self.NOW)
+        self.fixture = seeder.load_fixture()
 
-    def test_default_history_spans_three_years(self):
-        self.assertGreaterEqual(seeder.DEFAULT_DAYS, 365 * 3)
+    def test_history_ends_today_and_never_in_the_future(self):
+        """Catches a shift that leaves "today" empty or puts detections after now."""
+        stamps = [datetime.fromisoformat(f"{row[0]}T{row[1]}") for row in self.rows]
+        self.assertEqual(max(stamps).date(), self.NOW.date())
+        self.assertLessEqual(max(stamps), self.NOW)
 
-    def test_summer_breeders_and_winter_visitors_do_not_overlap(self):
-        """Catches a presence curve that makes every species a year-round resident."""
-        oriole = self.species("Baltimore Oriole")
-        junco = self.species("Dark-eyed Junco")
+    def test_shift_is_whole_days_so_times_of_day_stay_real(self):
+        """Catches a shift that drags the dawn chorus to some other hour."""
+        recorded_times = Counter(row["Time"] for row in self.fixture)
+        replayed_times = Counter(row[1] for row in self.rows)
+        for time, count in replayed_times.items():
+            self.assertLessEqual(count, recorded_times[time])
 
-        self.assertGreater(oriole.presence(self.JUNE), 0.5)
-        self.assertEqual(oriole.presence(self.JANUARY), 0)
-        self.assertGreater(junco.presence(self.JANUARY), 0.5)
-        self.assertEqual(junco.presence(self.JUNE), 0)
+    def test_only_todays_unheard_detections_are_dropped(self):
+        """Catches the future-filter swallowing earlier days too."""
+        last_day = self.fixture[-1]["Date"]
+        later_today = sum(
+            1 for row in self.fixture if row["Date"] == last_day and row["Time"] > "09:30:00"
+        )
+        self.assertEqual(len(self.rows), len(self.fixture) - later_today)
 
-    def test_passage_migrants_appear_only_on_migration(self):
-        """Catches a migrant that lingers through the breeding season."""
-        blackpoll = self.species("Blackpoll Warbler")
+    def test_week_and_file_name_follow_the_shifted_date(self):
+        """Catches rows that still carry the recording's original dates."""
+        for row in self.rows[:50] + self.rows[-50:]:
+            day = date.fromisoformat(row[0])
+            self.assertEqual(row[8], day.isocalendar()[1])
+            self.assertIn(f"-{row[0]}-birdnet-{row[1]}.mp3", row[11])
 
-        self.assertGreater(blackpoll.presence(143), 0.5)   # late May
-        self.assertGreater(blackpoll.presence(260), 0.2)   # mid September
-        self.assertEqual(blackpoll.presence(200), 0)       # mid July
-        self.assertEqual(blackpoll.presence(self.JANUARY), 0)
+    def test_days_keeps_only_the_most_recent_days(self):
+        rows = seeder.generate_rows(days=7, now=self.NOW)
+        days = {row[0] for row in rows}
+        self.assertLessEqual(len(days), 7)
+        self.assertGreaterEqual(min(days), str(self.NOW.date() - timedelta(days=6)))
 
-    def test_irruptive_species_favours_a_single_winter(self):
-        """Catches year factors collapsing into three identical years."""
-        siskin = self.species("Pine Siskin")
-        weights = [siskin.weight_on(self.JANUARY, years_ago) for years_ago in (0, 1, 2)]
-
-        self.assertGreater(max(weights), 5 * min(weights))
-
-    def test_dawn_chorus_follows_the_sunrise_through_the_year(self):
-        """Catches a fixed clock-time activity curve that ignores the season."""
-        june_sunrise, june_sunset = seeder.sun_times(self.JUNE)
-        january_sunrise, january_sunset = seeder.sun_times(self.JANUARY)
-
-        self.assertLess(june_sunrise, january_sunrise - 1)
-        self.assertGreater(june_sunset, january_sunset + 1)
-
-    def test_generated_rows_cover_every_month_with_a_spring_peak(self):
-        """Catches a generator that produces three years of undifferentiated noise."""
-        seeder.random.seed(3)
-        rows = seeder.generate_rows(seeder.DEFAULT_DAYS)
-
-        by_month = Counter(row[0][5:7] for row in rows)
-        self.assertEqual(len(by_month), 12)
-
-        spring = sum(by_month[month] for month in ("04", "05", "06"))
-        winter = sum(by_month[month] for month in ("12", "01", "02"))
-        self.assertGreater(spring, 2 * winter)
-
-    def test_generated_rows_end_today_and_start_three_years_back(self):
-        """Catches an off-by-a-year history, which the UI's year ranges depend on."""
-        seeder.random.seed(3)
-        rows = seeder.generate_rows(seeder.DEFAULT_DAYS)
-
-        first = datetime.strptime(rows[0][0], "%Y-%m-%d").date()
-        last = datetime.strptime(rows[-1][0], "%Y-%m-%d").date()
-        self.assertEqual(last, date.today())
-        self.assertLessEqual(first, date.today() - timedelta(days=365 * 3 - 1))
+    def test_fixture_does_not_reveal_the_station_location(self):
+        """The repo is public: the station's location stays blanked to 0, 0."""
+        for row in self.fixture:
+            self.assertEqual((float(row["Lat"]), float(row["Lon"])), (0.0, 0.0))
 
 
 class SeedTestDataTests(unittest.TestCase):
@@ -147,9 +123,7 @@ class SeedTestDataTests(unittest.TestCase):
                 "--db",
                 str(self.db_path),
                 "--days",
-                "1",
-                "--seed",
-                "1",
+                "2",
                 "--no-audio",
                 *extra_args,
             ],
