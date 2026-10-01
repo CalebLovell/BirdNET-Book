@@ -280,6 +280,7 @@ export function SpeciesControlTable({
 				</TableHeader>
 				<TableBody
 					role="rowgroup"
+					data-scroll-reset=""
 					className="col-span-full grid min-h-0 grid-cols-subgrid content-start overflow-y-auto [scrollbar-gutter:stable]"
 				>
 					{rows.map((row, index) => {

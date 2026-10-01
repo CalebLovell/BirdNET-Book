@@ -79,7 +79,9 @@ function RootDocument({ children }: { children: React.ReactNode }) {
 						    always would leave a dead band at the right edge on top of
 						    the page's own 1rem, so the content would sit further from
 						    the edge than it does from the sidebar. */}
-						<main className="min-h-0 flex-1 overflow-y-auto">{children}</main>
+						<main id="app-scroll" className="min-h-0 flex-1 overflow-y-auto">
+							{children}
+						</main>
 					</div>
 				</div>
 				<Scripts />

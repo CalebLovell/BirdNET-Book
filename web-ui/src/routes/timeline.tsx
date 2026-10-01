@@ -130,7 +130,12 @@ function Timeline() {
 		period?: TimelinePeriod;
 		date?: string;
 		view?: TimelineView;
-	}) => navigate({ search: (prev) => ({ ...prev, ...next }), replace: true });
+	}) =>
+		navigate({
+			search: (prev) => ({ ...prev, ...next }),
+			replace: true,
+			resetScroll: false,
+		});
 
 	// A date the station could never have recorded is the one case with nothing
 	// to say at all -- no figures, no window, no grid -- so it replaces the page

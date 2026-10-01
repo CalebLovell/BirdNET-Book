@@ -704,6 +704,7 @@ export function DetectionsTable({
 				    this table, so the header, footer and pager come off with it. */}
 				<TableBody
 					role="rowgroup"
+					data-scroll-reset=""
 					className="col-span-full grid min-h-0 grid-cols-subgrid content-start overflow-y-auto [scrollbar-gutter:stable]"
 				>
 					{table.getRowModel().rows.map((row) => (

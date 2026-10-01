@@ -21,6 +21,12 @@ export function getRouter() {
 		stringifySearch: stringifySearchWith(JSON.stringify),
 		parseSearch: parseSearchWith(JSON.parse),
 		scrollRestoration: true,
+		// The window never scrolls: `<main>` does (see __root.tsx), and a table
+		// with its own scrolling body marks it `data-scroll-reset`. Without these
+		// the reset on navigation hits only the window, so turning a page left
+		// you at the pager at the bottom of the new one. Controls that reshape a
+		// view in place opt out with `resetScroll: false`.
+		scrollToTopSelectors: ["#app-scroll", "[data-scroll-reset]"],
 		defaultPreload: "intent",
 		defaultPreloadStaleTime: 0,
 	});

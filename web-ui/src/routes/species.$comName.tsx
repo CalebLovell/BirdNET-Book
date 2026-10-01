@@ -306,6 +306,7 @@ function SpeciesDetailView({ detail }: { detail: SpeciesDetail }) {
 		navigate({
 			search: (prev) => ({ ...prev, year: next }),
 			replace: true,
+			resetScroll: false,
 		});
 	const selectVisitsPage = (next: number) =>
 		navigate({
