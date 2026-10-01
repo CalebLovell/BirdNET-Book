@@ -35,6 +35,11 @@ export function normalizeSpeciesControlWorkspaceSearch(
 	const rawPage = Number(input.page);
 	const page =
 		Number.isFinite(rawPage) && rawPage > 0 ? Math.floor(rawPage) : 1;
+	// TODO(audit 17): opening on ~6,500 installed species A→Z buries the few
+	// dozen this station actually hears among zero-count rows. Default to the
+	// count sort (or add a "heard here" filter), and give the bulk-action
+	// buttons (Automatic / Custom / Always / Never) enough contrast to read
+	// while nothing is selected.
 	const sort = isSpeciesControlSort(input.sort) ? input.sort : "species";
 	const direction = input.direction === "desc" ? "desc" : "asc";
 	const query = input.query == null ? "" : String(input.query).trim();

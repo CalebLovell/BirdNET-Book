@@ -695,6 +695,11 @@ export function DetectionsTable({
 						</TableRow>
 					))}
 				</TableHeader>
+				{/* TODO(audit 18): the body scrolls inside the card, so a 100-row page
+				    shows a second scrollbar nested in the page's own. Let the page
+				    scroll instead; also add a jump-to-page control (the pager only
+				    steps, across 1,000+ pages) and species / confidence filters
+				    beside the search and dates. */}
 				{/* No empty row here: the page renders its own empty card instead of
 				    this table, so the header, footer and pager come off with it. */}
 				<TableBody
