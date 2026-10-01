@@ -45,7 +45,10 @@ for a meaning; don't write a new mix inline when one exists:
 | `--confidence-high/mid/low` | confidence pills; text is moss / bark / ink |
 
 Confidence tiers are fixed at ≥90%, ≥75% and below (`lib/confidence.ts`),
-never a gradient. Destructive is clay. Single-series charts are moss.
+never a gradient. Destructive is clay. Single-series charts are moss. Heat
+shading is a continuous ramp from a pale moss wash to full moss, log-scaled,
+with one scale per chart topped by its busiest cell across every row -- never
+a row's own peak (`lib/heatmap.ts`).
 
 ## Type
 

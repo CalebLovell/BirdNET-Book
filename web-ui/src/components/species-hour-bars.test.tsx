@@ -11,9 +11,17 @@ counts[7] = 40; // peak
 counts[8] = 20; // half of peak
 counts[18] = 2; // quiet but present
 
-function render(hourCounts: number[], comName = "European Robin") {
+function render(
+	hourCounts: number[],
+	comName = "European Robin",
+	heatMax = Math.max(...hourCounts),
+) {
 	return renderToStaticMarkup(
-		<SpeciesHourBars comName={comName} hourCounts={hourCounts} />,
+		<SpeciesHourBars
+			comName={comName}
+			hourCounts={hourCounts}
+			heatMax={heatMax}
+		/>,
 	);
 }
 
@@ -34,6 +42,14 @@ test("a non-zero hour scales to its share of the peak", () => {
 	const markup = render(counts);
 	// index 8 = 20/40 = 50%.
 	assert.match(markup, /height:50%/);
+});
+
+test("colour follows the shared scale, not the bird's own peak", () => {
+	// Next to a bird whose busiest hour is 400, this one's 40 is a pale bar at
+	// full height rather than a moss one.
+	const markup = render(counts, "European Robin", 400);
+	assert.match(markup, /height:100%/);
+	assert.doesNotMatch(markup, /background-color:var\(--moss\)/);
 });
 
 test("a zero hour renders a faint baseline stub, not a moss bar", () => {

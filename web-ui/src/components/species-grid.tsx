@@ -6,6 +6,7 @@ import { SpeciesFlagPills } from "~/components/species-flag-pills.tsx";
 import { SpeciesHourBars } from "~/components/species-hour-bars.tsx";
 import { SpeciesThumbnail } from "~/components/species-row.tsx";
 import { TooltipProvider } from "~/components/ui/tooltip.tsx";
+import { heatMaximum } from "~/lib/heatmap.ts";
 import { comNameToSlug } from "~/lib/species-slug.ts";
 
 export type SpeciesGridItem = {
@@ -54,6 +55,10 @@ export function SpeciesGrid({
 	action?: ReactNode;
 	className?: string;
 }) {
+	// One colour scale for every tile's bars -- see heatShare.
+	const heatMax = heatMaximum(
+		species.map((item) => ({ hourCounts: item.hourCounts ?? [] })),
+	);
 	return (
 		<TooltipProvider>
 			<section
@@ -89,7 +94,11 @@ export function SpeciesGrid({
 				) : (
 					<ul className="grid grid-cols-1 gap-2 sm:grid-cols-2 sm:gap-4 xl:grid-cols-3">
 						{species.map((item) => (
-							<SpeciesGridRow key={item.comName} item={item} />
+							<SpeciesGridRow
+								key={item.comName}
+								item={item}
+								heatMax={heatMax}
+							/>
 						))}
 					</ul>
 				)}
@@ -98,7 +107,13 @@ export function SpeciesGrid({
 	);
 }
 
-function SpeciesGridRow({ item }: { item: SpeciesGridItem }) {
+function SpeciesGridRow({
+	item,
+	heatMax,
+}: {
+	item: SpeciesGridItem;
+	heatMax: number;
+}) {
 	return (
 		<li className="flex min-h-16 min-w-0 flex-col gap-2 rounded-md bg-[var(--meadow)] px-3 py-2 max-[400px]:px-2">
 			<div className="flex min-w-0 items-center gap-3 max-[400px]:gap-2">
@@ -141,6 +156,7 @@ function SpeciesGridRow({ item }: { item: SpeciesGridItem }) {
 				<SpeciesHourBars
 					comName={item.comName}
 					hourCounts={item.hourCounts}
+					heatMax={heatMax}
 					className="border-[var(--line)] border-t pt-2"
 				/>
 			) : null}

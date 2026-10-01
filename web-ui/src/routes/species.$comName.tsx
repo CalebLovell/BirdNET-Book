@@ -44,7 +44,7 @@ import { YearSelector } from "~/components/year-selector.tsx";
 import { formatConfidence } from "~/lib/confidence.ts";
 import { formatDate, formatDateTime } from "~/lib/date-format.ts";
 import { ebirdUrlFor } from "~/lib/ebird.ts";
-import { HEAT_COLORS, heatLevel } from "~/lib/heatmap.ts";
+import { heatColor, heatColorAt } from "~/lib/heatmap.ts";
 import { illustrationUrlFor } from "~/lib/illustrations.ts";
 import { pageTitle } from "~/lib/page-title.ts";
 import {
@@ -388,11 +388,11 @@ function SpeciesDetailView({ detail }: { detail: SpeciesDetail }) {
 						</div>
 						<div className="mt-3 flex items-center justify-end gap-1 text-[10px] text-muted-foreground max-[400px]:mt-2">
 							<span>Less</span>
-							{HEAT_COLORS.map((color) => (
+							{LEGEND_SHARES.map((share) => (
 								<span
-									key={color}
+									key={share}
 									className="size-3 rounded-[3px] border border-[var(--line)]"
-									style={{ backgroundColor: color }}
+									style={{ backgroundColor: heatColorAt(share) }}
 								/>
 							))}
 							<span>More</span>
@@ -439,6 +439,9 @@ function SpeciesDetailView({ detail }: { detail: SpeciesDetail }) {
 	);
 }
 
+/** Samples of the continuous ramp for the "Less … More" key. */
+const LEGEND_SHARES = [0, 0.25, 0.5, 0.75, 1] as const;
+
 const SWATCH =
 	"size-3 rounded-[3px] border border-[var(--line)] transition-[outline] hover:z-10 hover:outline hover:outline-2 hover:outline-[var(--hover-line)] hover:outline-offset-1";
 
@@ -457,13 +460,9 @@ function HeatMapDay({
 	maximum: number;
 }) {
 	const count = point?.count ?? 0;
-	const dateLabel = date.toLocaleDateString([], {
-		month: "short",
-		day: "numeric",
-		year: "numeric",
-	});
-	const label = `${dateLabel}: ${count} detections`;
-	const fill = { backgroundColor: HEAT_COLORS[heatLevel(count, maximum)] };
+	const dateLabel = formatDate(bucketForDate(date));
+	const label = `${dateLabel}: ${count.toLocaleString()} detections`;
+	const fill = { backgroundColor: heatColor(count, maximum) };
 
 	// Inside a link the swatch is decoration: the link already carries the label,
 	// and repeating it would have a screen reader read the day twice.
@@ -485,8 +484,7 @@ function HeatMapDay({
 		<Tooltip>
 			<TooltipTrigger asChild>{swatch}</TooltipTrigger>
 			<TooltipContent>
-				{dateLabel} — {count}
-				{count > 0 ? " · view this day" : null}
+				{dateLabel} — {count.toLocaleString()}{" "}
 			</TooltipContent>
 		</Tooltip>
 	);

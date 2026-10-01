@@ -5,7 +5,7 @@ import {
 	TooltipProvider,
 	TooltipTrigger,
 } from "~/components/ui/tooltip.tsx";
-import { HEAT_COLORS, heatLevel } from "~/lib/heatmap.ts";
+import { heatColor } from "~/lib/heatmap.ts";
 import type { HourActivity } from "~/lib/stats-data.ts";
 import { hourLabel } from "~/lib/time-ago.ts";
 
@@ -178,13 +178,12 @@ export function DetectionsByHourRose({
 						MAX_RADIUS * Math.sqrt(count / maximum),
 						MIN_WEDGE_RADIUS,
 					);
-					const level = heatLevel(count, maximum);
 					return (
 						<Tooltip key={`wedge-${hour}`}>
 							<TooltipTrigger asChild>
 								<path
 									d={wedgePath(hour, radius)}
-									fill={HEAT_COLORS[level]}
+									fill={heatColor(count, maximum)}
 									stroke="var(--paper-raised)"
 									strokeWidth={0.75}
 									className="transition-opacity hover:opacity-80"

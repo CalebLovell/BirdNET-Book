@@ -4,7 +4,7 @@ import { EmptyNote } from "~/components/empty-state.tsx";
 import { SpeciesFlagPills } from "~/components/species-flag-pills.tsx";
 import { SpeciesImage } from "~/components/species-image.tsx";
 import { TooltipProvider } from "~/components/ui/tooltip.tsx";
-import { HEAT_COLORS, heatLevel } from "~/lib/heatmap.ts";
+import { heatColor, heatInk, heatMaximum } from "~/lib/heatmap.ts";
 import { compactCount } from "~/lib/number-format.ts";
 import { comNameToSlug } from "~/lib/species-slug.ts";
 import { hourLabel } from "~/lib/time-ago.ts";
@@ -64,17 +64,6 @@ const HOUR_GRID_COLUMNS = "repeat(24, 1.75rem)";
 const EMPTY_CELL_COLOR =
 	"color-mix(in oklab, var(--moss) 4%, var(--paper-raised))";
 
-// Ink for the count sitting inside each cell, indexed the same way as
-// HEAT_COLORS. The first three grounds are pale enough to take dark text; the
-// two busiest are 70% moss and full moss, where only paper reads.
-const HEAT_TEXT_COLORS = [
-	"var(--muted-foreground)",
-	"var(--foreground)",
-	"var(--foreground)",
-	"var(--paper)",
-	"var(--paper)",
-] as const;
-
 function hourTickParts(hour: number): { number: string; meridiem: string } {
 	if (hour === 0) return { number: "12", meridiem: "a" };
 	if (hour < 12) return { number: String(hour), meridiem: "a" };
@@ -84,10 +73,9 @@ function hourTickParts(hour: number): { number: string; meridiem: string } {
 
 /**
  * The species x hour grid on the timeline page. A left panel ranks the species
- * by total detections, name and count; the heatmap to its right scales each
- * row against its own busiest hour, so a quiet species still shows the shape
- * of when it was around rather than flattening against the station's loudest
- * bird.
+ * by total detections, name and count; the heatmap to its right shades every
+ * cell on one scale, topped by the busiest hour of any species in the window,
+ * so a quiet bird reads as quiet next to a loud one (see heatShare).
  *
  * It always fits the card: the hours shrink before they would scroll, and on a
  * phone they drop away. See ROW_LAYOUT.
@@ -115,6 +103,7 @@ export function SpeciesByHourCard({
 	// count right-aligns into the same column.
 	const maxTotal = Math.max(...rows.map((row) => row.totalDetections), 0);
 	const countWidthCh = maxTotal.toLocaleString().length;
+	const heatMax = heatMaximum(rows);
 
 	return (
 		<TooltipProvider>
@@ -182,6 +171,7 @@ export function SpeciesByHourCard({
 									key={row.comName}
 									row={row}
 									countWidthCh={countWidthCh}
+									heatMax={heatMax}
 								/>
 							))}
 						</div>
@@ -214,9 +204,11 @@ function HourTick({ hour }: { hour: number }) {
 function SpeciesHourRowView({
 	row,
 	countWidthCh,
+	heatMax,
 }: {
 	row: SpeciesHourRow;
 	countWidthCh: number;
+	heatMax: number;
 }) {
 	return (
 		<div className={`${ROW_LAYOUT} border-[var(--line)] border-t`}>
@@ -258,7 +250,7 @@ function SpeciesHourRowView({
 			</Link>
 
 			<div className={HOURS_LAYOUT}>
-				<HeatRow row={row} />
+				<HeatRow row={row} heatMax={heatMax} />
 			</div>
 		</div>
 	);
@@ -268,9 +260,14 @@ function SpeciesHourRowView({
  * The row's 24 cells, each scaled against this row's own busiest hour so the
  * shape of the day reads regardless of the bird's overall volume.
  */
-function HeatRow({ row }: { row: SpeciesHourRow }) {
-	const rowMax = Math.max(...row.hourCounts, 0);
-
+function HeatRow({
+	row,
+	heatMax,
+}: {
+	row: SpeciesHourRow;
+	/** The busiest hour of any species in the window: one scale for all rows. */
+	heatMax: number;
+}) {
 	return (
 		<div
 			className="grid items-center"
@@ -280,7 +277,6 @@ function HeatRow({ row }: { row: SpeciesHourRow }) {
 			    by the hour it stands for instead of its position in the array. */}
 			{HOURS.map((hour) => {
 				const count = row.hourCounts[hour] ?? 0;
-				const level = heatLevel(count, rowMax);
 				return (
 					<div
 						key={`hour-${hour}`}
@@ -289,8 +285,8 @@ function HeatRow({ row }: { row: SpeciesHourRow }) {
 						className="tabular-data mx-0.5 my-1 flex h-6 items-center justify-center overflow-hidden rounded-[3px] text-[10px] leading-none"
 						style={{
 							backgroundColor:
-								count > 0 ? HEAT_COLORS[level] : EMPTY_CELL_COLOR,
-							color: HEAT_TEXT_COLORS[level],
+								count > 0 ? heatColor(count, heatMax) : EMPTY_CELL_COLOR,
+							color: heatInk(count, heatMax),
 						}}
 					>
 						{/* A zero reads as an empty cell: printing the digit 24 times a
