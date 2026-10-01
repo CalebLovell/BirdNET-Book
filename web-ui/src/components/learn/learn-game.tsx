@@ -480,14 +480,20 @@ function ChoiceButton({
 			type="button"
 			onClick={onSelect}
 			disabled={state !== "open"}
-			className={`flex items-center gap-4 rounded-md border px-4 py-2 text-left max-[400px]:gap-2 max-[400px]:px-2 ${CHOICE_STYLES[state]}`}
+			// A container so the art can give way to the name when two choices
+			// share a row on a mid-sized screen, instead of the name truncating.
+			className={`@container/choice flex items-center gap-4 rounded-md border px-4 py-2 text-left max-[400px]:gap-2 max-[400px]:px-2 ${CHOICE_STYLES[state]}`}
 		>
 			<span className="tabular-data w-4 shrink-0 text-center text-muted-foreground text-xs">
 				{shortcut}
 			</span>
 			<ChoiceThumbnail choice={choice} size="lg" />
 			<span className="min-w-0 flex-1">
-				<span className="block truncate font-medium">{choice.comName}</span>
+				{/* Two lines before it truncates: "Yellow-rumped Warbler" wraps
+				    rather than losing the half that tells it apart. */}
+				<span className="line-clamp-2 font-medium @max-[20rem]/choice:text-sm leading-snug">
+					{choice.comName}
+				</span>
 				<span className="block truncate text-[var(--bark)] text-xs italic">
 					{choice.sciName}
 				</span>
@@ -505,7 +511,7 @@ function ChoiceButton({
 const THUMBNAIL_SIZES = {
 	sm: "h-6 w-8",
 	md: "size-10",
-	lg: "h-20 w-24 max-[400px]:h-10 max-[400px]:w-13",
+	lg: "h-20 w-24 @max-[20rem]/choice:h-12 @max-[20rem]/choice:w-14 max-[400px]:h-10 max-[400px]:w-13",
 } as const;
 
 const GLYPH_SIZES: Record<keyof typeof THUMBNAIL_SIZES, string> = {

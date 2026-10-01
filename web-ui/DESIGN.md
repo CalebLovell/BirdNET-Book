@@ -18,6 +18,8 @@ Design System" canvas on claude.ai.
   (`SpeciesImage`), never a photo, initials or a tinted box.
 - **One instrument.** Every figure is the same size, face and weight
   (`PageHeaderCard` stats: kicker label + 20px semibold tabular value).
+  Where a row of figure cards gets too narrow, the whole row steps down to
+  16px (and, narrowest, drops the icon) rather than truncating a value.
 - **Stable under the cursor.** Fixed slots and floored line boxes, so data
   arriving never shifts a control.
 

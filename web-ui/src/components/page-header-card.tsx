@@ -129,10 +129,11 @@ function Figure({
 			className={
 				inline
 					? "flex items-center gap-4 overflow-hidden"
-					: "feature-card flex items-center gap-4 overflow-hidden rounded-md p-4 max-[400px]:gap-3"
+					: "@container/figure feature-card flex items-center gap-4 overflow-hidden rounded-md p-4 max-[400px]:gap-3"
 			}
 		>
-			<div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-[var(--icon-well)] text-[var(--moss)]">
+			{/* Narrowest of all, the icon steps aside for the figure. */}
+			<div className="flex @max-[15rem]/figure:hidden size-8 shrink-0 items-center justify-center rounded-full bg-[var(--icon-well)] text-[var(--moss)]">
 				<Icon aria-hidden="true" className="size-4" />
 			</div>
 			<div className="min-w-0 flex-1">
@@ -144,7 +145,11 @@ function Figure({
 				    under the cursor. */}
 				{/* A size down on phones, where each figure has a whole row to itself
 				    and text-xl read as louder than the cards around it. */}
-				<dd className="tabular-data mt-2 min-h-[1.75rem] truncate font-semibold text-xl leading-tight max-[400px]:mt-1 max-[400px]:min-h-6 max-[400px]:text-lg">
+				{/* And a size down wherever a four-across row leaves the card too
+				    narrow for a species name at full size, rather than cutting it
+				    off. Every card in the row is the same width, so the figures
+				    still match each other. */}
+				<dd className="tabular-data mt-2 min-h-[1.75rem] truncate font-semibold @max-[16rem]/figure:text-base text-xl leading-tight max-[400px]:mt-1 max-[400px]:min-h-6 max-[400px]:text-lg">
 					{typeof value === "number" ? value.toLocaleString() : value}
 				</dd>
 			</div>
