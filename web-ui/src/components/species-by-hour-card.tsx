@@ -33,7 +33,23 @@ export type SpeciesHourRow = {
 	vocalRatio: number | null;
 };
 
-const HOURS = Array.from({ length: 24 }, (_, hour) => hour);
+/**
+ * Where the heat map's day starts, when it starts at sunrise rather than
+ * midnight: the clock hour holding the window's average sunrise, the hour
+ * holding its sunset (both marked on the ticks), and a line saying when.
+ */
+export type SpeciesByHourSun = {
+	startHour: number;
+	sunsetHour: number;
+	caption: string;
+};
+
+/** The 24 clock hours, starting at `startHour` and wrapping past midnight. */
+export function rotatedHours(startHour: number): number[] {
+	return Array.from({ length: 24 }, (_, index) => (startHour + index) % 24);
+}
+
+const MIDNIGHT_FIRST = rotatedHours(0);
 
 // The heat map never scrolls sideways, each species is always one row -- name
 // and count, then its 24 hours beside them -- and the hour squares never
@@ -86,6 +102,7 @@ export function SpeciesByHourCard({
 	emptyAction,
 	summary,
 	action,
+	sun,
 	className = "",
 }: {
 	rows: SpeciesHourRow[];
@@ -99,6 +116,9 @@ export function SpeciesByHourCard({
 	/** A control set against the card title, top-right -- the view switcher on
 	 * the timeline page. Omitted by callers that show the card on its own. */
 	action?: ReactNode;
+	/** Start the day at sunrise instead of midnight. The columns are still clock
+	 * hours, only reordered; omitted, the day runs midnight to midnight. */
+	sun?: SpeciesByHourSun;
 	className?: string;
 }) {
 	const isEmpty = rows.length === 0;
@@ -107,6 +127,8 @@ export function SpeciesByHourCard({
 	const maxTotal = Math.max(...rows.map((row) => row.totalDetections), 0);
 	const countWidthCh = maxTotal.toLocaleString().length;
 	const heatMax = heatMaximum(rows);
+	const hours = sun ? rotatedHours(sun.startHour) : MIDNIGHT_FIRST;
+	const sunHours = sun ? [sun.startHour, sun.sunsetHour] : [];
 
 	return (
 		<TooltipProvider>
@@ -150,7 +172,9 @@ export function SpeciesByHourCard({
 					<div className="-m-1 p-1">
 						{/* The header: the count column's label, set exactly like the hour
 						    numbers, beside the hour ticks. */}
-						<div className={`${ROW_LAYOUT} mb-2`}>
+						{/* Bottom-aligned, so "Total" stays on the ticks' line when the
+						    sunrise caption sits above them. */}
+						<div className="mb-2 flex items-end">
 							<div className={`h-4 ${LABEL_LAYOUT}`}>
 								<span />
 								<span className="text-right font-semibold text-[10px] text-foreground leading-none">
@@ -158,12 +182,21 @@ export function SpeciesByHourCard({
 								</span>
 							</div>
 							<div className={HOURS_LAYOUT}>
+								{sun ? (
+									<p className="mb-1.5 text-[11px] text-muted-foreground leading-none">
+										{sun.caption}
+									</p>
+								) : null}
 								<div
 									className="grid h-4 items-center"
 									style={{ gridTemplateColumns: HOUR_GRID_COLUMNS }}
 								>
-									{HOURS.map((hour) => (
-										<HourTick key={`tick-${hour}`} hour={hour} />
+									{hours.map((hour) => (
+										<HourTick
+											key={`tick-${hour}`}
+											hour={hour}
+											sun={sunHours.includes(hour)}
+										/>
 									))}
 								</div>
 							</div>
@@ -178,6 +211,7 @@ export function SpeciesByHourCard({
 									row={row}
 									countWidthCh={countWidthCh}
 									heatMax={heatMax}
+									hours={hours}
 								/>
 							))}
 						</div>
@@ -189,12 +223,20 @@ export function SpeciesByHourCard({
 }
 
 /**
- * One hour's tick: its number, with a small a/p.
+ * One hour's tick: its number, with a small a/p. The sunrise and sunset hours
+ * carry a short sand rule beneath.
  */
-function HourTick({ hour }: { hour: number }) {
+function HourTick({ hour, sun = false }: { hour: number; sun?: boolean }) {
 	const { number, meridiem } = hourTickParts(hour);
 	return (
-		<div className="flex items-baseline justify-center gap-px leading-none">
+		<div className="relative flex items-baseline justify-center gap-px leading-none">
+			{sun ? (
+				<span
+					data-sun-tick
+					aria-hidden="true"
+					className="absolute inset-x-2 -bottom-1 h-0.5 rounded-full bg-[var(--sand)]"
+				/>
+			) : null}
 			<span className="font-semibold text-[10px] text-foreground">
 				{number}
 			</span>
@@ -211,10 +253,13 @@ function SpeciesHourRowView({
 	row,
 	countWidthCh,
 	heatMax,
+	hours,
 }: {
 	row: SpeciesHourRow;
 	countWidthCh: number;
 	heatMax: number;
+	/** The clock hours in the order the columns draw them. */
+	hours: number[];
 }) {
 	return (
 		<div className={`${ROW_LAYOUT} border-[var(--line)] border-t`}>
@@ -256,7 +301,7 @@ function SpeciesHourRowView({
 			</Link>
 
 			<div className={HOURS_LAYOUT}>
-				<HeatRow row={row} heatMax={heatMax} />
+				<HeatRow row={row} heatMax={heatMax} hours={hours} />
 			</div>
 		</div>
 	);
@@ -269,10 +314,12 @@ function SpeciesHourRowView({
 function HeatRow({
 	row,
 	heatMax,
+	hours,
 }: {
 	row: SpeciesHourRow;
 	/** The busiest hour of any species in the window: one scale for all rows. */
 	heatMax: number;
+	hours: number[];
 }) {
 	return (
 		<div
@@ -281,7 +328,7 @@ function HeatRow({
 		>
 			{/* Driven by the hour list rather than the counts, so each cell is keyed
 			    by the hour it stands for instead of its position in the array. */}
-			{HOURS.map((hour) => {
+			{hours.map((hour) => {
 				const count = row.hourCounts[hour] ?? 0;
 				return (
 					<div
