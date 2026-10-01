@@ -16,6 +16,7 @@ import { Button } from "~/components/ui/button.tsx";
 import { Input } from "~/components/ui/input.tsx";
 import { PageStepper } from "~/components/ui/page-stepper.tsx";
 import { formatConfidence } from "~/lib/confidence.ts";
+import { formatDate, formatDateTime } from "~/lib/date-format.ts";
 import type { ReviewCandidate, ReviewPage } from "~/lib/review.server.ts";
 import type { SpeciesOption } from "~/lib/review-data.ts";
 
@@ -27,20 +28,12 @@ type Action =
 	| { kind: "delete"; row: ReviewCandidate }
 	| { kind: "recategorize"; row: ReviewCandidate; species: SpeciesOption };
 
-/** "Jul 27, 2026" and "6:04 AM" from the detection's separate date/time columns. */
+/** "Jul 27, 2026" and "6:04 AM", for the queue's stacked date-over-time
+    column; everywhere else the two travel together as formatDateTime. */
 function formatRecorded(date: string, time: string) {
-	const parsed = new Date(`${date}T${time}`);
-	if (Number.isNaN(parsed.getTime())) return { day: date, clock: time };
 	return {
-		day: new Intl.DateTimeFormat(undefined, {
-			month: "short",
-			day: "numeric",
-			year: "numeric",
-		}).format(parsed),
-		clock: new Intl.DateTimeFormat(undefined, {
-			hour: "numeric",
-			minute: "2-digit",
-		}).format(parsed),
+		day: formatDate(date),
+		clock: formatDateTime(date, time).split(", ").at(-1) ?? time,
 	};
 }
 
@@ -130,7 +123,6 @@ export function ReviewWorkflow({
 				) : null}
 			</section>
 		);
-	const recorded = formatRecorded(row.date, row.time);
 	const position = rows.indexOf(row);
 	return (
 		<>
@@ -187,9 +179,7 @@ export function ReviewWorkflow({
 						<div className="tabular-data flex flex-wrap items-center gap-x-3 gap-y-1 text-muted-foreground text-sm">
 							<ConfidencePill confidence={row.confidence} />
 							<span>{describeLifetime(row.lifetimeCount)}</span>
-							<span>
-								{recorded.day}, {recorded.clock}
-							</span>
+							<span>{formatDateTime(row.date, row.time)}</span>
 						</div>
 
 						{/* The evidence itself: hear the call and see its shape. */}
@@ -298,7 +288,7 @@ export function ReviewWorkflow({
 													{item.sciName}
 												</span>
 												<span className="tabular-data block @min-[26rem]:hidden truncate text-muted-foreground text-xs">
-													{when.day} · {when.clock}
+													{formatDateTime(item.date, item.time)}
 												</span>
 											</span>
 											<span className="@min-[26rem]:block hidden shrink-0 text-right">

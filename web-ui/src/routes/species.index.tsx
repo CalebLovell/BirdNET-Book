@@ -29,6 +29,7 @@ import { SpeciesImage } from "~/components/species-image.tsx";
 import { PageStepper } from "~/components/ui/page-stepper.tsx";
 import { SearchInput } from "~/components/ui/search-input.tsx";
 import { ToggleGroup, ToggleGroupItem } from "~/components/ui/toggle-group.tsx";
+import { formatDateTime } from "~/lib/date-format.ts";
 import { getLifeListCards, type LifeListCard } from "~/lib/detections.ts";
 import { pageTitle } from "~/lib/page-title.ts";
 import { comNameToSlug } from "~/lib/species-slug.ts";
@@ -78,12 +79,6 @@ export const Route = createFileRoute("/species/")({
 });
 
 const PAGE_SIZE = 24;
-
-function parseDetected(value: string): Date | null {
-	if (!value) return null;
-	const parsed = new Date(value.replace(" ", "T"));
-	return Number.isNaN(parsed.getTime()) ? null : parsed;
-}
 
 function Species() {
 	const cards = Route.useLoaderData();
@@ -517,16 +512,7 @@ function DirectionButton({
 }
 
 function SpeciesCard({ card }: { card: LifeListCard }) {
-	const parsedLastDetected = parseDetected(card.lastDetected);
-	const lastHeard = parsedLastDetected
-		? new Intl.DateTimeFormat(undefined, {
-				month: "short",
-				day: "numeric",
-				year: "numeric",
-				hour: "numeric",
-				minute: "2-digit",
-			}).format(parsedLastDetected)
-		: card.lastDetected || "—";
+	const lastHeard = card.lastDetected ? formatDateTime(card.lastDetected) : "—";
 
 	return (
 		<div className="feature-card feature-card-link relative flex flex-col gap-3 overflow-hidden rounded-md p-4 has-[[data-card-link]:focus-visible]:outline-2 has-[[data-card-link]:focus-visible]:outline-offset-2 max-[400px]:gap-2">

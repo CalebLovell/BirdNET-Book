@@ -5,8 +5,9 @@ import {
 	HeroCardShell,
 	SpeciesHeroCard,
 } from "~/components/species-hero-card.tsx";
+import { formatDateTime } from "~/lib/date-format.ts";
 import type { CurrentBird } from "~/lib/now.ts";
-import { formatClockTime, formatTimeAgo } from "~/lib/time-ago.ts";
+import { formatTimeAgo } from "~/lib/time-ago.ts";
 
 /**
  * The page's masthead: the most recent detection as its portrait, and the
@@ -59,7 +60,7 @@ export function CurrentBirdCard({
 			speciesSlug={current.speciesSlug}
 			imageUrl={current.imageUrl}
 			relativeTime={formatTimeAgo(elapsedMs)}
-			clockTime={formatClockTime(current.detectedAt)}
+			heardAt={formatDateTime(current.detectedAt)}
 			confidence={current.confidence}
 			audioUrl={current.audioUrl}
 			className={flash ? `${HERO_CARD_SHELL} flash-in` : HERO_CARD_SHELL}

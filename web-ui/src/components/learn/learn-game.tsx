@@ -6,7 +6,7 @@ import { ClipPlayer } from "~/components/learn/clip-player.tsx";
 import { RecordingButton } from "~/components/recording-button.tsx";
 import { SpeciesImage } from "~/components/species-image.tsx";
 import { Button } from "~/components/ui/button.tsx";
-import { formatDayTitle } from "~/lib/day-title.ts";
+import { formatDateTime } from "~/lib/date-format.ts";
 import {
 	type LearnChoice,
 	type LearnQuestion,
@@ -17,7 +17,6 @@ import {
 	roundVerdict,
 	scoreRound,
 } from "~/lib/learn-round.ts";
-import { formatClockTime } from "~/lib/time-ago.ts";
 
 /**
  * The quiz itself: play a clip, pick the bird, keep going until the round is
@@ -129,8 +128,7 @@ export function LearnGame({
 					<header className="-mx-(--page-gap) -mt-(--page-gap) flex min-h-[45px] flex-wrap items-center justify-between gap-x-2 border-b px-(--page-gap) py-2">
 						<h2 className="island-kicker">Mystery call</h2>
 						<div className="tabular-data text-muted-foreground text-xs">
-							Heard {formatClockTime(question.detectedAt)} ·{" "}
-							{formatDayTitle(question.detectedAt.slice(0, 10))}
+							Heard {formatDateTime(question.detectedAt)}
 						</div>
 					</header>
 
@@ -608,7 +606,7 @@ function RoundSummary({
 								</Link>
 								<div className="text-muted-foreground text-xs">
 									{attemptLabel(result.attempts)} ·{" "}
-									{formatClockTime(question.detectedAt)}
+									{formatDateTime(question.detectedAt)}
 								</div>
 							</div>
 							<span className="tabular-data shrink-0 text-sm">

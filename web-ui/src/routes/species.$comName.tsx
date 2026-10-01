@@ -42,6 +42,7 @@ import {
 } from "~/components/ui/tooltip.tsx";
 import { YearSelector } from "~/components/year-selector.tsx";
 import { formatConfidence } from "~/lib/confidence.ts";
+import { formatDate, formatDateTime } from "~/lib/date-format.ts";
 import { ebirdUrlFor } from "~/lib/ebird.ts";
 import { HEAT_COLORS, heatLevel } from "~/lib/heatmap.ts";
 import { illustrationUrlFor } from "~/lib/illustrations.ts";
@@ -542,7 +543,10 @@ function SummaryCard({
 					? formatTimeAgo(lastVisit.ageMs + offsetMs)
 					: formatHeardDate(detail.lastDetected.date)
 			}
-			clockTime={formatVisitTime(detail.lastDetected.time)}
+			heardAt={formatDateTime(
+				detail.lastDetected.date,
+				detail.lastDetected.time,
+			)}
 			confidence={detail.lastDetected.confidence}
 			audioUrl={lastVisit?.audioUrl ?? null}
 			stats={stats}
@@ -555,20 +559,7 @@ function SummaryCard({
 }
 
 function formatHeardDate(date: string): string {
-	if (!date) return "—";
-
-	return new Date(`${date}T00:00:00`).toLocaleDateString([], {
-		month: "short",
-		day: "numeric",
-		year: "numeric",
-	});
-}
-
-function formatVisitTime(time: string): string {
-	return new Date(`1970-01-01T${time}`).toLocaleTimeString([], {
-		hour: "numeric",
-		minute: "2-digit",
-	});
+	return date ? formatDate(date) : "—";
 }
 
 /**
@@ -660,26 +651,18 @@ function VisitLogCard({
 					className={`-mx-(--page-gap) divide-y transition-opacity ${loading ? "opacity-50" : ""}`}
 				>
 					{visits.map((visit, i) => {
-						const date = new Date(`${visit.date}T00:00:00`);
-						const dateLabel = date.toLocaleDateString([], {
-							month: "long",
-							day: "numeric",
-							year: "numeric",
-						});
-						const weekday = date.toLocaleDateString([], { weekday: "long" });
-						const time = formatVisitTime(visit.time);
+						const heardAt = formatDateTime(visit.date, visit.time);
 
 						return (
 							<li
 								key={`${visit.date}-${visit.time}`}
-								aria-label={`${dateLabel} at ${time}${visit.confidence != null ? `, ${formatConfidence(visit.confidence)} confidence` : ""}`}
+								aria-label={`${heardAt}${visit.confidence != null ? `, ${formatConfidence(visit.confidence)} confidence` : ""}`}
 								// 7px rather than the usual 10px, so ten rows take the
 								// height nine used to and the card doesn't grow.
 								//
-								// Under 26rem the row can't hold date, time column, pill and
-								// a labelled button side by side, so the time and age tuck
-								// under the date and the button drops its label. The row
-								// keeps its height either way: two lines on both layouts.
+								// The moment it was heard over how long ago that was: two
+								// lines at every width. Under 26rem the button drops its
+								// label to make room.
 								//
 								// The dividers run out to the card's edges (the list
 								// bleeds through the card's padding), and the row's own
@@ -697,19 +680,11 @@ function VisitLogCard({
 										search={{ period: "day", date: visit.date }}
 										className="block max-w-fit truncate font-medium no-underline hover:underline"
 									>
-										<time dateTime={visit.date}>{dateLabel}</time>
+										<time dateTime={`${visit.date}T${visit.time}`}>
+											{heardAt}
+										</time>
 									</Link>
-									<div className="@min-[26rem]:block hidden truncate text-muted-foreground text-xs">
-										{weekday}
-									</div>
-									<div className="tabular-data @min-[26rem]:hidden truncate text-muted-foreground text-xs">
-										{time} · {formatTimeAgo(visit.ageMs + offsetMs)}
-									</div>
-								</div>
-
-								<div className="@min-[26rem]:block hidden shrink-0 text-right">
-									<div className="tabular-data text-sm">{time}</div>
-									<div className="text-muted-foreground text-xs">
+									<div className="truncate text-muted-foreground text-xs">
 										{formatTimeAgo(visit.ageMs + offsetMs)}
 									</div>
 								</div>

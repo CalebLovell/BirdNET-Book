@@ -1,19 +1,13 @@
 import { AudioLines, Gem, Sparkles, Undo2 } from "lucide-react";
 import type { CSSProperties } from "react";
 import { Pill } from "~/components/pill.tsx";
+import { formatDate } from "~/lib/date-format.ts";
 import { formatRatio } from "~/lib/highlights-data.ts";
-
-const FIRST_HEARD = new Intl.DateTimeFormat("en-US", {
-	month: "short",
-	day: "numeric",
-	year: "numeric",
-	timeZone: "UTC",
-});
 
 /** "First recorded here on Sep 22, 2026." -- the day itself, not the window. */
 export function newTooltip(firstHeard: string | null): string {
 	if (firstHeard == null) return "First recorded here.";
-	return `First recorded here on ${FIRST_HEARD.format(new Date(`${firstHeard}T00:00:00Z`))}.`;
+	return `First recorded here on ${formatDate(firstHeard)}.`;
 }
 
 export function returnedTooltip(daysAway: number | null): string {

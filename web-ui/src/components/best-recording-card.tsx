@@ -2,6 +2,7 @@ import { ConfidencePill } from "~/components/confidence-pill.tsx";
 import { EmptyNote } from "~/components/empty-state.tsx";
 import { RecordingButton } from "~/components/recording-button.tsx";
 import { Spectrogram } from "~/components/spectrogram.tsx";
+import { formatDateTime } from "~/lib/date-format.ts";
 import type { BestRecording } from "~/lib/species-detail.ts";
 
 /**
@@ -35,7 +36,7 @@ export function BestRecordingCard({
 
 					<div className="flex flex-wrap items-center justify-between gap-3 max-[400px]:gap-2">
 						<div className="tabular-data text-muted-foreground text-sm">
-							{formatHeard(recording.date, recording.time)}
+							{formatDateTime(recording.date, recording.time)}
 						</div>
 						<div className="flex items-center gap-2">
 							<ConfidencePill confidence={recording.confidence} />
@@ -49,17 +50,4 @@ export function BestRecordingCard({
 			)}
 		</section>
 	);
-}
-
-function formatHeard(date: string, time: string): string {
-	const dateLabel = new Date(`${date}T00:00:00`).toLocaleDateString([], {
-		month: "short",
-		day: "numeric",
-		year: "numeric",
-	});
-	const timeLabel = new Date(`1970-01-01T${time}`).toLocaleTimeString([], {
-		hour: "numeric",
-		minute: "2-digit",
-	});
-	return `${dateLabel} · ${timeLabel}`;
 }

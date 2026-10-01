@@ -26,6 +26,7 @@ import {
 } from "~/components/ui/table.tsx";
 import { SortButton, SortMenu } from "~/components/ui/table-sort.tsx";
 import { audioUrlFor } from "~/lib/audio.ts";
+import { formatDate, formatDateTime } from "~/lib/date-format.ts";
 import {
 	DETECTION_SORTS,
 	type DetectionWorkspaceSearch,
@@ -137,36 +138,17 @@ function gridColumns(canDelete: boolean): CSSProperties {
 }
 
 function recordedLabel(row: DetectionTableRow): string {
-	const date = new Date(`${row.Date}T${row.Time}`);
-	if (Number.isNaN(date.valueOf())) return `${row.Date} ${row.Time}`;
-	return new Intl.DateTimeFormat(undefined, {
-		dateStyle: "medium",
-		timeStyle: "short",
-	}).format(date);
+	return formatDateTime(row.Date, row.Time);
 }
 
 // The narrow row splits `recordedLabel` in two -- a clock time the eye can
-// compare down the column, over the day it belongs to. The year only appears
-// when it is not the current one: on a station's recent detections it is the
-// same digits on every row.
+// compare down the column, over the day it belongs to.
 function clockLabel(row: DetectionTableRow): string {
-	const date = new Date(`${row.Date}T${row.Time}`);
-	if (Number.isNaN(date.valueOf())) return row.Time;
-	return new Intl.DateTimeFormat(undefined, { timeStyle: "short" }).format(
-		date,
-	);
+	return formatDateTime(row.Date, row.Time).split(", ").at(-1) ?? row.Time;
 }
 
 function dayLabel(row: DetectionTableRow): string {
-	const date = new Date(`${row.Date}T${row.Time}`);
-	if (Number.isNaN(date.valueOf())) return row.Date;
-	return new Intl.DateTimeFormat(undefined, {
-		month: "short",
-		day: "numeric",
-		...(date.getFullYear() === new Date().getFullYear()
-			? {}
-			: { year: "numeric" }),
-	}).format(date);
+	return formatDate(row.Date);
 }
 
 const SORT_LABELS: Record<DetectionWorkspaceSort, string> = {

@@ -52,6 +52,11 @@ never a gradient. Destructive is clay. Single-series charts are moss.
 Georgia for everything: headings, body, controls, figures. Numbers use
 `.tabular-data`. Monospace only for code and paths.
 
+Dates are always "Sep 29, 2026" and, with a time, "Sep 29, 2026, 12:15 PM"
+(`lib/date-format.ts`). Counts use thousands separators; a slot too small for
+the full figure (a heat-map cell) shortens past three digits: 1k, 1.2k, 300k,
+1m (`compactCount`).
+
 - Page title: 20px bold (`display-title`)
 - Figure: 20px semibold, tabular
 - Count: `.count-figure`, 13px bold ink, tabular. Every count of birds or

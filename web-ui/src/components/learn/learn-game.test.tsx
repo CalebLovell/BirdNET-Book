@@ -105,7 +105,7 @@ test("heads the card like the rail: title left, recording time right", () => {
 	assert.match(markup, /<h2 class="island-kicker">Mystery call</);
 	assert.doesNotMatch(markup, /Heard at /);
 	assert.match(markup, /text-xs">Heard /);
-	assert.match(markup, /July 28, 2026/);
+	assert.match(markup, /Jul 28, 2026, /);
 });
 
 test("the rail counts the birds now that the title doesn't", () => {

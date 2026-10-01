@@ -95,7 +95,7 @@ export function SpeciesHeroCard({
 	speciesSlug,
 	imageUrl,
 	relativeTime,
-	clockTime,
+	heardAt,
 	confidence,
 	audioUrl,
 	stats,
@@ -112,8 +112,9 @@ export function SpeciesHeroCard({
 	imageUrl: string | null;
 	/** The moss line: "5 minutes ago". */
 	relativeTime: string;
-	/** The wall-clock time that reading is of, e.g. "4:13 PM". */
-	clockTime: string;
+	/** The moment that reading is of, e.g. "Sep 29, 2026, 4:13 PM" -- the date
+	    always rides along, since "3:30 PM" alone can't say which day. */
+	heardAt: string;
 	confidence: number | null;
 	audioUrl: string | null;
 	/** The figures, rendered as their own row of little cards below the portrait
@@ -169,9 +170,7 @@ export function SpeciesHeroCard({
 				<div className="tabular-data mt-1 flex flex-wrap items-center gap-2 text-sm">
 					{/* Phrased identically on both pages: the card always describes the
 					    most recent detection, whether or not the page is polling. */}
-					<span className="text-muted-foreground">
-						last heard at {clockTime}
-					</span>
+					<span className="text-muted-foreground">last heard {heardAt}</span>
 					<ConfidencePill confidence={confidence} />
 					<RecordingButton audioUrl={audioUrl} />
 				</div>
