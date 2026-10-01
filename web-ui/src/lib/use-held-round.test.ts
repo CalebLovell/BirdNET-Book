@@ -11,8 +11,8 @@ function round(id: string): LearnRound {
 test("keeps the round in play when the loader reruns on its own", () => {
 	assert.equal(
 		shouldAdoptRound(
-			{ round: round("a"), pool: "frequent" },
-			{ round: round("b"), pool: "frequent" },
+			{ round: round("a"), pool: "regulars" },
+			{ round: round("b"), pool: "regulars" },
 			false,
 		),
 		false,
@@ -22,7 +22,7 @@ test("keeps the round in play when the loader reruns on its own", () => {
 test("adopts the new round after a pool switch", () => {
 	assert.equal(
 		shouldAdoptRound(
-			{ round: round("a"), pool: "frequent" },
+			{ round: round("a"), pool: "regulars" },
 			{ round: round("b"), pool: "all" },
 			false,
 		),
@@ -33,8 +33,8 @@ test("adopts the new round after a pool switch", () => {
 test("adopts the new round once play again was asked for", () => {
 	assert.equal(
 		shouldAdoptRound(
-			{ round: round("a"), pool: "frequent" },
-			{ round: round("b"), pool: "frequent" },
+			{ round: round("a"), pool: "regulars" },
+			{ round: round("b"), pool: "regulars" },
 			true,
 		),
 		true,
@@ -44,8 +44,8 @@ test("adopts the new round once play again was asked for", () => {
 test("waits for play again's round to actually arrive", () => {
 	assert.equal(
 		shouldAdoptRound(
-			{ round: round("a"), pool: "frequent" },
-			{ round: round("a"), pool: "frequent" },
+			{ round: round("a"), pool: "regulars" },
+			{ round: round("a"), pool: "regulars" },
 			true,
 		),
 		false,

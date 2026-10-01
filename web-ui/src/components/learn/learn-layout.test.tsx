@@ -6,7 +6,7 @@ import { LearnPoolSelector } from "./learn-layout.tsx";
 
 test("left-aligns the recording-pool selector", () => {
 	const markup = renderToStaticMarkup(
-		<LearnPoolSelector pool="today" onPoolChange={() => {}} />,
+		<LearnPoolSelector pool="regulars" onPoolChange={() => {}} />,
 	);
 
 	assert.match(markup, /class="[^"]*justify-start/);
@@ -14,10 +14,10 @@ test("left-aligns the recording-pool selector", () => {
 
 test("offers the pools as a dropdown on phones and joined tabs from 640px", () => {
 	const markup = renderToStaticMarkup(
-		<LearnPoolSelector pool="week" onPoolChange={() => {}} />,
+		<LearnPoolSelector pool="rare" onPoolChange={() => {}} />,
 	);
 
 	assert.match(markup, /<div class="[^"]*sm:hidden[^"]*"><svg[^>]*>.*<select/);
-	assert.match(markup, /<option value="week" selected="">This Week<\/option>/);
+	assert.match(markup, /<option value="rare" selected="">Rare<\/option>/);
 	assert.match(markup, /class="hidden sm:block"/);
 });

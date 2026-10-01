@@ -1,7 +1,6 @@
 import {
-	CalendarDays,
 	ChevronDown,
-	Clock,
+	Gem,
 	Infinity as InfinityIcon,
 	Repeat2,
 } from "lucide-react";
@@ -18,9 +17,8 @@ export const LEARN_POOL_ICONS: Record<
 	LearnPool,
 	ComponentType<{ className?: string }>
 > = {
-	today: Clock,
-	week: CalendarDays,
-	frequent: Repeat2,
+	regulars: Repeat2,
+	rare: Gem,
 	all: InfinityIcon,
 };
 
@@ -33,7 +31,7 @@ export function LearnPoolSelector({
 }) {
 	return (
 		<div className="mt-(--page-gap) flex justify-start">
-			{/* Four joined segments want about 440px, and a segmented control can't
+			{/* Joined segments want about 300px, and a segmented control can't
 			    wrap without breaking its own shape -- so below 640px the same choice
 			    becomes a dropdown, as the timeline's period and the species sort do. */}
 			<PoolSelect pool={pool} onPoolChange={onPoolChange} />
@@ -82,7 +80,7 @@ function PoolSelect({
 				aria-hidden="true"
 			/>
 			<select
-				aria-label="Recordings from"
+				aria-label="Which birds"
 				value={pool}
 				onChange={(event) => onPoolChange(event.target.value as LearnPool)}
 				className="h-9 cursor-pointer appearance-none rounded-md border border-input bg-card pr-7 pl-8 font-medium pointer-coarse:text-base text-sm transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:border-[var(--focus-ring)] focus-visible:outline-none"

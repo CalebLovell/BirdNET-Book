@@ -17,7 +17,7 @@ import { CHOICES_PER_QUESTION } from "~/lib/learn-round.ts";
 import { pageTitle } from "~/lib/page-title.ts";
 import { useHeldRound } from "~/lib/use-held-round.ts";
 
-const DEFAULT_POOL: LearnPool = "today";
+const DEFAULT_POOL: LearnPool = "regulars";
 
 const learnSearchSchema = z.object({
 	pool: z.enum(LEARN_POOLS).default(DEFAULT_POOL).catch(DEFAULT_POOL),
@@ -115,8 +115,8 @@ function EmptyPool({
 			<EmptyNote>
 				A round needs {CHOICES_PER_QUESTION} species with clear recordings still
 				on disk, and this selection has{" "}
-				{speciesInPool === 0 ? "none" : speciesInPool}. Try a wider selection —
-				All Time always has the most to work with.
+				{speciesInPool === 0 ? "none" : speciesInPool}. Try another selection —
+				All always has the most to work with.
 			</EmptyNote>
 		</section>
 	);

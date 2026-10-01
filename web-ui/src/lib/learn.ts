@@ -22,19 +22,12 @@ import { comNameToSlug } from "~/lib/species-slug.ts";
 // about become questions.
 const MINIMUM_CLIP_CONFIDENCE = 0.65;
 
-// Taken per species, not per pool, so a bird heard twice this week is as likely
+// Taken per species, not per pool, so a bird heard twice all year is as likely
 // to come up as the crow that never shuts up. Newest first, because BirdNET-Pi's
 // cleanup job trims old audio: a species' recent detections are the ones whose
 // files are still on disk. Which of the survivors a question uses is then
 // chosen at random, so a round doesn't replay the same clip every time.
 const CLIPS_PER_SPECIES = 30;
-
-const POOL_HOURS: Record<LearnPool, number | null> = {
-	today: 24,
-	week: 24 * 7,
-	frequent: null,
-	all: null,
-};
 
 type ClipRow = {
 	date: string;
@@ -52,19 +45,14 @@ type ClipRow = {
  * the shared handle the clearer way to express this particular shape.
  */
 function recentClipsPerSpecies(pool: LearnPool): ClipRow[] {
-	const hours = POOL_HOURS[pool];
 	const conditions = ["Confidence >= ?"];
 	const params: (string | number)[] = [MINIMUM_CLIP_CONFIDENCE];
 
-	if (hours !== null) {
+	// Regulars and rare split the station's species on one line, so between
+	// them they cover exactly what "all" does.
+	if (pool !== "all") {
 		conditions.push(
-			"datetime(Date || ' ' || Time) >= datetime('now', ?, 'localtime')",
-		);
-		params.push(`-${hours} hours`);
-	}
-	if (pool === "frequent") {
-		conditions.push(
-			"Com_Name IN (SELECT Com_Name FROM detections GROUP BY Com_Name HAVING COUNT(*) >= ?)",
+			`Com_Name IN (SELECT Com_Name FROM detections GROUP BY Com_Name HAVING COUNT(*) ${pool === "regulars" ? ">=" : "<"} ?)`,
 		);
 		params.push(FREQUENT_SPECIES_THRESHOLD);
 	}
