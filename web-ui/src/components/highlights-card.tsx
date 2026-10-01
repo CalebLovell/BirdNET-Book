@@ -73,12 +73,17 @@ const SPECIES_NOTES: Record<
 		icon: Sparkles,
 		lead: (total) => `first-ever ${total === 1 ? "visitor" : "visitors"}`,
 	},
-	returned: { icon: Undo2, lead: () => "back after time away" },
+	// "species" carries the count where the lead has no noun of its own, so
+	// the line never opens on a bare "1 heard ...".
+	returned: { icon: Undo2, lead: () => "species back after time away" },
 	rare: {
 		icon: Gem,
 		lead: (total) => `rare ${total === 1 ? "visitor" : "visitors"}`,
 	},
-	vocal: { icon: AudioLines, lead: () => "heard more often than usual" },
+	vocal: {
+		icon: AudioLines,
+		lead: () => "species heard more often than usual",
+	},
 	routine: {
 		icon: VolumeX,
 		lead: (total) => `${total === 1 ? "regular" : "regulars"} gone quiet`,

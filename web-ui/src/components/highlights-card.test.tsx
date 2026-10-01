@@ -78,7 +78,7 @@ test("each highlight reads as one sentence", async () => {
 	assert.match(text, /Busiest at 6 AM\./);
 	assert.match(
 		text,
-		/2 back after time away: Wood Thrush \(23 days\) and Veery \(16 days\)\./,
+		/2 species back after time away: Wood Thrush \(23 days\) and Veery \(16 days\)\./,
 	);
 	assert.match(
 		text,
@@ -146,6 +146,6 @@ test("the Vocal line says the birds were heard more often than usual", async () 
 	});
 	assert.match(
 		markup.replace(/<[^>]+>/g, ""),
-		/2 heard more often than usual: Rose-breasted Grosbeak \(3\.4×\) and Swainson(&#x27;|')s Thrush \(2\.8×\)\./,
+		/2 species heard more often than usual: Rose-breasted Grosbeak \(3\.4×\) and Swainson(&#x27;|')s Thrush \(2\.8×\)\./,
 	);
 });
