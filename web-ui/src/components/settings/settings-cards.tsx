@@ -7,7 +7,7 @@ import {
 	SlidersHorizontal,
 } from "lucide-react";
 import type { ChangeEvent, ReactNode } from "react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { InfoTip } from "~/components/ui/info-tip.tsx";
 import { Input } from "~/components/ui/input.tsx";
@@ -22,6 +22,7 @@ import type {
 	StationSettings,
 	StorageSettings,
 } from "~/lib/settings-data.ts";
+import { modernTimezone } from "~/lib/timezones.ts";
 import { RestartButton } from "./restart-button.tsx";
 import { type CardSaveState, SettingsCard } from "./settings-card.tsx";
 import { StationLocation } from "./station-location.tsx";
@@ -322,21 +323,68 @@ function StationCard({
 			)}
 			<Field
 				label="Timezone"
-				hint="Changing this updates the station's operating-system timezone."
+				hint="Type to search, e.g. “New York”. Changing this updates the station's operating-system timezone."
 			>
-				<select
-					className={controlClass}
+				{/* A text field over a datalist rather than a select: ~400 zones
+				    are a long scroll, and typing any part of a name finds it. */}
+				<Input
+					list="station-timezones"
+					autoComplete="off"
+					spellCheck={false}
 					value={form.values.timezone}
 					onChange={(event) =>
 						form.setValues({ ...form.values, timezone: event.target.value })
 					}
-				>
+				/>
+				<datalist id="station-timezones">
 					{timezones.map((timezone) => (
-						<option key={timezone}>{timezone}</option>
+						<option key={timezone} value={timezone} />
 					))}
-				</select>
+				</datalist>
 			</Field>
+			<BrowserTimezoneHint
+				timezone={form.values.timezone}
+				onUse={(timezone) => form.setValues({ ...form.values, timezone })}
+			/>
 		</SettingsCard>
+	);
+}
+
+/**
+ * Offers this browser's own timezone when it differs from the station's -- the
+ * likeliest way a station ends up on the wrong clock is a zone picked once and
+ * never checked against where it actually sits. Read after mount, since the
+ * server can't know the viewer's zone and guessing would break hydration.
+ */
+function BrowserTimezoneHint({
+	timezone,
+	onUse,
+}: {
+	timezone: string;
+	onUse: (timezone: string) => void;
+}) {
+	const [browserTimezone, setBrowserTimezone] = useState<string | null>(null);
+	useEffect(() => {
+		setBrowserTimezone(
+			modernTimezone(Intl.DateTimeFormat().resolvedOptions().timeZone),
+		);
+	}, []);
+
+	if (!browserTimezone || modernTimezone(timezone) === browserTimezone) {
+		return null;
+	}
+	return (
+		<p className="text-muted-foreground text-xs leading-relaxed">
+			This browser is on <span className="font-medium">{browserTimezone}</span>.
+			If you're at the station, it should probably match.{" "}
+			<button
+				type="button"
+				onClick={() => onUse(browserTimezone)}
+				className="font-medium text-foreground underline underline-offset-2"
+			>
+				Use {browserTimezone}
+			</button>
+		</p>
 	);
 }
 

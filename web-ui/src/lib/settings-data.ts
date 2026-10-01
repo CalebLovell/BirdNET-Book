@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { isKnownTimezone } from "~/lib/timezones.ts";
+
 export const DEFAULT_REVIEW_RARE_SPECIES_MAX = 10;
 
 const MODEL_IDS = [
@@ -50,15 +52,14 @@ const safeText = (maximum: number) =>
 		.max(maximum)
 		.refine(hasNoControlCharacters, "Control characters are not allowed");
 
-const supportedTimezones = new Set(Intl.supportedValuesOf("timeZone"));
-
 export const stationSettingsSchema = z.object({
 	siteName: safeText(80),
 	latitude: z.number().finite().min(-90).max(90),
 	longitude: z.number().finite().min(-180).max(180),
 	timezone: z
 		.string()
-		.refine((value) => supportedTimezones.has(value), "Unsupported timezone"),
+		.trim()
+		.refine(isKnownTimezone, "Pick a timezone from the list"),
 });
 
 export const detectionSettingsSchema = z.object({

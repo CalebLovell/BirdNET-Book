@@ -3,6 +3,8 @@ import "@tanstack/react-start/server-only";
 import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 
+import { timezoneOptions } from "~/lib/timezones.ts";
+
 import {
 	readReviewRareSpeciesMax,
 	readSettingsPageValues,
@@ -98,7 +100,7 @@ export async function loadSettingsPageData(
 				modelDirectory,
 				settings.detection.model,
 			),
-			supportedTimezones: Intl.supportedValuesOf("timeZone"),
+			supportedTimezones: timezoneOptions(),
 		};
 	} catch {
 		throw new Error("BirdNET settings are unavailable.");
