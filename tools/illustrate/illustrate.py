@@ -581,12 +581,19 @@ def keep_what_touches_the_animal(painted, cut, pose: str, low: float = 14, high:
         big = 1 + np.nonzero(sizes >= 0.02 * sizes.max())[0]
         animal_alpha = animal_alpha * ndimage.binary_dilation(np.isin(labels, big), iterations=3)
     animal = animal_alpha > 0.5
-    edge = 8
-    border = np.concatenate([
-        rgb[:edge].reshape(-1, 3), rgb[-edge:].reshape(-1, 3),
-        rgb[:, :edge].reshape(-1, 3), rgb[:, -edge:].reshape(-1, 3),
-    ])
-    paper = np.median(border, axis=0)
+    # The paper colour, from a ring just outside the animal: the image's own
+    # border can be a different white margin or sheet edge, and judging the
+    # paper by it turns all the tinted paper round the bird into "paint".
+    gap = ndimage.distance_transform_edt(~animal) if animal.any() else None
+    ring = (gap > 12) & (gap < 60) if gap is not None else None
+    if ring is not None and ring.sum() > 500:
+        paper = np.median(rgb[ring], axis=0)
+    else:
+        edge = 8
+        paper = np.median(np.concatenate([
+            rgb[:edge].reshape(-1, 3), rgb[-edge:].reshape(-1, 3),
+            rgb[:, :edge].reshape(-1, 3), rgb[:, -edge:].reshape(-1, 3),
+        ]), axis=0)
     # How far each pixel is from bare paper, as a soft 0-1 coverage.
     printed = np.clip((np.linalg.norm(rgb - paper, axis=2) - low) / (high - low), 0, 1)
 

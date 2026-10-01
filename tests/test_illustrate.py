@@ -195,6 +195,25 @@ class StylePlatesTest(unittest.TestCase):
         self.assertEqual(len(illustrate.style_plates("mammal")), 3)
 
 
+class PaperTest(unittest.TestCase):
+    def test_a_white_margin_does_not_turn_the_paper_into_paint(self):
+        """Catches the beige halo cut out around a bird painted on tinted paper
+        inside a white sheet margin."""
+        try:
+            from PIL import Image
+        except ImportError:
+            self.skipTest("Pillow not installed")
+        painted = Image.new("RGB", (400, 400), (255, 255, 255))
+        painted.paste((236, 220, 180), (10, 10, 390, 390))
+        painted.paste((60, 50, 40), (150, 150, 250, 250))
+        cut = Image.new("RGBA", (400, 400), (0, 0, 0, 0))
+        cut.paste((60, 50, 40, 255), (150, 150, 250, 250))
+        out = illustrate.keep_what_touches_the_animal(painted, cut, "perched")
+        alpha = out.getchannel("A")
+        self.assertEqual(alpha.getpixel((200, 262)), 0)  # paper just under the feet
+        self.assertEqual(alpha.getpixel((200, 200)), 255)
+
+
 class CanvasTest(unittest.TestCase):
     def setUp(self):
         try:
