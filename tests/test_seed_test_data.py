@@ -1,10 +1,11 @@
 import importlib.util
+import math
 import sqlite3
 import subprocess
 import sys
 import tempfile
 import unittest
-from collections import Counter
+from collections import Counter, defaultdict
 from contextlib import closing
 from datetime import date, datetime, timedelta
 from pathlib import Path
@@ -66,7 +67,7 @@ class ReplayTests(unittest.TestCase):
     NOW = datetime(2030, 3, 10, 9, 30, 0)
 
     def setUp(self):
-        self.rows = seeder.generate_rows(now=self.NOW)
+        self.rows = seeder.generate_rows(days=None, now=self.NOW)
         self.fixture = seeder.load_fixture()
 
     def test_history_ends_today_and_never_in_the_future(self):
@@ -107,6 +108,90 @@ class ReplayTests(unittest.TestCase):
         """The repo is public: the station's location stays blanked to 0, 0."""
         for row in self.fixture:
             self.assertEqual((float(row["Lat"]), float(row["Lon"])), (0.0, 0.0))
+
+
+class ExtrapolationTests(unittest.TestCase):
+    """The months before the recording are invented, so these lock in that
+    they read as the same yard's year rather than noise bolted onto it."""
+
+    NOW = ReplayTests.NOW
+
+    @classmethod
+    def setUpClass(cls):
+        cls.rows = seeder.generate_rows(now=cls.NOW)
+        cls.real_rows = seeder.generate_rows(days=None, now=cls.NOW)
+        cls.first_real_date = cls.real_rows[0][0]
+        cls.synthetic = [row for row in cls.rows if row[0] < cls.first_real_date]
+        cls.shift = cls.NOW.date() - date.fromisoformat(seeder.load_fixture()[-1]["Date"])
+
+    def recording_month(self, row):
+        """The month in the recording's own calendar, before the shift to today."""
+        return (date.fromisoformat(row[0]) - self.shift).month
+
+    def per_day(self, rows):
+        days = Counter(row[0] for row in rows)
+        return sum(days.values()) / max(1, len(days))
+
+    def test_default_history_is_a_full_year_ending_today(self):
+        """Catches the year view going back to a twelve-week stub."""
+        self.assertEqual(seeder.DEFAULT_DAYS, 365)
+        self.assertEqual(self.rows[-1][0], str(self.NOW.date()))
+        self.assertEqual(self.rows[0][0], str(self.NOW.date() - timedelta(days=364)))
+
+    def test_real_detections_are_replayed_untouched(self):
+        """Catches the extrapolation leaking into, or reshaping, the real record."""
+        recent = [row for row in self.rows if row[0] >= self.first_real_date]
+        self.assertEqual(recent, self.real_rows)
+
+    def test_reseeding_produces_the_same_year(self):
+        """Catches unseeded randomness making every reset a different dataset."""
+        self.assertEqual(seeder.generate_rows(now=self.NOW)[:500], self.rows[:500])
+
+    def test_winter_visitors_and_summer_breeders_keep_to_their_seasons(self):
+        """Catches presence curves that make every species a year-round resident."""
+        by_month = defaultdict(Counter)
+        for row in self.synthetic:
+            by_month[self.recording_month(row)][row[3]] += 1
+
+        self.assertGreater(by_month[1]["Dark-eyed Junco"], 50)
+        self.assertEqual(by_month[6]["Dark-eyed Junco"], 0)
+        self.assertGreater(by_month[6]["House Wren"], 20)
+        self.assertEqual(by_month[1]["House Wren"], 0)
+        self.assertEqual(by_month[1]["Snowy Tree Cricket"], 0)
+
+    def test_may_dawn_chorus_dwarfs_midwinter(self):
+        """Catches a flat year with no seasonal swing in volume."""
+        may = [row for row in self.synthetic if self.recording_month(row) == 5]
+        december = [row for row in self.synthetic if self.recording_month(row) == 12]
+        self.assertGreater(self.per_day(may), 4 * self.per_day(december))
+
+    def test_dawn_follows_the_sunrise_through_the_year(self):
+        """Catches real July times pasted onto January mornings."""
+
+        def early_hour(month):
+            hours = sorted(
+                int(row[1][:2]) for row in self.synthetic
+                if self.recording_month(row) == month and 4 <= int(row[1][:2]) <= 12
+            )
+            return hours[len(hours) // 20]
+
+        self.assertGreater(early_hour(1), early_hour(6))
+
+    def test_both_seams_meet_the_real_level(self):
+        """Catches a cliff in the charts where invented data meets real."""
+        real_start = date.fromisoformat(self.first_real_date)
+
+        def between(start, end):
+            return [row for row in self.rows if str(start) <= row[0] < str(end)]
+
+        first_real = self.per_day(between(real_start, real_start + timedelta(days=14)))
+        last_synthetic = self.per_day(between(real_start - timedelta(days=14), real_start))
+        self.assertLess(abs(math.log(last_synthetic / first_real)), math.log(2))
+
+        year_start = date.fromisoformat(self.rows[0][0])
+        first_synthetic = self.per_day(between(year_start, year_start + timedelta(days=14)))
+        last_real = self.per_day(between(self.NOW.date() - timedelta(days=13), self.NOW.date()))
+        self.assertLess(abs(math.log(first_synthetic / last_real)), math.log(2))
 
 
 class SeedTestDataTests(unittest.TestCase):
