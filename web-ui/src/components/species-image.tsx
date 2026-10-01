@@ -1,5 +1,9 @@
 import { Bird } from "lucide-react";
 
+import {
+	inIllustrationSet,
+	useIllustrationSet,
+} from "~/lib/illustration-set.ts";
 import { cn } from "~/lib/utils.ts";
 
 /**
@@ -22,10 +26,11 @@ export function SpeciesImage({
 	title?: string;
 	loading?: "lazy" | "eager";
 }) {
-	if (imageUrl) {
+	const src = inIllustrationSet(imageUrl, useIllustrationSet());
+	if (src) {
 		return (
 			<img
-				src={imageUrl}
+				src={src}
 				alt={alt}
 				title={title}
 				loading={loading}
