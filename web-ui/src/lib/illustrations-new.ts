@@ -76,6 +76,7 @@ export const NEW_SLUGS = new Set([
 	"troglodytes-aedon",
 	"turdus-migratorius",
 	"tyrannus-tyrannus",
+	"vireo-flavifrons",
 	"zenaida-macroura",
 	"zonotrichia-albicollis",
 	"zonotrichia-leucophrys",

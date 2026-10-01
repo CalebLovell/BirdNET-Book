@@ -80,3 +80,4 @@ Each is cropped to the bird.
 | `falco-sparverius.jpg` | Male American Kestrel, National Park Service ([Wikimedia Commons](https://commons.wikimedia.org/wiki/File:American_Kestrel_(f8e587ca-155d-451f-6732-536e54c5c2f0).jpg)) | Public domain |
 | `sturnella-magna.jpg` | Eastern Meadowlark, Nosferattus ([Wikimedia Commons](https://commons.wikimedia.org/wiki/File:Eastern_Meadowlark_Sturnella_magna_02.jpg)) | CC0 |
 | `coccyzus-americanus.jpg` | Yellow-billed Cuckoo, Alan Schmierer ([Wikimedia Commons](https://commons.wikimedia.org/wiki/File:CUCKOO,_YELLOW-BILLED_(6-30-12)_with_both_cormorants,_patagonia_lake,_scc,_az_-03_(7473039520).jpg)) | CC0 |
+| `vireo-flavifrons.jpg` | Yellow-throated Vireo, crop of Louis Agassiz Fuertes's plate 91 in *Birds of New York* (1910–14), no CC0/PD photo of a live bird exists ([Wikimedia Commons](https://commons.wikimedia.org/wiki/File:Birds_of_New_York_(Plate_91)_(6901495142).jpg)) | Public domain |
