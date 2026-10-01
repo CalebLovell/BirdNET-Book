@@ -531,10 +531,12 @@ function SpeciesCard({ card }: { card: LifeListCard }) {
 			<div className="flex flex-col gap-1">
 				<div className="flex items-baseline gap-1">
 					<div className="tabular-data font-semibold text-foreground text-lg leading-none">
-						{card.allTimeCount}
+						{card.allTimeCount.toLocaleString()}
 					</div>
+					{/* Not "total": that word belongs to the station's own figure
+					    above the grid, which this card's count is one share of. */}
 					<div className="text-[10px] text-muted-foreground/70 leading-none">
-						total recordings
+						{card.allTimeCount === 1 ? "detection" : "detections"}
 					</div>
 				</div>
 			</div>
