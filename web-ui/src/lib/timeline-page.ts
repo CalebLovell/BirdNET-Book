@@ -5,6 +5,8 @@ import { db } from "~/db/index.ts";
 import { detections } from "~/db/schema.ts";
 import { dayIdFor } from "~/lib/day.ts";
 import { classifyDay } from "~/lib/day-range.ts";
+import { readStationLocation } from "~/lib/station-location.server.ts";
+import { sampleDays, type WindowSun, windowSun } from "~/lib/sun-times.ts";
 import {
 	loadTimelineData,
 	loadTimelineNav,
@@ -41,6 +43,9 @@ export type TimelineBody =
 			kind: "rows";
 			rows: TimelineRow[];
 			highlights: TimelineData["highlights"];
+			/** The window's average sunrise and sunset, for the heat map's
+			    sunrise start -- or why there isn't one. */
+			sun: WindowSun;
 	  }
 	| { kind: "day-out-of-range"; result: DayOutOfRange };
 
@@ -73,9 +78,36 @@ export const getTimelinePage = createServerFn({ method: "GET" })
 			}
 		}
 
-		const { rows, highlights, ...nav } = await loadTimelineData({
-			period,
-			anchor,
-		});
-		return { ...nav, body: { kind: "rows", rows, highlights } };
+		const [{ rows, highlights, ...nav }, location] = await Promise.all([
+			loadTimelineData({ period, anchor }),
+			readStationLocation(),
+		]);
+		const sun = location
+			? windowSun(
+					sunDays(nav),
+					location.latitude,
+					location.longitude,
+					location.timezone,
+				)
+			: ({ available: false, reason: "no-location" } as const);
+		return { ...nav, body: { kind: "rows", rows, highlights, sun } };
 	});
+
+/**
+ * The days whose sunrise the window averages: the window itself, stopping at
+ * today so a month still running isn't pulled toward the weeks it hasn't had
+ * -- unless the whole window is still ahead, when its own days are all there
+ * is. All Time spans the station's history.
+ */
+function sunDays(nav: TimelineNav): string[] {
+	if (nav.window) {
+		const today = dayIdFor(new Date());
+		const end = nav.window.end > today ? today : nav.window.end;
+		return end >= nav.window.start
+			? sampleDays(nav.window.start, end)
+			: sampleDays(nav.window.start, nav.window.end);
+	}
+	return nav.stationRange
+		? sampleDays(nav.stationRange.first, nav.stationRange.last)
+		: [];
+}
