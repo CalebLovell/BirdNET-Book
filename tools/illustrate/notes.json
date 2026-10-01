@@ -26,6 +26,7 @@
   "poecile-carolinensis": { "note": "Black cap and neat black bib, white cheeks, grey wings with little white edging, pale grey-buff flanks. Not Black-capped Chickadee." },
   "regulus-satrapa": { "note": "Tiny: black-and-white striped face with a yellow crown stripe bordered in black (orange center in males)." },
   "sciurus-carolinensis": { "kind": "mammal", "note": "Grey coat with a brownish wash, white belly, large bushy grey tail fringed with white." },
+  "spinus-tristis": { "note": "Breeding male: brilliant lemon-yellow body, underparts included -- no peach or buff wash; only the undertail coverts are white. Neat black cap on the forehead only, wings jet black throughout -- in flight, show the bird from slightly above so the black upper surfaces of BOTH wings face the viewer, never a pale or grey underwing -- with bold white wing bars and white feather edges, black tail with white inner webs. Small conical pinkish-orange bill." },
   "spinus-pinus": { "note": "Heavily brown-streaked all over, thin sharply pointed bill, yellow flashes in the wing and tail." },
   "tamias-striatus": { "kind": "mammal", "note": "Small ground squirrel: bold black and white stripes down the back and across the face, rusty rump, short furred tail." },
   "tringa-flavipes": { "note": "Bright yellow legs; thin, straight bill about as long as the head. Not Greater Yellowlegs.", "perch": "ground" },
