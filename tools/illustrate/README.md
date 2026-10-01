@@ -19,7 +19,10 @@ setx GEMINI_API_KEY "..."    # once; open a new terminal afterwards
 ```
 
 Gemini's free tier allows no image generation, so the key's project needs
-billing on. Each painting costs a few cents. The first `cutout` downloads the
+billing on. A painting costs about $0.07: `gemini-3.1-flash-image` at 1K,
+which is plenty for the 800px canvas. A finished bird usually takes 3–4
+paintings. Flash Lite and 2.5 Flash were tried on a House Finch: cheaper,
+but flatter and less accurate. The first `cutout` downloads the
 background-removal model, about 1 GB.
 
 ## One bird at a time

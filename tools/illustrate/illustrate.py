@@ -298,7 +298,7 @@ def with_retries(call, what: str):
             time.sleep(wait)
 
 
-def paint(client, prompt: str, images: list[tuple[str, Path]], model: str) -> bytes:
+def paint(client, prompt: str, images: list[tuple[str, Path]], model: str, resolution: str = '1K') -> bytes:
     request = [{'type': 'text', 'text': prompt}]
     for label, path in images:
         request += [{'type': 'text', 'text': label}, image_input(path)]
@@ -307,7 +307,7 @@ def paint(client, prompt: str, images: list[tuple[str, Path]], model: str) -> by
         input=request,
         response_format={
             # JPEG is the only format offered; it's kept as PNG from here on.
-            'type': 'image', 'mime_type': 'image/jpeg', 'aspect_ratio': '1:1', 'image_size': '2K',
+            'type': 'image', 'mime_type': 'image/jpeg', 'aspect_ratio': '1:1', 'image_size': resolution,
         },
     ), 'painting')
     if not getattr(interaction, 'output_image', None):
@@ -450,7 +450,10 @@ def cmd_generate(args):
         out = next_attempt_path(sp['slug'], pose)
         print(f"[{n}/{len(todo)}] {sp['com_name']}, {pose} -> {out.relative_to(HERE)}")
         try:
-            image = paint(client, build_prompt(sp, pose, sections), attachments(sp, pose, picks), args.model)
+            image = paint(
+                client, build_prompt(sp, pose, sections), attachments(sp, pose, picks),
+                args.model, args.resolution,
+            )
         except Exception as error:
             print(f'  skipped: {error}')
             continue
@@ -716,6 +719,7 @@ def main(argv=None):
     generate.add_argument('--pose', choices=POSES, action='append', help='only this pose (repeatable)')
     generate.add_argument('--again', action='store_true', help='paint another attempt even if one is fine')
     generate.add_argument('--model', default=PAINT_MODEL)
+    generate.add_argument('--resolution', default='1K', choices=['1K', '2K'], help='size of the painting (1K is plenty for the 800px canvas)')
     generate.add_argument('--dry-run', action='store_true', help='show the prompts, call nothing')
     generate.set_defaults(run=cmd_generate)
 

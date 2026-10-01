@@ -12,6 +12,7 @@ export type IllustrationSet = "old" | "new";
 const NEW_SLUGS = new Set([
 	"cardinalis-cardinalis",
 	"cyanocitta-cristata",
+	"haemorhous-mexicanus",
 	"spinus-tristis",
 ]);
 
