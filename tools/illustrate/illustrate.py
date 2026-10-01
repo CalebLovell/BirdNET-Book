@@ -55,8 +55,9 @@ PICKS_PATH = WORK_DIR / 'picks.json'
 # The new set ships beside the bundled one; the sidebar's Old/New switch
 # (web-ui/src/lib/illustration-set.ts) shows it for the species in NEW_SLUGS.
 PUBLIC_DIR = REPO_ROOT / 'web-ui' / 'public' / 'illustrations-new'
-SLUGS_TS = REPO_ROOT / 'web-ui' / 'src' / 'lib' / 'illustration-set.ts'
+SLUGS_TS = REPO_ROOT / 'web-ui' / 'src' / 'lib' / 'illustrations-new.ts'
 SLUGS_NAME = 'NEW_SLUGS'
+FLIGHT_SLUGS_NAME = 'NEW_FLIGHT_SLUGS'
 
 PAINT_MODEL = os.environ.get('ILLUSTRATE_PAINT_MODEL', 'gemini-3.1-flash-image')
 VERIFY_MODEL = os.environ.get('ILLUSTRATE_VERIFY_MODEL', 'gemini-3.8-flash')
@@ -436,6 +437,14 @@ def cmd_generate(args):
         print('Nothing to paint: every pose has an attempt that is unverified or passed. '
               'Use --again to paint more.')
         return
+    # Without a photo the model paints the species from memory and drifts
+    # toward a generic bird, so every species needs one first.
+    missing = sorted({sp['slug'] for sp, _ in todo if not anatomy_reference(sp['slug'])})
+    if missing and not args.no_reference:
+        sys.exit(
+            f'No reference photo for: {", ".join(missing)}. Add references/<slug>.jpg '
+            '(public domain or CC0, logged in references/SOURCES.md) first.'
+        )
     print(f'{len(todo)} paintings to make with {args.model}.')
     if args.dry_run:
         for sp, pose in todo[:3]:
@@ -670,23 +679,29 @@ def rewrite_slugs(source: str, slugs: list[str], name: str = SLUGS_NAME) -> str:
     `slugs`: on one line while it fits, one per line after that, as Biome
     would format it."""
     quoted = [f'"{slug}"' for slug in sorted(slugs)]
-    one_line = f'const {name} = new Set([{", ".join(quoted)}]);'
-    if len(one_line) <= 80:
-        listed = one_line
-    else:
-        listed = f'const {name} = new Set([\n' + ''.join(f'\t{q},\n' for q in quoted) + ']);'
+
+    def listed(match):
+        start = f'{match.group(1) or ""}const {name} = new Set(['
+        one_line = f'{start}{", ".join(quoted)}]);'
+        if len(one_line) <= 80:
+            return one_line
+        return start + '\n' + ''.join(f'\t{q},\n' for q in quoted) + ']);'
+
     new, count = re.subn(
-        rf'const {name} = new Set\(\[.*?\]\);', lambda _: listed, source, flags=re.DOTALL,
+        rf'^(export )?const {name} = new Set\(\[.*?\]\);', listed, source,
+        flags=re.DOTALL | re.MULTILINE,
     )
     if count != 1:
         raise ValueError(f'{name} not found')
     return new
 
 
-def complete_slugs(folder: Path) -> list[str]:
-    """Slugs with both poses in `folder`; the UI assumes a flight pose exists."""
+def installed_slugs(folder: Path) -> tuple[list[str], list[str]]:
+    """Species with a perched pose in `folder`, and those that also have a
+    flight pose; the web UI shows the perched one in place of a missing flight."""
     names = {p.stem for p in folder.glob('*.png')}
-    return sorted(n for n in names if not n.endswith('-2') and f'{n}-2' in names)
+    perched = sorted(n for n in names if not n.endswith('-2'))
+    return perched, [n for n in perched if f'{n}-2' in names]
 
 
 def cmd_install(args):
@@ -697,14 +712,11 @@ def cmd_install(args):
             PUBLIC_DIR.mkdir(parents=True, exist_ok=True)
             shutil.copy2(path, PUBLIC_DIR / path.name)
             copied += 1
-    slugs = complete_slugs(PUBLIC_DIR)
-    SLUGS_TS.write_text(
-        rewrite_slugs(SLUGS_TS.read_text(encoding='utf-8'), slugs), encoding='utf-8', newline='\n',
-    )
-    half = sorted({p.stem.removesuffix('-2') for p in PUBLIC_DIR.glob('*.png')} - set(slugs))
-    print(f'Copied {copied} files. {len(slugs)} species listed in {SLUGS_TS.name}.')
-    if half:
-        print(f'Not listed, only one pose: {", ".join(half)}')
+    perched, flight = installed_slugs(PUBLIC_DIR)
+    source = SLUGS_TS.read_text(encoding='utf-8')
+    source = rewrite_slugs(rewrite_slugs(source, perched), flight, FLIGHT_SLUGS_NAME)
+    SLUGS_TS.write_text(source, encoding='utf-8', newline='\n')
+    print(f'Copied {copied} files. {len(perched)} species in {SLUGS_TS.name}, {len(flight)} with a flight pose.')
 
 
 def main(argv=None):
@@ -716,11 +728,17 @@ def main(argv=None):
 
     generate = commands.add_parser('generate', help='paint poses that need it')
     generate.add_argument('slugs', nargs='*')
-    generate.add_argument('--pose', choices=POSES, action='append', help='only this pose (repeatable)')
+    generate.add_argument(
+        '--pose', choices=POSES, action='append',
+        help='pose to paint (repeatable; default: perched only, flight poses are opt-in)',
+    )
     generate.add_argument('--again', action='store_true', help='paint another attempt even if one is fine')
     generate.add_argument('--model', default=PAINT_MODEL)
     generate.add_argument('--resolution', default='1K', choices=['1K', '2K'], help='size of the painting (1K is plenty for the 800px canvas)')
     generate.add_argument('--dry-run', action='store_true', help='show the prompts, call nothing')
+    generate.add_argument(
+        '--no-reference', action='store_true', help='paint even without a reference photo',
+    )
     generate.set_defaults(run=cmd_generate)
 
     verify = commands.add_parser('verify', help='blind-check unverified attempts')
@@ -755,7 +773,7 @@ def main(argv=None):
 
     args = parser.parse_args(argv)
     if args.command == 'generate':
-        args.pose = args.pose or list(POSES)
+        args.pose = args.pose or ['perched']
     args.run(args)
 
 

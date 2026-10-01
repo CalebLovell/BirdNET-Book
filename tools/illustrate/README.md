@@ -8,8 +8,13 @@ own prompt and public-domain style plates.
 
 New illustrations ship in `web-ui/public/illustrations-new/`, next to the
 bundled set. The sidebar's **Illustrations: Old / New** switch shows them, for
-the species listed in `NEW_SLUGS` (`web-ui/src/lib/illustration-set.ts`).
-`install` keeps that list up to date.
+the species listed in `web-ui/src/lib/illustrations-new.ts`: `NEW_SLUGS` (a
+perched pose) and `NEW_FLIGHT_SLUGS` (a flight pose too). `install` keeps both
+up to date.
+
+**Flight poses are on hold to halve the cost:** `generate` paints the perched
+pose only unless given `--pose flight`. A species without one shows its
+perched pose in the large hero slots.
 
 ## Setup
 
@@ -27,16 +32,25 @@ background-removal model, about 1 GB.
 
 ## One bird at a time
 
+Batches work the same way: give several slugs to each command, and review
+them side by side before installing.
+
 From `tools/illustrate`, with `<slug>` from `python illustrate.py species`
 (for example `cardinalis-cardinalis`):
 
-1. `python illustrate.py generate <slug> --pose perched` paints one perched
+0. Add a reference photo as `references/<slug>.jpg`: public domain or CC0
+   only (Wikimedia Commons filtered by licence; US Fish & Wildlife and
+   National Park Service photos are public domain). Pick a clear side view
+   showing every field mark, crop it to the bird, and log it in
+   `references/SOURCES.md`. `generate` refuses a species without one:
+   from memory alone the model drifts toward a generic bird.
+1. `python illustrate.py generate <slug>` paints one perched
    attempt into `work/<slug>/perched-NN.png`. Look at it. To paint another,
    add `--again`.
 2. `python illustrate.py pick <slug> perched NN` picks the one you like.
-3. `python illustrate.py generate <slug> --pose flight` paints the flight
-   pose from the picked perched one, so the pair matches. Then pick it with
-   `pick <slug> flight NN`.
+3. (Optional, on hold for now.) `python illustrate.py generate <slug> --pose
+   flight` paints the flight pose from the picked perched one, so the pair
+   matches. Then pick it with `pick <slug> flight NN`.
 4. `python illustrate.py cutout <slug>` removes the paper. It also trims
    the twig to a stub under the feet, and centres the bird on an 800x800
    canvas. Colour stays as painted unless the species has a `"colour"` in
@@ -45,8 +59,8 @@ From `tools/illustrate`, with `<slug>` from `python illustrate.py species`
 5. Check the cutouts. Stray bits can be erased by hand in the `work/cut`
    files. Later `cutout` runs leave an edited file alone unless given
    `--force`.
-6. `python illustrate.py install <slug>` copies the pair into the web UI and
-   adds the species to `NEW_SLUGS`. Then flip the sidebar switch to New to
+6. `python illustrate.py install <slug>` copies the cutouts into the web UI
+   and lists the species in `illustrations-new.ts`. Then flip the sidebar switch to New to
    see it on the site.
 
 `verify` (a blind check by a second Gemini model) and `review` (an HTML
@@ -69,8 +83,9 @@ They're optional when going one bird at a time.
     rather than on a twig.
   - `"colour"`: saturation at cutout, for a species that comes back too
     vivid. 1 is as painted.
-- **`references/<slug>.jpg`** is optional: a photo of one species for
-  anatomy. Only use photos you're free to use.
+- **`references/<slug>.jpg`** is required: a public-domain or CC0 photo of
+  the species, sent with every painting of it for anatomy and markings.
+  Sources are logged in `references/SOURCES.md`.
 
 ## What we learned getting the style right
 

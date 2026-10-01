@@ -1,9 +1,10 @@
 import importlib.util
+import io
 import json
 import sqlite3
 import tempfile
 import unittest
-from contextlib import closing
+from contextlib import closing, redirect_stdout
 from pathlib import Path
 
 
@@ -233,14 +234,17 @@ class CanvasTest(unittest.TestCase):
 
 
 class InstallTest(unittest.TestCase):
-    def test_rewrites_the_web_uis_slug_list(self):
-        """Catches the regex silently missing the real illustration-set.ts."""
+    def test_rewrites_both_of_the_web_uis_slug_lists(self):
+        """Catches the regex missing the real illustrations-new.ts, or one list
+        overwriting the other."""
         source = illustrate.SLUGS_TS.read_text(encoding="utf-8")
         rewritten = illustrate.rewrite_slugs(source, ["zenaida-macroura", "canis-latrans"])
+        rewritten = illustrate.rewrite_slugs(rewritten, ["canis-latrans"], "NEW_FLIGHT_SLUGS")
         self.assertIn(
-            'const NEW_SLUGS = new Set(["canis-latrans", "zenaida-macroura"]);', rewritten
+            'export const NEW_SLUGS = new Set(["canis-latrans", "zenaida-macroura"]);',
+            rewritten,
         )
-        self.assertEqual(rewritten.count("NEW_SLUGS"), source.count("NEW_SLUGS"))
+        self.assertIn('export const NEW_FLIGHT_SLUGS = new Set(["canis-latrans"]);', rewritten)
 
     def test_a_long_slug_list_goes_one_per_line(self):
         """Catches an install leaving a line Biome's formatter would reject."""
@@ -250,12 +254,26 @@ class InstallTest(unittest.TestCase):
         self.assertTrue(rewritten.startswith('const NEW_SLUGS = new Set([\n\t"genus-species0",\n'))
         self.assertTrue(rewritten.endswith('\t"genus-species5",\n]);\n'))
 
-    def test_only_species_with_both_poses_are_listed(self):
+    def test_flight_poses_are_listed_apart_from_perched_ones(self):
         """Catches a hero slot pointing at a flight pose that doesn't exist."""
         with tempfile.TemporaryDirectory() as tmp:
             for name in ("a-b.png", "a-b-2.png", "c-d.png", "e-f-2.png"):
                 (Path(tmp) / name).write_bytes(b"")
-            self.assertEqual(illustrate.complete_slugs(Path(tmp)), ["a-b"])
+            self.assertEqual(illustrate.installed_slugs(Path(tmp)), (["a-b", "c-d"], ["a-b"]))
+
+    def test_generate_paints_perched_only_by_default(self):
+        """Catches flight poses, which double the cost, being painted unasked."""
+        with tempfile.TemporaryDirectory() as tmp:
+            db = Path(tmp) / "birds.db"
+            with closing(sqlite3.connect(db)) as con:
+                con.execute("CREATE TABLE detections (Sci_Name TEXT, Com_Name TEXT)")
+                con.execute("INSERT INTO detections VALUES ('Sitta carolinensis', 'White-breasted Nuthatch')")
+                con.commit()
+            out = io.StringIO()
+            with redirect_stdout(out):
+                illustrate.main(["--db", str(db), "generate", "sitta-carolinensis", "--again", "--dry-run"])
+        self.assertIn("1 paintings to make", out.getvalue())
+        self.assertNotIn("flight ---", out.getvalue())
 
 
 class SpeciesTest(unittest.TestCase):
@@ -273,6 +291,18 @@ class SpeciesTest(unittest.TestCase):
         self.assertEqual([s["slug"] for s in found], ["zenaida-macroura", "canis-latrans"])
         self.assertEqual([s["kind"] for s in found], ["bird", "mammal"])
         self.assertEqual([s["colour"] for s in found], [None, None])
+
+    def test_painting_needs_a_reference_photo(self):
+        """Catches a species being painted from memory, which drifts off the real bird."""
+        with tempfile.TemporaryDirectory() as tmp:
+            db = Path(tmp) / "birds.db"
+            with closing(sqlite3.connect(db)) as con:
+                con.execute("CREATE TABLE detections (Sci_Name TEXT, Com_Name TEXT)")
+                con.execute("INSERT INTO detections VALUES ('Genus nophoto', 'No Photo Bird')")
+                con.commit()
+            with self.assertRaises(SystemExit) as stopped:
+                illustrate.main(["--db", str(db), "generate", "genus-nophoto", "--dry-run"])
+        self.assertIn("No reference photo for: genus-nophoto", str(stopped.exception))
 
     def test_a_species_can_keep_its_own_colour(self):
         """Catches the Blue Jay losing the 0.75 toning it was approved at."""

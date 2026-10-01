@@ -1,3 +1,5 @@
+import { NEW_SLUGS } from "~/lib/illustrations-new.ts";
+
 // Locally-bundled kachō-e style illustrations pulled from Twarner491/AvianVisitors
 // (see public/illustrations/ATTRIBUTION.md) for the species detected in this
 // project's own birds.db. A species without one shows the generic bird glyph
@@ -42,11 +44,21 @@ function slugify(sciName: string): string {
 	return sciName.trim().toLowerCase().replaceAll(/\s+/g, "-");
 }
 
+/** Whether the bundled set has this species. */
+export function hasBundledIllustration(slug: string): boolean {
+	return AVAILABLE_SLUGS.has(slug);
+}
+
+/**
+ * The bundled URL for the species, also handed out for a species only the new
+ * set has: `inIllustrationSet` (applied at render) swaps it for the new file,
+ * or drops it again when the bundled set is showing.
+ */
 export function illustrationUrlFor(
 	sciName: string,
 	pose: IllustrationPose = "perched",
 ): string | null {
 	const slug = slugify(sciName);
-	if (!AVAILABLE_SLUGS.has(slug)) return null;
+	if (!AVAILABLE_SLUGS.has(slug) && !NEW_SLUGS.has(slug)) return null;
 	return `/illustrations/${slug}${pose === "flight" ? "-2" : ""}.png`;
 }

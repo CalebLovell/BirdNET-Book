@@ -1,5 +1,8 @@
 import { useSyncExternalStore } from "react";
 
+import { hasBundledIllustration } from "~/lib/illustrations.ts";
+import { NEW_FLIGHT_SLUGS, NEW_SLUGS } from "~/lib/illustrations-new.ts";
+
 /**
  * A side-by-side switch between the bundled illustrations and the new set
  * being painted with tools/illustrate, kept per browser. The loaders always
@@ -7,14 +10,6 @@ import { useSyncExternalStore } from "react";
  * species the new set already has, so no data path needs to know.
  */
 export type IllustrationSet = "old" | "new";
-
-// Species whose new pair (perched + flight) is in public/illustrations-new/.
-const NEW_SLUGS = new Set([
-	"cardinalis-cardinalis",
-	"cyanocitta-cristata",
-	"haemorhous-mexicanus",
-	"spinus-tristis",
-]);
 
 const STORAGE_KEY = "birdnet:illustration-set";
 const listeners = new Set<() => void>();
@@ -57,13 +52,21 @@ export function useIllustrationSet(): IllustrationSet {
 
 const BUNDLED = /^\/illustrations\/([a-z-]+?)(-2)?\.png$/;
 
-/** `url` in the chosen set: the new file where one exists, else unchanged. */
+/**
+ * `url` in the chosen set: the new file where the new set has the species
+ * (its perched pose standing in for a flight pose not painted yet), the
+ * bundled one otherwise, and none for a species only the other set has.
+ */
 export function inIllustrationSet(
 	url: string | null,
 	set: IllustrationSet,
 ): string | null {
-	if (set === "old" || !url) return url;
-	const match = BUNDLED.exec(url);
-	if (!match || !NEW_SLUGS.has(match[1])) return url;
-	return `/illustrations-new/${match[1]}${match[2] ?? ""}.png`;
+	const match = url ? BUNDLED.exec(url) : null;
+	if (!match) return url;
+	const [, slug, flight] = match;
+	if (set === "new" && NEW_SLUGS.has(slug)) {
+		const pose = flight && NEW_FLIGHT_SLUGS.has(slug) ? "-2" : "";
+		return `/illustrations-new/${slug}${pose}.png`;
+	}
+	return hasBundledIllustration(slug) ? url : null;
 }
