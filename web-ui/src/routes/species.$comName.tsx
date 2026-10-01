@@ -316,14 +316,17 @@ function SpeciesDetailView({ detail }: { detail: SpeciesDetail }) {
 
 	return (
 		<TooltipProvider>
-			<div className="page-wrap pb-4">
+			<div className="@container/species page-wrap pb-4">
 				<SummaryCard detail={detail} offsetMs={offsetMs} />
 
-				{/* One column below lg, and `minmax(0,1fr)` rather than the implicit
-				    `auto` track: an auto track sizes to the heat map's full-year
-				    min-content (~900px), which pushed every card off a phone screen
-				    instead of letting the heat map scroll inside its own card. */}
-				<div className="mt-(--page-gap) grid grid-cols-[minmax(0,1fr)] items-stretch gap-(--page-gap) lg:grid-cols-[minmax(0,max-content)_minmax(20rem,1fr)]">
+				{/* Two columns only once the page is wide enough (80rem) for a full
+				    year of heat map (~920px card) beside the 20rem column; any
+				    narrower and the side column squeezes the heat map into a
+				    scroller, so stack instead. One column uses `minmax(0,1fr)`
+				    rather than the implicit `auto` track: an auto track sizes to the
+				    heat map's min-content, which pushed every card off a phone
+				    screen instead of letting the heat map scroll inside its card. */}
+				<div className="mt-(--page-gap) grid @min-[80rem]/species:grid-cols-[minmax(0,max-content)_minmax(20rem,1fr)] grid-cols-[minmax(0,1fr)] items-stretch gap-(--page-gap)">
 					<section
 						aria-label="Detection history"
 						className="feature-card overflow-hidden rounded-md p-4"
@@ -357,10 +360,13 @@ function SpeciesDetailView({ detail }: { detail: SpeciesDetail }) {
 							>
 								<div className="w-max">
 									<div className="mb-1 flex h-3 gap-1 leading-3">
-										{weeks.map((week) => (
+										{/* A label in the last column hangs leftwards over the
+										    empty cells before it; hanging right would widen the
+										    scroller past the squares and force a scrollbar. */}
+										{weeks.map((week, index) => (
 											<div
 												key={`month-${week.days[0].date.toISOString()}`}
-												className="w-3 shrink-0 whitespace-nowrap text-[10px] text-muted-foreground"
+												className={`flex w-3 shrink-0 whitespace-nowrap text-[10px] text-muted-foreground ${index === weeks.length - 1 ? "justify-end" : ""}`}
 											>
 												{week.monthLabel}
 											</div>
@@ -406,15 +412,15 @@ function SpeciesDetailView({ detail }: { detail: SpeciesDetail }) {
 					    charts line up on the left and Best recording and the visit log
 					    line up on the right. min-w-0 lets the charts conform to the
 					    left track rather than widen it. */}
-					<div className="grid min-w-0 gap-(--page-gap) lg:grid-rows-2">
+					<div className="grid min-w-0 @min-[80rem]/species:grid-rows-2 gap-(--page-gap)">
 						<DetectionsByHourCard
 							activity={detail.hourActivity}
-							className="lg:min-h-0"
+							className="@min-[80rem]/species:min-h-0"
 						/>
 
 						<DetectionsByMonthCard
 							trend={detail.detectionTrend}
-							className="lg:min-h-0"
+							className="@min-[80rem]/species:min-h-0"
 						/>
 					</div>
 
