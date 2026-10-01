@@ -10,25 +10,39 @@ import type { CurrentBird } from "~/lib/now.ts";
 import { formatTimeAgo } from "~/lib/time-ago.ts";
 
 /**
- * The page's masthead: the most recent detection as its portrait, and the
- * station's last 24 hours as its figures. The bird is what the card looks like;
- * the window is what it is about, so the figures stay put as detections come and
- * go beneath them. There is deliberately no "singing now" / "quiet" styling: a
- * station that last heard something five seconds ago and one that last heard
- * something five days ago get the same card, and the relative time is left to
- * say which it is.
+ * The page's masthead: the most recent detection of the last 24 hours as its
+ * portrait. Like everything else on the Live page it is bounded to that window,
+ * so once a day passes without a bird the card goes quiet rather than holding
+ * up yesterday's news.
  */
 export function CurrentBirdCard({
 	current,
+	hasAnyDetections,
 	offsetMs,
 	flash,
 }: {
 	current: CurrentBird | null;
+	hasAnyDetections: boolean;
 	offsetMs: number;
 	flash: boolean;
 }) {
-	// The only state worth distinguishing: a station whose database is still
-	// empty, where there is no detection to render a card from at all.
+	if (!current && hasAnyDetections) {
+		return (
+			<HeroCardShell label="Last 24 hours" portrait={<NestPortrait />}>
+				<CenteredBody>
+					<h1 className="display-title font-bold text-2xl sm:text-3xl">
+						All quiet
+					</h1>
+					<p className="text-muted-foreground">
+						Nothing heard in the last 24 hours. New detections will appear here
+						on their own.
+					</p>
+				</CenteredBody>
+			</HeroCardShell>
+		);
+	}
+
+	// A station whose database is still empty.
 	if (!current) {
 		return (
 			<HeroCardShell label="Station status" portrait={<NestPortrait />}>

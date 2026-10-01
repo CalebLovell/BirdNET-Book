@@ -73,8 +73,8 @@ function Live() {
 	// Follows the poll rather than the loader, so the tab keeps pace with the hero
 	// card as new birds arrive. It reuses the hero's own image, whatever that
 	// turned out to be, so the two never disagree and the browser fetches once.
-	// A null here means nothing has ever been heard, and the nest is what the
-	// hero card is showing too.
+	// A null here means nothing was heard in the last 24 hours, and the nest is
+	// what the hero card is showing too.
 	useFavicon(snapshot.current?.imageUrl ?? null);
 
 	// The hero is left out of the log, so each tracks its own arrivals: a new
@@ -88,6 +88,7 @@ function Live() {
 		<div className="page-wrap py-4">
 			<CurrentBirdCard
 				current={snapshot.current}
+				hasAnyDetections={snapshot.hasAnyDetections}
 				offsetMs={offsetMs}
 				flash={heroIsNew}
 			/>

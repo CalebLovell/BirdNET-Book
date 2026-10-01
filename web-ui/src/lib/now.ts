@@ -72,7 +72,12 @@ export type RecentVisit = {
 export type NowSnapshot = {
 	/** When the server built this snapshot, as "YYYY-MM-DD HH:MM:SS" local. */
 	generatedAt: string;
+	/** The newest detection of the last 24 hours, or null when the window is
+	    empty -- the page is about the last day, and an older bird is not news. */
 	current: CurrentBird | null;
+	/** Whether the station has ever recorded anything, so an empty window can
+	    tell a quiet day from a station that has yet to hear its first bird. */
+	hasAnyDetections: boolean;
 	summary: NowSummary;
 	/** The window's visits, most recently heard first, less the one the hero
 	    is showing: each bird sits in one place at a time, and moves down into
@@ -128,9 +133,8 @@ async function buildCurrentBird(
 			})
 			.from(detections)
 			.where(and(isLast24h, isSameSpecies)),
-		// Confidence is averaged over the species' whole history, not the 24-hour
-		// window: the hero shows the most recent detection however old it is, and
-		// a window-scoped average reads as "--" for anything heard before it.
+		// Confidence is averaged over the species' whole history rather than the
+		// window, so one lone detection today doesn't stand in for the species.
 		db
 			.select({
 				allTimeCount: count(),
@@ -177,14 +181,23 @@ const detectionColumns = {
 	fileName: detections.File_Name,
 };
 
-/** The newest detection the station has, whatever its age. */
+/** The newest detection of the last 24 hours, if there was one. */
 async function getLatestRow(): Promise<LatestRow | undefined> {
 	const [latest] = await db
 		.select(detectionColumns)
 		.from(detections)
+		.where(isLast24h)
 		.orderBy(desc(detections.Date), desc(detections.Time))
 		.limit(1);
 	return latest;
+}
+
+async function hasAnyDetections(): Promise<boolean> {
+	const [row] = await db
+		.select({ rowId: sql<number>`rowid` })
+		.from(detections)
+		.limit(1);
+	return row !== undefined;
 }
 
 /**
@@ -244,18 +257,19 @@ export const getNowSnapshot = createServerFn({ method: "GET" }).handler(
 		const generatedAtDate = new Date();
 		const generatedAtMs = generatedAtDate.getTime();
 
-		// The one query deliberately NOT bounded to 24 hours: the hero card
-		// names the most recent detection whatever its age, even if that was
-		// days ago. Every other figure on the page respects the window.
+		// Everything, the hero included, is bounded to the last 24 hours: a bird
+		// heard two days ago leaves the page to its quiet state instead.
 		const latest = await getLatestRow();
-		const [current, window] = await Promise.all([
+		const [current, window, anyDetections] = await Promise.all([
 			latest ? buildCurrentBird(latest, generatedAtMs) : null,
 			getWindowVisits(latest ? detectionKey(latest) : undefined),
+			latest ? true : hasAnyDetections(),
 		]);
 
 		return {
 			generatedAt: localTimestamp(generatedAtDate),
 			current,
+			hasAnyDetections: anyDetections,
 			summary: { detections: window.rows.length },
 			recent: await buildRecentPage(window.log, 1, generatedAtMs),
 			recentTotal: window.log.length,
