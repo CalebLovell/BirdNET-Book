@@ -17,7 +17,7 @@ import { formatTimeAgo } from "~/lib/time-ago.ts";
  * is about -- not necessarily the one the app is installed on.
  */
 async function diskMetric(): Promise<HealthMetric> {
-	const base = { id: "disk", label: "Disk" } as const;
+	const base = { id: "disk", label: "Disk used" } as const;
 	try {
 		const stats = await statfs(extractedDir());
 		const total = stats.blocks * stats.bsize;
