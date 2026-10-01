@@ -272,6 +272,13 @@ class SpeciesTest(unittest.TestCase):
             found = illustrate.load_species(db)
         self.assertEqual([s["slug"] for s in found], ["zenaida-macroura", "canis-latrans"])
         self.assertEqual([s["kind"] for s in found], ["bird", "mammal"])
+        self.assertEqual([s["colour"] for s in found], [None, None])
+
+    def test_a_species_can_keep_its_own_colour(self):
+        """Catches the Blue Jay losing the 0.75 toning it was approved at."""
+        notes = illustrate.load_notes()
+        self.assertEqual(notes["cyanocitta-cristata"]["colour"], 0.75)
+        self.assertNotIn("colour", notes["cardinalis-cardinalis"])
 
 
 if __name__ == "__main__":

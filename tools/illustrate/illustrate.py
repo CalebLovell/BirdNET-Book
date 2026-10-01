@@ -66,9 +66,10 @@ POSES = ('perched', 'flight')
 POSE_SUFFIX = {'perched': '', 'flight': '-2'}
 IMAGE_TYPES = {'.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.webp': 'image/webp'}
 MAX_STYLE_PLATES = 3
-# The paintings come back a touch more saturated than the house style; every
-# cutout is toned down by the same amount so the set stays consistent.
-COLOUR = 0.75
+# Saturation applied at cutout, 1 = as painted. A species that comes back too
+# vivid gets its own "colour" in notes.json (the Blue Jay looked best at 0.75;
+# the same toning left the Northern Cardinal dark and brick-red).
+COLOUR = 1.0
 
 
 # --------------------------------------------------------------------------
@@ -106,6 +107,7 @@ def load_species(db_path: Path) -> list[dict]:
             # 'ground' for birds shown standing rather than on a twig.
             'perch': entry.get('perch', 'twig'),
             'note': entry.get('note', ''),
+            'colour': entry.get('colour'),
         })
     return species
 
@@ -654,7 +656,8 @@ def cmd_cutout(args):
                 session = new_session(args.model)
             print(f'{source.relative_to(HERE)} -> {out.relative_to(HERE)}')
             with Image.open(source) as image:
-                toned = ImageEnhance.Color(image.convert('RGB')).enhance(args.colour)
+                colour = args.colour if args.colour is not None else sp['colour'] or COLOUR
+                toned = ImageEnhance.Color(image.convert('RGB')).enhance(colour)
                 cut = keep_what_touches_the_animal(toned, remove(toned, session=session), pose)
             place_on_canvas(cut, pose, side=args.size).save(out, optimize=True)
 
@@ -736,7 +739,9 @@ def main(argv=None):
     cutout.add_argument('slugs', nargs='*')
     cutout.add_argument('--model', default='birefnet-general', help='rembg model')
     cutout.add_argument('--size', type=int, default=CANVAS, help='square canvas, in px')
-    cutout.add_argument('--colour', type=float, default=COLOUR, help='saturation, 1 = as painted')
+    cutout.add_argument(
+        '--colour', type=float, help='saturation, 1 = as painted (default: the species\' notes, else COLOUR)',
+    )
     cutout.add_argument('--force', action='store_true')
     cutout.set_defaults(run=cmd_cutout)
 

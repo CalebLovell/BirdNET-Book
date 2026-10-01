@@ -35,8 +35,9 @@ From `tools/illustrate`, with `<slug>` from `python illustrate.py species`
    pose from the picked perched one, so the pair matches. Then pick it with
    `pick <slug> flight NN`.
 4. `python illustrate.py cutout <slug>` removes the paper. It also trims
-   the twig to a stub under the feet, tones the colour down (`COLOUR`, 0.75),
-   and centres the bird on an 800x800 canvas. Results go to
+   the twig to a stub under the feet, and centres the bird on an 800x800
+   canvas. Colour stays as painted unless the species has a `"colour"` in
+   `notes.json`. Try one with `cutout <slug> --colour 0.75 --force`. Results go to
    `work/cut/<slug>.png` and `<slug>-2.png`.
 5. Check the cutouts. Stray bits can be erased by hand in the `work/cut`
    files. Later `cutout` runs leave an edited file alone unless given
@@ -63,6 +64,8 @@ They're optional when going one bird at a time.
   - `"kind": "mammal"`: for non-birds.
   - `"perch": "ground"`: for birds shown standing (waterbirds, turkey)
     rather than on a twig.
+  - `"colour"`: saturation at cutout, for a species that comes back too
+    vivid. 1 is as painted.
 - **`references/<slug>.jpg`** is optional: a photo of one species for
   anatomy. Only use photos you're free to use.
 
@@ -71,8 +74,9 @@ They're optional when going one bird at a time.
 - **Text alone gave generic, cartoonish birds.** The Koson style plates are
   what made the look.
 - **Colour wording is too coarse to tune.** One painting varies more than a
-  small change in the prompt. That's why the final saturation is a fixed
-  adjustment at cutout time (`COLOUR`).
+  small change in the prompt. So saturation is adjusted at cutout time, and
+  per species: one value didn't suit every bird (the Blue Jay wanted 0.75,
+  which made the Cardinal dark).
 - **Feet need something to grip.** Without a twig they float or splay. The
   model also paints long, forked branches however it's asked, so cutout
   keeps only the twig within `STUB_REACH` of the feet.

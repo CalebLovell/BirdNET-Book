@@ -9,7 +9,7 @@ import { useSyncExternalStore } from "react";
 export type IllustrationSet = "old" | "new";
 
 // Species whose new pair (perched + flight) is in public/illustrations-new/.
-const NEW_SLUGS = new Set(["cyanocitta-cristata"]);
+const NEW_SLUGS = new Set(["cardinalis-cardinalis", "cyanocitta-cristata"]);
 
 const STORAGE_KEY = "birdnet:illustration-set";
 const listeners = new Set<() => void>();
