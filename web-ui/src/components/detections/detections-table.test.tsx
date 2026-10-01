@@ -72,8 +72,10 @@ test("renders every detections column header semibold", () => {
 	const semiboldHeaders = markup.match(
 		/<th[^>]*class="[^"]*font-semibold[^"]*"[^>]*>/g,
 	);
-	assert.equal(semiboldHeaders?.length, 6);
+	// The selection checkbox, the row number, and the five data columns.
+	assert.equal(semiboldHeaders?.length, 7);
 	for (const label of [
+		"#",
 		"Recorded",
 		"Species",
 		"Scientific name",
@@ -143,11 +145,12 @@ test("keeps the complete table for containers wide enough to fit it", () => {
 		.filter((match) => /(?:^|\s)hidden(?:\s|$)/.test(match[1]))
 		.map((match) => [
 			match[2].match(
-				/>(Species|Scientific name|Recorded|Confidence|Recording)</,
+				/>(#|Species|Scientific name|Recorded|Confidence|Recording)</,
 			)?.[1],
 			match[1].match(/@min-\[(\d+)rem\]:block/)?.[1],
 		]);
 	assert.deepEqual(hiddenUntil, [
+		["#", "36"],
 		["Species", "36"],
 		["Scientific name", "54"],
 		["Recorded", "36"],
