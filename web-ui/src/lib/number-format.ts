@@ -15,3 +15,25 @@ export function ordinal(value: number): string {
 export function plural(count: number, noun: string): string {
 	return `${count.toLocaleString()} ${noun}${count === 1 ? "" : "s"}`;
 }
+
+/**
+ * A count squeezed to at most three digits and a suffix, for slots too small
+ * for the full figure: 999, then 1k, 1.2k, 12k, 300k, then 1m, 1.5m. One
+ * decimal only where it still fits in three characters, and never rounded up
+ * past the next unit (999,999 reads "999k", not "1000k").
+ */
+export function compactCount(count: number): string {
+	if (count < 1_000) return count.toString();
+	const units = [
+		{ size: 1_000_000_000, suffix: "b" },
+		{ size: 1_000_000, suffix: "m" },
+		{ size: 1_000, suffix: "k" },
+	];
+	for (const { size, suffix } of units) {
+		if (count < size) continue;
+		const value = count / size;
+		const shown = value < 10 ? Math.floor(value * 10) / 10 : Math.floor(value);
+		return `${shown}${suffix}`;
+	}
+	return count.toString();
+}

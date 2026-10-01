@@ -5,6 +5,7 @@ import { SpeciesFlagPills } from "~/components/species-flag-pills.tsx";
 import { SpeciesImage } from "~/components/species-image.tsx";
 import { TooltipProvider } from "~/components/ui/tooltip.tsx";
 import { HEAT_COLORS, heatLevel } from "~/lib/heatmap.ts";
+import { compactCount } from "~/lib/number-format.ts";
 import { comNameToSlug } from "~/lib/species-slug.ts";
 import { hourLabel } from "~/lib/time-ago.ts";
 
@@ -284,7 +285,7 @@ function HeatRow({ row }: { row: SpeciesHourRow }) {
 					<div
 						key={`hour-${hour}`}
 						role="img"
-						aria-label={`${row.comName} — ${hourLabel(hour)}: ${count} detections`}
+						aria-label={`${row.comName} — ${hourLabel(hour)}: ${count.toLocaleString()} detections`}
 						className="tabular-data mx-0.5 my-1 flex h-6 items-center justify-center overflow-hidden rounded-[3px] text-[10px] leading-none"
 						style={{
 							backgroundColor:
@@ -293,8 +294,10 @@ function HeatRow({ row }: { row: SpeciesHourRow }) {
 						}}
 					>
 						{/* A zero reads as an empty cell: printing the digit 24 times a
-						    row would bury the counts that matter under noise. */}
-						{count > 0 ? count.toLocaleString() : null}
+						    row would bury the counts that matter under noise. Past three
+						    digits the count shortens (1.2k, 300k) to fit the square; the
+						    exact figure stays in the label. */}
+						{count > 0 ? compactCount(count) : null}
 					</div>
 				);
 			})}
