@@ -2,7 +2,11 @@ import { AudioLines, Gem, Sparkles, Undo2 } from "lucide-react";
 import type { CSSProperties } from "react";
 import { Pill } from "~/components/pill.tsx";
 import { formatDate } from "~/lib/date-format.ts";
-import { formatAway, type VocalJump } from "~/lib/highlights-data.ts";
+import {
+	formatAway,
+	formatDailyRate,
+	type VocalJump,
+} from "~/lib/highlights-data.ts";
 
 /** "First recorded here on Sep 22, 2026." -- the day itself, not the window. */
 export function newTooltip(firstHeard: string | null): string {
@@ -15,11 +19,9 @@ export function returnedTooltip(daysAway: number | null): string {
 	return `Back after ${formatAway(daysAway)} away.`;
 }
 
-/** "Heard 76 times here; usually about 5." -- the Highlights line's figures. */
-export function vocalTooltip({ count, usual }: VocalJump): string {
-	const usually =
-		usual < 0.5 ? "under 1" : `about ${Math.round(usual).toLocaleString()}`;
-	return `Heard ${count.toLocaleString()} times here; usually ${usually}.`;
+/** "Heard 76 times a day; usually 4.6." -- the Highlights line's figures. */
+export function vocalTooltip({ perDay, usualPerDay }: VocalJump): string {
+	return `Heard ${formatDailyRate(perDay)} times a day; usually ${formatDailyRate(usualPerDay)}.`;
 }
 
 // Each status pill wears its own tint over the raised paper, so a glance down a
@@ -67,8 +69,8 @@ export function SpeciesFlagPills({
 	isRare: boolean;
 	/** How long a returning bird was away. Null unless isReturned. */
 	daysAway: number | null;
-	/** The bird's count against its usual, when that makes it Vocal. Null for
-	    no Vocal pill. */
+	/** The bird's daily rate against its usual, when that makes it Vocal.
+	    Null for no Vocal pill. */
 	vocal: VocalJump | null;
 	/** The day a New bird was first recorded, "YYYY-MM-DD". Null unless isNew. */
 	firstHeard: string | null;

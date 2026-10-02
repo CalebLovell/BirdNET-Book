@@ -79,8 +79,8 @@ export type TimelineRow = {
 	    Null unless isReturned. */
 	daysAway: number | null;
 	/**
-	 * Heard far more than usual: the window's count against what its usual
-	 * daily rate comes to over the window, when that's VOCAL_RATIO or more and
+	 * Heard far more than usual: the window's detections a day against its
+	 * usual detections a day, when that's VOCAL_RATIO or more and
 	 * the bird was around for enough of the comparison stretch to have a usual
 	 * (see vocalJump) -- the same stretch as the Highlights' activity line.
 	 * Null otherwise, and always for a New, Rare or Returned species: at most

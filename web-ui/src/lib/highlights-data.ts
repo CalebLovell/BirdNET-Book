@@ -141,9 +141,11 @@ export type HighlightFacts = {
 	} | null;
 };
 
-/** A species heard far more than usual: its count in the window, what its
-    usual daily rate comes to over as many days, and the multiple between. */
-export type VocalJump = { count: number; usual: number; ratio: number };
+/** A species heard far more than usual: its detections a day in the window,
+    its usual detections a day, and the multiple between. Daily on both sides,
+    so the figures mean the same thing for a day, a week, a month or a year,
+    and for a window still in progress. */
+export type VocalJump = { perDay: number; usualPerDay: number; ratio: number };
 
 /**
  * A species heard far more than usual in the window, or null unless it clears
@@ -170,22 +172,23 @@ export function vocalJump({
 	if (windowDays <= 0 || baselineDays <= 0 || baselineCount === 0) return null;
 	if (windowCount < VOCAL_MIN_DETECTIONS) return null;
 	if (daysHeard < VOCAL_MIN_PRESENCE * baselineDays) return null;
-	const usual = (baselineCount / baselineDays) * windowDays;
-	const ratio = windowCount / usual;
-	return ratio >= VOCAL_RATIO ? { count: windowCount, usual, ratio } : null;
+	const perDay = windowCount / windowDays;
+	const usualPerDay = baselineCount / baselineDays;
+	const ratio = perDay / usualPerDay;
+	return ratio >= VOCAL_RATIO ? { perDay, usualPerDay, ratio } : null;
 }
 
-/** "76, usually about 5" -- the window's count against its usual. */
-export function formatVocal({
-	count,
-	usual,
-}: {
-	count: number;
-	usual: number;
-}) {
-	const usually =
-		usual < 0.5 ? "under 1" : `about ${Math.round(usual).toLocaleString()}`;
-	return `${count.toLocaleString()}, usually ${usually}`;
+/** A daily rate as the vocal figures print it: a decimal while it's small
+    enough for one to matter ("4.6"), whole past ten ("43"). */
+export function formatDailyRate(rate: number): string {
+	if (rate < 0.05) return "under 0.1";
+	if (rate < 10) return String(Number(rate.toFixed(1)));
+	return Math.round(rate).toLocaleString();
+}
+
+/** "76 a day, usually 4.6" -- the window's daily rate against its usual. */
+export function formatVocal({ perDay, usualPerDay }: VocalJump): string {
+	return `${formatDailyRate(perDay)} a day, usually ${formatDailyRate(usualPerDay)}`;
 }
 
 /**

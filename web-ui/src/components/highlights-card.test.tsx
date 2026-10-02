@@ -137,8 +137,8 @@ test("the Vocal line says what the birds were heard far more than", async () => 
 				kind: "vocal",
 				total: 2,
 				birds: [
-					{ comName: "Rose-breasted Grosbeak", note: "41, usually about 12" },
-					{ comName: "Swainson's Thrush", note: "30, usually about 9" },
+					{ comName: "Rose-breasted Grosbeak", note: "41 a day, usually 12" },
+					{ comName: "Swainson's Thrush", note: "30 a day, usually 9" },
 				],
 				comparedWith: "the four weeks before",
 			},
@@ -146,6 +146,6 @@ test("the Vocal line says what the birds were heard far more than", async () => 
 	});
 	assert.match(
 		markup.replace(/<[^>]+>/g, ""),
-		/2 species heard far more than the four weeks before: Rose-breasted Grosbeak \(41, usually about 12\) and Swainson(&#x27;|')s Thrush \(30, usually about 9\)\./,
+		/2 species heard far more than the four weeks before: Rose-breasted Grosbeak \(41 a day, usually 12\) and Swainson(&#x27;|')s Thrush \(30 a day, usually 9\)\./,
 	);
 });

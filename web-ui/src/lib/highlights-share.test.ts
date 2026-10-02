@@ -93,7 +93,7 @@ test("writes each species highlight with its notes", () => {
 		{
 			kind: "vocal",
 			total: 1,
-			birds: [{ comName: "Blue Jay", note: "30, usually about 9" }],
+			birds: [{ comName: "Blue Jay", note: "30 a day, usually 9" }],
 			comparedWith: "August 2026",
 		},
 		{
@@ -107,7 +107,7 @@ test("writes each species highlight with its notes", () => {
 		"🐣 First ever: Indigo Bunting",
 		"🔁 Back: Wood Thrush (23 days), Veery (16 days)",
 		"💎 Rare: Hooded Warbler (3 records ever)",
-		"📣 Heard far more than in August 2026: Blue Jay (30, usually about 9)",
+		"📣 Heard far more than in August 2026: Blue Jay (30 a day, usually 9)",
 		"🤐 Gone quiet: Carolina Wren (silent 3 days)",
 	]);
 });

@@ -128,9 +128,9 @@ test("a grid row without hourCounts draws no bars", async () => {
 });
 
 test("a bird heard far more than usual gets a Vocal chip", async () => {
-	const vocal = { count: 76, usual: 4.6, ratio: 16.5 };
+	const vocal = { perDay: 76, usualPerDay: 4.6, ratio: 16.5 };
 	const markup = await renderGrid([{ ...robin, vocal }]);
 	assert.match(markup, /lucide-audio-lines/);
 	assert.match(markup, /Vocal/);
-	assert.equal(vocalTooltip(vocal), "Heard 76 times here; usually about 5.");
+	assert.equal(vocalTooltip(vocal), "Heard 76 times a day; usually 4.6.");
 });

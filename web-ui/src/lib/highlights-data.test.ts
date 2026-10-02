@@ -4,6 +4,7 @@ import test from "node:test";
 import {
 	buildHighlights,
 	formatAway,
+	formatDailyRate,
 	formatVocal,
 	type HighlightFacts,
 	MAX_NAMED_BIRDS,
@@ -143,7 +144,7 @@ test("orders the lines activity, hour, then the birds", () => {
 				newSpecies: ["Merlin"],
 				returning: [{ comName: "Redwing", daysAway: 20 }],
 				rare: [{ comName: "Hoopoe", lifetimeCount: 2 }],
-				vocal: [{ comName: "Blue Jay", count: 30, usual: 10, ratio: 3 }],
+				vocal: [{ comName: "Blue Jay", perDay: 30, usualPerDay: 10, ratio: 3 }],
 				breakingRoutine: [{ comName: "Robin", daysSilent: 3 }],
 			}),
 		),
@@ -194,10 +195,10 @@ test("heard far more than usual needs three times the usual daily rate", () => {
 		baselineDays: 28,
 		daysHeard: 28,
 	};
-	// Usual is 10 a day, so 70 over the week; the week heard 210.
+	// Usual is 10 a day; the week heard 30 a day.
 	assert.deepEqual(vocalJump({ ...base, windowCount: 210 }), {
-		count: 210,
-		usual: 70,
+		perDay: 30,
+		usualPerDay: 10,
 		ratio: 3,
 	});
 	assert.equal(vocalJump({ ...base, windowCount: 209 }), null);
@@ -241,13 +242,18 @@ test("a bird barely around before is an arrival, not a regular gone loud", () =>
 	assert.ok(vocalJump({ ...robin, daysHeard: 8 }));
 });
 
-test("the vocal note gives the count against its usual", () => {
-	assert.equal(formatVocal({ count: 76, usual: 4.6 }), "76, usually about 5");
+test("the vocal note gives both rates per day", () => {
 	assert.equal(
-		formatVocal({ count: 1148, usual: 247 }),
-		"1,148, usually about 247",
+		formatVocal({ perDay: 76, usualPerDay: 4.57, ratio: 16.6 }),
+		"76 a day, usually 4.6",
 	);
-	assert.equal(formatVocal({ count: 12, usual: 0.3 }), "12, usually under 1");
+	assert.equal(
+		formatVocal({ perDay: 38.3, usualPerDay: 8.2, ratio: 4.7 }),
+		"38 a day, usually 8.2",
+	);
+	assert.equal(formatDailyRate(2), "2");
+	assert.equal(formatDailyRate(0.04), "under 0.1");
+	assert.equal(formatDailyRate(1234.4), "1,234");
 });
 
 test("the vocal line names what usual is", () => {
@@ -266,13 +272,13 @@ test("the vocal line names what usual is", () => {
 		facts({
 			activity: null,
 			comparedWith: "August 2026",
-			vocal: [{ comName: "Blue Jay", count: 30, usual: 10, ratio: 3 }],
+			vocal: [{ comName: "Blue Jay", perDay: 30, usualPerDay: 10, ratio: 3 }],
 		}),
 	).filter((l) => l.kind === "vocal");
 	assert.deepEqual(line, {
 		kind: "vocal",
 		total: 1,
-		birds: [{ comName: "Blue Jay", note: "30, usually about 10" }],
+		birds: [{ comName: "Blue Jay", note: "30 a day, usually 10" }],
 		comparedWith: "August 2026",
 	});
 });
