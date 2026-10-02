@@ -453,8 +453,9 @@ function TimelineCards({
 	// views, so the toggle never shifts the column beside it: the window's
 	// detections by hour, then Highlights, stacked. Below that there isn't room
 	// for the column beside the body, so the same two cards follow it
-	// underneath, side by side and matched in height, from md (768px, roughly
-	// 360px each) up. Only on a phone do they stack.
+	// underneath, side by side from md (768px, roughly 360px each) up, each only
+	// as tall as its own content -- Highlights doesn't stretch to the chart's
+	// height and trail empty space. Only on a phone do they stack.
 	return (
 		<div className="min-[1800px]:flex min-[1800px]:items-start min-[1800px]:gap-4">
 			{body}
@@ -467,7 +468,11 @@ function TimelineCards({
 					activity={hourActivity}
 					emptyMessage={emptyMessage}
 				/>
-				<HighlightsCard highlights={highlights} emptyMessage={emptyMessage} />
+				<HighlightsCard
+					highlights={highlights}
+					emptyMessage={emptyMessage}
+					className="self-start"
+				/>
 			</div>
 		</div>
 	);
