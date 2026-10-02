@@ -26,7 +26,7 @@ Each is cropped to the bird.
 | `setophaga-coronata.jpg` | Male Yellow-rumped Warbler (Myrtle, breeding), USFWS Mountain-Prairie ([Wikimedia Commons](https://commons.wikimedia.org/wiki/File:Myrtle_yellow-rumped_Warbler_Seedskadee_NWR_(17565663621).jpg)) | Public domain |
 | `molothrus-ater.jpg` | Male Brown-headed Cowbird, MONGO ([Wikimedia Commons](https://commons.wikimedia.org/wiki/File:Molothrus_ater_Brown-headed_Cowbird_5.29.2010.jpg)) | Public domain |
 | `troglodytes-aedon.jpg` | House Wren, U.S. Fish and Wildlife Service - Midwest Region ([Wikimedia Commons](https://commons.wikimedia.org/wiki/File:House_Wren_in_DeWitt,_MI_(33761820763).jpg)) | Public domain |
-| `archilochus-colubris.jpg` | Male Ruby-throated Hummingbird, U.S. Fish and Wildlife Service - Midwest Region ([Wikimedia Commons](https://commons.wikimedia.org/wiki/File:Ruby-throated_Hummingbird_(34948957896).jpg)) | Public domain |
+| `archilochus-colubris.jpg` | Male Ruby-throated Hummingbird, by Courtney Celley, U.S. Fish and Wildlife Service - Midwest Region ([Wikimedia Commons](https://commons.wikimedia.org/wiki/File:Ruby-throated_hummingbird_(53727355041).jpg)) | Public domain |
 | `pandion-haliaetus.jpg` | Osprey, NASA/Ken Thornsley ([Wikimedia Commons](https://commons.wikimedia.org/wiki/File:Osprey_on_a_peg.jpg)) | Public domain |
 | `sphyrapicus-varius.jpg` | Male Yellow-bellied Sapsucker, U.S. Fish and Wildlife Service - Midwest Region ([Wikimedia Commons](https://commons.wikimedia.org/wiki/File:Yellow-bellied_sapsucker_(53752103302).jpg)) | Public domain |
 | `regulus-satrapa.jpg` | Golden-crowned Kinglet, PookieFugglestein ([Wikimedia Commons](https://commons.wikimedia.org/wiki/File:Golden-crowned_Kinglet_in_cedar.jpg)) | CC0 |
