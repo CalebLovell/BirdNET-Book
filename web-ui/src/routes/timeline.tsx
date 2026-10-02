@@ -5,7 +5,7 @@ import {
 } from "@tanstack/react-router";
 import { ArrowRight, Bird, LayoutDashboard, Rows3 } from "lucide-react";
 import { z } from "zod";
-import { DetectionsByHourRoseCard } from "~/components/detections-by-hour-rose-card.tsx";
+import { DetectionsByHourCard } from "~/components/detections-by-hour-card.tsx";
 import { EmptyState } from "~/components/empty-state.tsx";
 import { HighlightsCard } from "~/components/highlights-card.tsx";
 import { PageHeaderCard } from "~/components/page-header-card.tsx";
@@ -418,8 +418,8 @@ function TimelineCards({
 	) : undefined;
 	const summary = hasRows ? <WindowSummary rows={rows} /> : undefined;
 
-	// The window's day for the side column's rose: every species summed, hour by
-	// hour.
+	// The window's day for the side column's hour chart: every species summed,
+	// hour by hour.
 	const hourActivity: HourActivity[] = Array.from(
 		{ length: 24 },
 		(_, hour) => ({
@@ -463,9 +463,8 @@ function TimelineCards({
 			    period steps from a window that heard something to one that
 			    didn't. */}
 			<div className="mt-(--page-gap) grid min-w-0 gap-(--page-gap) md:max-[1799px]:grid-cols-2 min-[1800px]:mt-0 min-[1800px]:flex-1">
-				<DetectionsByHourRoseCard
+				<DetectionsByHourCard
 					activity={hourActivity}
-					title="Detections by hour"
 					emptyMessage={emptyMessage}
 				/>
 				<HighlightsCard highlights={highlights} emptyMessage={emptyMessage} />

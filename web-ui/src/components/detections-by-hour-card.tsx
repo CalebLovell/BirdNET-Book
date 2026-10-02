@@ -24,14 +24,17 @@ import { hourLabel } from "~/lib/time-ago.ts";
 const EVEN_HOURS = Array.from({ length: 12 }, (_, index) => index * 2);
 
 /**
- * The species page's detections-by-hour chart: every detection of the species
- * on record, bucketed by hour of day.
+ * Detections bucketed by hour of day, midnight to midnight: every detection of
+ * the species on its page, the selected window's on the timeline.
  */
 export function DetectionsByHourCard({
 	activity,
+	emptyMessage = "No detections recorded yet.",
 	className = "",
 }: {
 	activity: HourActivity[];
+	/** What the card says when every hour is zero. */
+	emptyMessage?: string;
 	className?: string;
 }) {
 	// Two of these can share a page in principle; a scoped id keeps the
@@ -49,7 +52,7 @@ export function DetectionsByHourCard({
 				className={`feature-card flex flex-col rounded-md p-4 ${className}`}
 			>
 				<div className="island-kicker">Detections by hour</div>
-				<EmptyNote>No detections recorded yet.</EmptyNote>
+				<EmptyNote>{emptyMessage}</EmptyNote>
 			</section>
 		);
 	}

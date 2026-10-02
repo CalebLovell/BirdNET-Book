@@ -41,8 +41,9 @@ test("every period draws the same body", async () => {
 	const route = await read("./timeline.tsx");
 	assert.match(route, /<SpeciesByHourCard/);
 	assert.match(route, /<SpeciesGrid/);
-	// The detections-by-hour card was dropped from every period's body.
-	assert.doesNotMatch(route, /<DetectionsByHourCard/);
+	// The window's detections by hour reads as a line, midnight to midnight.
+	assert.match(route, /<DetectionsByHourCard/);
+	assert.doesNotMatch(route, /DetectionsByHourRose/);
 	assert.doesNotMatch(route, /AllTimeCards/);
 });
 

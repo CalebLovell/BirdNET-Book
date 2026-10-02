@@ -1,8 +1,8 @@
 // Heat shading as a continuous ramp rather than a handful of steps: every
 // count gets its own mix of moss over paper, from a pale wash at the smallest
 // count up to full moss at the busiest. Shared by the timeline heat map, the
-// species grid's bars, the hour rose and the species page's history, so they
-// all read as one scale.
+// species grid's bars and the species page's history, so they all read as one
+// scale.
 
 /** How much moss the smallest non-zero count gets, in percent. Well above the
     4% an empty heat-map cell wears, so a quiet hour never passes for an empty

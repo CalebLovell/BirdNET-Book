@@ -10,7 +10,7 @@ import {
 import type { ComponentProps } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 
-import { DetectionsByHourRoseCard } from "~/components/detections-by-hour-rose-card.tsx";
+import { DetectionsByHourCard } from "~/components/detections-by-hour-card.tsx";
 import { HighlightsCard } from "~/components/highlights-card.tsx";
 
 /** The card names birds as species links, so it renders inside a router. */
@@ -113,15 +113,14 @@ test("a window still running gives its pace so far", () => {
 	);
 });
 
-test("an all-zero day gets the rose card's own empty note", () => {
+test("an all-zero day gets the hour card's own empty note", () => {
 	const activity = Array.from({ length: 24 }, (_, hour) => ({
 		hour,
 		count: 0,
 	}));
 	const markup = renderToStaticMarkup(
-		<DetectionsByHourRoseCard
+		<DetectionsByHourCard
 			activity={activity}
-			title="Detections by hour"
 			emptyMessage="No detections recorded for Thu, Sep 24, 2026."
 		/>,
 	);
