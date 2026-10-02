@@ -13,17 +13,15 @@ import {
 	type Highlight,
 	type HighlightEvidence,
 	judgeHighlights,
-	lookbackLabel,
 	MAX_NAMED_BIRDS,
-	thanPhrase,
 } from "./highlights-data.ts";
 
 /** A short-memory station, so the tallies below stay readable: three days
     back for Live and Day, two weeks for a week. */
 const settings: HighlightThresholds = {
 	...HIGHLIGHT_THRESHOLDS,
-	// A run of four days (three before this one), three weeks (two before).
-	consistent: { ...HIGHLIGHT_THRESHOLDS.consistent, days: 4, weeks: 3 },
+	// A Day's Regular streak of four days, this one included.
+	consistent: { ...HIGHLIGHT_THRESHOLDS.consistent, streakDays: 4 },
 	goneQuiet: { days: 3, weeks: 2, months: 3 },
 	returned: { days: 3, weeks: 2, months: 3 },
 	vocal: { ...HIGHLIGHT_THRESHOLDS.vocal, days: 3, weeks: 2 },
@@ -49,10 +47,11 @@ function evidence(
 	return {
 		period: "day",
 		window: [day({ Robin: 5 })],
+		inProgress: false,
 		before,
-		// Unless a test says otherwise, the history a run is counted against is
-		// just the periods it gave.
-		history: before.map(
+		// Unless a test says otherwise, the days a streak is counted back
+		// through are just the periods it gave.
+		daysBefore: before.map(
 			(unit) => new Set(unit.flatMap((tally) => Array.from(tally.keys()))),
 		),
 		hourCounts: hours(),
@@ -88,14 +87,19 @@ test("an empty window has no highlights at all", () => {
 
 test("up or down shows whatever the size of the change", () => {
 	const up = judge({ before: daysBefore(1, { Robin: 4 }) }).highlights;
-	assert.deepEqual(line(up, "activity"), {
-		kind: "activity",
-		direction: "up",
-		percent: 25,
-		baselineLabel: "yesterday",
-		detectionsDelta: 1,
-		speciesDelta: 0,
-	});
+	assert.deepEqual(
+		up.filter((h) => h.kind === "activity"),
+		[
+			{
+				kind: "activity",
+				direction: "up",
+				percent: 25,
+				baselineLabel: "yesterday",
+				count: 5,
+				delta: 1,
+			},
+		],
+	);
 	const tiny = judge({
 		window: [day({ Robin: 201 })],
 		before: daysBefore(1, { Robin: 200, Wren: 1 }),
@@ -161,105 +165,73 @@ test("all time has no new or rare birds", () => {
 	assert.equal(flags.get("Merlin")?.isRare, false);
 });
 
-test("consistent means every day of the lookback and of the window", () => {
-	const steady = judge({ before: daysBefore(3, { Robin: 2 }) });
-	assert.equal(steady.flags.get("Robin")?.isConsistent, true);
-	assert.deepEqual(line(steady.highlights, "consistent"), {
-		kind: "consistent",
-		total: 1,
-		birds: [{ comName: "Robin", note: "4 days in a row" }],
-		scope: "every day",
-	});
-
-	const missed = judge({
-		before: [[day({ Robin: 2 })], [day({ Wren: 1 })], [day({ Robin: 2 })]],
-	});
-	assert.equal(missed.flags.get("Robin")?.isConsistent, false);
-});
-
-test("a consistent bird's run is counted to its start, past the lookback", () => {
-	const { flags } = judge({
-		before: daysBefore(3, { Robin: 2 }),
-		history: [
-			...Array.from({ length: 40 }, () => new Set(["Robin"])),
+test("a day's regular is on a streak, counted to its start", () => {
+	const { flags, highlights } = judge({
+		window: [day({ Robin: 5, Wren: 2 })],
+		daysBefore: [
+			...Array.from({ length: 40 }, () => new Set(["Robin", "Wren"])),
+			// A day the station recorded nothing is stepped over.
 			new Set<string>(),
 			new Set(["Robin"]),
-			new Set(["Wren"]),
-		],
-	});
-	// 40 days, a day the station was down, one more, then a miss: 41 heard
-	// days before this one.
-	assert.equal(flags.get("Robin")?.streak, "42 days in a row");
-});
-
-test("a consistent bird's run is counted in the window's own unit", () => {
-	const run = judge({
-		before: [
-			...daysBefore(4, { Robin: 2 }),
-			[day({ Wren: 1 })],
-			...daysBefore(3, { Robin: 2 }),
-		],
-	});
-	assert.equal(run.flags.get("Robin")?.streak, "5 days in a row");
-
-	const weeks = judge({
-		period: "week",
-		window: [day({ Robin: 3 })],
-		before: [
-			Array.from({ length: 7 }, () => day({ Robin: 1 })),
-			Array.from({ length: 7 }, () => day({ Robin: 1 })),
-			[day({ Wren: 1 })],
-		],
-	});
-	assert.equal(weeks.flags.get("Robin")?.streak, "3 weeks in a row");
-});
-
-test("consistent skips a day the station was down, but needs every period watched", () => {
-	const gap = judge({
-		before: [[day({ Robin: 2 })], [day({})], [day({ Robin: 2 })]],
-	});
-	assert.equal(gap.flags.get("Robin")?.isConsistent, true);
-	// A station only two days old has no three-day streak to keep.
-	const young = judge({ before: daysBefore(2, { Robin: 2 }) });
-	assert.equal(young.flags.get("Robin")?.isConsistent, false);
-});
-
-test("a week is consistent when heard in each week, not every day", () => {
-	const { flags, highlights } = judge({
-		period: "week",
-		window: [day({ Robin: 3 }), day({ Wren: 1 })],
-		// This file's station looks back two weeks.
-		before: [
-			[day({ Wren: 1 }), day({ Robin: 1 }), day({ Wren: 1 })],
-			[day({ Robin: 1 }), day({ Wren: 1 })],
-			[day({ Wren: 1 })],
+			new Set(["Jay"]),
 		],
 	});
 	assert.equal(flags.get("Robin")?.isConsistent, true);
-	assert.equal(flags.get("Robin")?.streak, "3 weeks in a row");
-	assert.equal(
-		(line(highlights, "consistent") as { scope?: string }).scope,
-		"every week",
-	);
+	assert.equal(flags.get("Robin")?.regularNote, "42 days straight");
+	assert.equal(flags.get("Wren")?.regularNote, "41 days straight");
+	assert.deepEqual(named(highlights, "consistent"), ["Robin", "Wren"]);
 });
 
-test("a year or all time is consistent on over a share of its days", () => {
-	const yearDays = [
-		...Array.from({ length: 8 }, () => day({ Robin: 1 })),
-		...Array.from({ length: 2 }, () => day({ Wren: 1 })),
-	];
+test("a day's streak needs the minimum run", () => {
+	const short = judge({
+		daysBefore: [new Set(["Robin"]), new Set(["Robin"]), new Set(["Jay"])],
+	});
+	assert.equal(short.flags.get("Robin")?.isConsistent, false);
+	const long = judge({ before: daysBefore(3, { Robin: 1 }) });
+	assert.equal(long.flags.get("Robin")?.regularNote, "4 days straight");
+});
+
+test("a week's or month's regular is heard on every day it recorded", () => {
+	const { flags } = judge({
+		period: "week",
+		window: [
+			day({ Robin: 3 }),
+			day({}),
+			day({ Robin: 1, Wren: 1 }),
+			day({ Robin: 2 }),
+		],
+	});
+	// The day the station was down doesn't count against it.
+	assert.equal(flags.get("Robin")?.isConsistent, true);
+	assert.equal(flags.get("Robin")?.regularNote, "every day this week");
+	assert.equal(flags.get("Wren")?.isConsistent, false);
+});
+
+test("a year or all time is regular on over 90% of its days", () => {
+	// Twenty recorded days -- a Jay on each -- with the Robin on 19 and the
+	// Wren on 18.
+	const yearDays = Array.from({ length: 20 }, (_, i) =>
+		day({
+			Jay: 1,
+			...(i < 19 ? { Robin: 1 } : {}),
+			...(i < 18 ? { Wren: 1 } : {}),
+		}),
+	);
 	const { flags, highlights } = judge({
 		period: "year",
 		window: yearDays,
 		before: [[day({})]],
 	});
 	assert.equal(flags.get("Robin")?.isConsistent, true);
+	// 18 of 20 is exactly 90%, not over it.
 	assert.equal(flags.get("Wren")?.isConsistent, false);
 	assert.deepEqual(line(highlights, "consistent"), {
 		kind: "consistent",
-		total: 1,
-		birds: [{ comName: "Robin", note: "80% of days" }],
-		scope: "on over 75% of days this year",
+		total: 2,
+		birds: [
+			{ comName: "Jay", note: "100% of days" },
+			{ comName: "Robin", note: "95% of days" },
+		],
 	});
 });
 
@@ -271,7 +243,7 @@ test("gone quiet is heard in each period before and not at all now", () => {
 	assert.deepEqual(line(highlights, "routine"), {
 		kind: "routine",
 		total: 1,
-		birds: [{ comName: "Thrush", note: "silent 1 day" }],
+		birds: [{ comName: "Thrush", note: "1 day silent" }],
 	});
 	const patchy = judge({
 		before: [[day({ Thrush: 1 })], [day({ Robin: 1 })], [day({ Thrush: 1 })]],
@@ -312,7 +284,6 @@ test("vocal needs the ratio, the detections and the presence", () => {
 		kind: "vocal",
 		total: 1,
 		birds: [{ comName: "Robin", note: "30 today, usually 2" }],
-		comparedWith: "the past 3 days",
 	});
 
 	const few = judge({
@@ -347,7 +318,7 @@ test("tags stack: a regular can be consistent and vocal at once", () => {
 	assert.notEqual(robin?.vocal, null);
 	assert.deepEqual(
 		highlights.map((h) => h.kind),
-		["activity", "busiest-hour", "consistent", "vocal"],
+		["activity", "busiest-hour", "vocal", "consistent"],
 	);
 });
 
@@ -370,10 +341,10 @@ test("lines read in the card's order", () => {
 			"busiest-hour",
 			"new",
 			"rare",
+			"vocal",
+			"returned",
 			"consistent",
 			"routine",
-			"returned",
-			"vocal",
 		],
 	);
 });
@@ -412,16 +383,4 @@ test("the vocal note counts in the window's own unit", () => {
 	assert.equal(formatRate(0.4), "under 1");
 	assert.equal(formatRate(9.8), "10");
 	assert.equal(formatRate(1234.4), "1,234");
-});
-
-test("lookbacks and comparisons read as plain phrases", () => {
-	assert.equal(lookbackLabel(14, "day"), "the past 14 days");
-	assert.equal(lookbackLabel(1, "week"), "last week");
-	assert.equal(lookbackLabel(1, "day"), "yesterday");
-	assert.equal(lookbackLabel(3, "month"), "the past 3 months");
-	assert.equal(lookbackLabel(1, "year"), "last year");
-	assert.equal(thanPhrase("the past 3 weeks"), "than in the past 3 weeks");
-	assert.equal(thanPhrase("last year"), "than last year");
-	assert.equal(thanPhrase("yesterday"), "than yesterday");
-	assert.equal(thanPhrase(null), "than usual");
 });

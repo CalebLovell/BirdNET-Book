@@ -5,7 +5,7 @@
 // Every formatting rule lives here so it can be read and tested in one place.
 
 import type { Highlight } from "~/lib/highlights-data.ts";
-import { formatHighlightLines, nightShare } from "~/lib/highlights-share.ts";
+import { formatHighlightLines } from "~/lib/highlights-share.ts";
 import { ordinal, plural } from "~/lib/number-format.ts";
 import { hourLabel } from "~/lib/time-ago.ts";
 
@@ -134,11 +134,6 @@ export function formatShareCard(card: ShareCard): string {
 		);
 	}
 
-	// Only a calendar day's counts run midnight first, which is what lets the
-	// night hours be read off by position.
-	const night = window === "day" ? nightShare(card.hourlyCounts) : 0;
-	if (night > 0) highlights.push(`🌙 ${night}% heard after dark`);
-
 	const pageHighlights = card.highlights ?? [];
 	const namedByHighlights = new Set(
 		pageHighlights.flatMap((highlight) =>
@@ -153,7 +148,7 @@ export function formatShareCard(card: ShareCard): string {
 	if (newcomer && !highlightsNameNewcomers) {
 		const more =
 			otherNewcomers.length > 0 ? ` +${otherNewcomers.length} more` : "";
-		highlights.push(`🐣 First ever: ${newcomer}${more}`);
+		highlights.push(`🐣 New: ${newcomer}${more}`);
 	}
 
 	// A first-ever bird is by definition the rarest one, and saying so twice

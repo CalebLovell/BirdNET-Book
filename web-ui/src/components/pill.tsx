@@ -6,7 +6,8 @@ import { Hint } from "~/components/ui/hint.tsx";
  * One pill. Every pill -- confidence, New, Returned, Rare, Vocal -- shares this
  * size, radius and weight so a cluster reads as one family; only the tint and
  * the optional icon set them apart. A `tooltip` explains what the pill means
- * on hover.
+ * on hover. `iconOnly` draws just the glyph in a round chip, the label kept
+ * for screen readers -- the tooltip then carries the name.
  */
 export function Pill({
 	icon: Icon,
@@ -14,6 +15,7 @@ export function Pill({
 	style,
 	tooltip,
 	tabular = false,
+	iconOnly = false,
 	className = "",
 }: {
 	icon?: React.ComponentType<{ className?: string }>;
@@ -21,16 +23,17 @@ export function Pill({
 	style: CSSProperties;
 	tooltip?: string;
 	tabular?: boolean;
+	iconOnly?: boolean;
 	className?: string;
 }) {
 	return (
 		<Hint content={tooltip}>
 			<span
-				className={`inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-1 font-semibold text-xs leading-none ${tabular ? "tabular-data" : ""} ${className}`}
+				className={`inline-flex shrink-0 items-center rounded-full font-semibold text-xs leading-none ${iconOnly ? "size-5 justify-center" : "gap-1 px-2 py-1"} ${tabular ? "tabular-data" : ""} ${className}`}
 				style={style}
 			>
-				{Icon ? <Icon className="size-3" /> : null}
-				{label}
+				{Icon ? <Icon className="size-3" aria-hidden="true" /> : null}
+				{iconOnly ? <span className="sr-only">{label}</span> : label}
 			</span>
 		</Hint>
 	);

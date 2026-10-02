@@ -8,7 +8,7 @@
 // sharing costs no extra round trip.
 
 import type { Highlight } from "~/lib/highlights-data.ts";
-import { formatHighlightLines, nightShare } from "~/lib/highlights-share.ts";
+import { formatHighlightLines } from "~/lib/highlights-share.ts";
 import { plural } from "~/lib/number-format.ts";
 import { axisHour, sparkline } from "~/lib/share-card.ts";
 import { hourLabel } from "~/lib/time-ago.ts";
@@ -119,12 +119,6 @@ export function formatTimelineShareCard(card: TimelineShareCard): string {
 				"detection",
 			)}`,
 		);
-	}
-
-	const night = nightShare(byHour);
-	// Rounding to zero means the night was silent enough that saying so is noise.
-	if (night > 0) {
-		highlights.push(`🌙 ${night}% heard after dark`);
 	}
 
 	// What the page's Highlights card found worth saying: the pace against the

@@ -17,34 +17,28 @@ test("each period looks back in its own unit, a year at the one before", () => {
 });
 
 test("the guide explains each line in the period's own terms", () => {
+	assert.equal(meaning("day", "Up or down"), "Compared with yesterday.");
 	assert.equal(
-		meaning("day", "Up or down"),
-		"Detections and species this day against the day before.",
+		meaning("live", "Up or down"),
+		"Compared with the 24 hours before.",
 	);
+	assert.equal(meaning("day", "Regular"), "Heard 10+ days straight.");
+	assert.equal(meaning("week", "Regular"), "Heard every day this week.");
+	assert.equal(meaning("year", "Regular"), "Heard on over 90% of days.");
 	assert.equal(
-		meaning("week", "Regular"),
-		"Heard every week for at least 10 weeks in a row.",
+		meaning("day", "Gone quiet"),
+		"Heard the past 10 days, not today.",
 	);
 	assert.equal(
 		meaning("month", "Gone quiet"),
-		"Heard last month, but not this month.",
-	);
-	assert.equal(
-		meaning("live", "Gone quiet"),
-		"Heard every day of the past 10 days, but not today.",
+		"Heard the past 3 months, not this month.",
 	);
 	assert.equal(
 		meaning("week", "Returned"),
-		"Heard before, silent all last week, and back this week.",
+		"Silent last week, back this week.",
 	);
-	assert.equal(
-		meaning("year", "Vocal"),
-		"Heard at least 3× as much as usual, compared with last year.",
-	);
-	assert.equal(
-		meaning("year", "Regular"),
-		"Heard on over 75% of days this year.",
-	);
+	assert.equal(meaning("day", "Vocal"), "3× its usual, vs. the past 10 days.");
+	assert.equal(meaning("year", "Vocal"), "3× its usual, vs. last year.");
 });
 
 test("all time explains only the lines it can show", () => {

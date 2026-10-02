@@ -100,7 +100,7 @@ test("omits the peak hour when no hour stands out", () => {
 test("announces a species heard for the first time ever", () => {
 	assert.match(
 		formatShareCard(cardWith({ firstEver: ["Cedar Waxwing"] })),
-		/^🐣 First ever: Cedar Waxwing$/m,
+		/^🐣 New: Cedar Waxwing$/m,
 	);
 });
 
@@ -109,7 +109,7 @@ test("counts the remaining newcomers after naming the first", () => {
 		formatShareCard(
 			cardWith({ firstEver: ["Cedar Waxwing", "Merlin", "Sora"] }),
 		),
-		/^🐣 First ever: Cedar Waxwing \+2 more$/m,
+		/^🐣 New: Cedar Waxwing \+2 more$/m,
 	);
 });
 
@@ -154,7 +154,7 @@ test("does not name the same bird as both newest and rarest", () => {
 		}),
 	);
 
-	assert.match(text, /🐣 First ever: Cedar Waxwing/);
+	assert.match(text, /🐣 New: Cedar Waxwing/);
 	assert.doesNotMatch(text, /💎/);
 });
 
@@ -232,7 +232,7 @@ test("adds the page's highlights in place of its own first-ever line", () => {
 				{
 					kind: "rare",
 					total: 1,
-					birds: [{ comName: "Hooded Warbler", note: "3 records ever" }],
+					birds: [{ comName: "Hooded Warbler", note: "3 total" }],
 				},
 				{
 					kind: "returned",
@@ -245,22 +245,7 @@ test("adds the page's highlights in place of its own first-ever line", () => {
 
 	assert.equal(text.match(/Indigo Bunting/g)?.length, 1);
 	assert.equal(text.match(/Hooded Warbler/g)?.length, 1);
-	assert.match(text, /^🐣 First ever: Indigo Bunting$/m);
-	assert.match(text, /^💎 Rare: Hooded Warbler \(3 records ever\)$/m);
-	assert.match(text, /^🔁 Back: Wood Thrush \(23 days\)$/m);
-});
-
-test("reports a calendar day's share heard after dark", () => {
-	const hourlyCounts = Array.from({ length: 24 }, (_, hour) =>
-		hour === 2 ? 25 : hour === 12 ? 75 : 0,
-	);
-	const text = formatShareCard(
-		cardWith({ window: "day", startHour: 0, hourlyCounts }),
-	);
-
-	assert.match(text, /^🌙 25% heard after dark$/m);
-});
-
-test("does not read night hours off a rolling window", () => {
-	assert.doesNotMatch(formatShareCard(cardWith({ startHour: 21 })), /🌙/);
+	assert.match(text, /^🐣 New: Indigo Bunting$/m);
+	assert.match(text, /^💎 Rare: Hooded Warbler \(3 total\)$/m);
+	assert.match(text, /^🔁 Returned: Wood Thrush \(23 days\)$/m);
 });

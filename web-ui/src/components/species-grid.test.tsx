@@ -44,12 +44,11 @@ const robin: SpeciesGridItem = {
 	sciName: "Erithacus rubecula",
 	imageUrl: "/illustrations/robin.png",
 	count: 128,
-	averageConfidence: 0.83,
 	isNew: false,
 	firstHeard: null,
 	isRare: false,
 	isConsistent: false,
-	streak: null,
+	regularNote: null,
 	isReturned: false,
 	away: null,
 	vocal: null,
@@ -62,12 +61,11 @@ const robin: SpeciesGridItem = {
 	})(),
 };
 
-test("a species row shows its name, count and confidence", async () => {
+test("a species row shows its name and count", async () => {
 	const markup = await renderGrid([robin]);
 	assert.match(markup, /European Robin/);
 	assert.match(markup, /href="\/species\/european-robin"/);
 	assert.match(markup, /128/);
-	assert.match(markup, /83%/);
 	// No chips on an ordinary resident.
 	assert.doesNotMatch(markup, /lucide-sparkles/);
 	assert.doesNotMatch(markup, /lucide-gem/);
@@ -105,8 +103,8 @@ test("a returned visitor gets a Returned chip", async () => {
 test("the Returned tooltip says how long the bird was away", () => {
 	// The tooltip content lives in a Radix portal that only mounts on hover, so
 	// it never reaches the static markup above -- test the copy at its source.
-	assert.equal(returnedTooltip("3 weeks"), "Back after 3 weeks away.");
-	assert.equal(returnedTooltip(null), "Back after time away.");
+	assert.equal(returnedTooltip("3 weeks"), "Back after 3 weeks missing.");
+	assert.equal(returnedTooltip(null), "Back after time missing.");
 });
 
 test("an empty grid shows its empty note", async () => {

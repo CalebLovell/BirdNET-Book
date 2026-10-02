@@ -1,9 +1,10 @@
-import { AudioLines, CalendarCheck, Gem, Sparkles, Undo2 } from "lucide-react";
+import { AudioLines, Gem, House, Sparkles, Undo2 } from "lucide-react";
 import type { CSSProperties } from "react";
 import { Pill } from "~/components/pill.tsx";
 import { formatDate } from "~/lib/date-format.ts";
 import {
 	formatRate,
+	type SpeciesHighlightKind,
 	type VocalJump,
 	windowPhrase,
 } from "~/lib/highlights-data.ts";
@@ -14,19 +15,17 @@ export function newTooltip(firstHeard: string | null): string {
 	return `First recorded here on ${formatDate(firstHeard)}.`;
 }
 
-/** "Heard 15 days in a row.", "Heard 3 weeks in a row." -- or for a year or
-    all time, "Heard on 82% of days." */
-export function consistentTooltip(streak: string | null): string {
-	if (streak == null) return "Heard here day in, day out.";
-	return streak.endsWith("in a row")
-		? `Heard ${streak}.`
-		: `Heard on ${streak}.`;
+/** "Heard 14 of 18 hours.", "Heard every day so far this week.", "Heard on
+    93% of days." */
+export function consistentTooltip(note: string | null): string {
+	if (note == null) return "Heard here day in, day out.";
+	return note.endsWith("of days") ? `Heard on ${note}.` : `Heard ${note}.`;
 }
 
-/** "Back after 3 weeks away." -- in the window's own unit. */
+/** "Back after 3 weeks missing." -- in the window's own unit. */
 export function returnedTooltip(away: string | null): string {
-	if (away == null) return "Back after time away.";
-	return `Back after ${away} away.`;
+	if (away == null) return "Back after time missing.";
+	return `Back after ${away} missing.`;
 }
 
 /**
@@ -74,17 +73,28 @@ const VOCAL_PILL_STYLE: CSSProperties = {
 	color: "#6e4a10",
 };
 
+/** The badges' tints by the Highlights line they share a name with, so the
+    card's glyphs wear the same colours as the species rows' badges. */
+export const BADGE_STYLES = {
+	new: NEW_PILL_STYLE,
+	rare: RARE_PILL_STYLE,
+	consistent: CONSISTENT_PILL_STYLE,
+	returned: RETURNED_PILL_STYLE,
+	vocal: VOCAL_PILL_STYLE,
+} satisfies Partial<Record<SpeciesHighlightKind, CSSProperties>>;
+
 /**
- * The flags a species can carry in a window -- New, Rare, Consistent,
- * Returned, Vocal -- as pills, the same wherever a species row shows them (the
- * species grid, the heat map), in the Highlights card's order. They stack: a
- * bird gets every pill it qualifies for.
+ * The flags a species can carry in a window -- New, Rare, Vocal, Returned,
+ * Regular -- as pills, the same wherever a species row shows them (the
+ * species grid, the heat map), in the Highlights card's order. Glyphs only,
+ * so a stack of them stays small; each one's tooltip leads with its name.
+ * They stack: a bird gets every pill it qualifies for.
  */
 export function SpeciesFlagPills({
 	isNew,
 	isRare,
 	isConsistent,
-	streak,
+	regularNote,
 	isReturned,
 	firstHeard,
 	away,
@@ -93,8 +103,8 @@ export function SpeciesFlagPills({
 	isNew: boolean;
 	isRare: boolean;
 	isConsistent: boolean;
-	/** A Regular bird's run, for its tooltip. */
-	streak: string | null;
+	/** How much of the window a Regular bird filled, for its tooltip. */
+	regularNote: string | null;
 	isReturned: boolean;
 	/** How long a returning bird was away. Null unless isReturned. */
 	away: string | null;
@@ -111,7 +121,8 @@ export function SpeciesFlagPills({
 					icon={Sparkles}
 					label="New"
 					style={NEW_PILL_STYLE}
-					tooltip={newTooltip(firstHeard)}
+					tooltip={`New — ${newTooltip(firstHeard)}`}
+					iconOnly
 				/>
 			) : null}
 			{isRare ? (
@@ -119,23 +130,8 @@ export function SpeciesFlagPills({
 					icon={Gem}
 					label="Rare"
 					style={RARE_PILL_STYLE}
-					tooltip="Barely ever heard here — a rare visitor."
-				/>
-			) : null}
-			{isConsistent ? (
-				<Pill
-					icon={CalendarCheck}
-					label="Regular"
-					style={CONSISTENT_PILL_STYLE}
-					tooltip={consistentTooltip(streak)}
-				/>
-			) : null}
-			{isReturned ? (
-				<Pill
-					icon={Undo2}
-					label="Returned"
-					style={RETURNED_PILL_STYLE}
-					tooltip={returnedTooltip(away)}
+					tooltip="Rare — Barely ever heard here."
+					iconOnly
 				/>
 			) : null}
 			{vocal != null ? (
@@ -143,7 +139,26 @@ export function SpeciesFlagPills({
 					icon={AudioLines}
 					label="Vocal"
 					style={VOCAL_PILL_STYLE}
-					tooltip={vocalTooltip(vocal)}
+					tooltip={`Vocal — ${vocalTooltip(vocal)}`}
+					iconOnly
+				/>
+			) : null}
+			{isReturned ? (
+				<Pill
+					icon={Undo2}
+					label="Returned"
+					style={RETURNED_PILL_STYLE}
+					tooltip={`Returned — ${returnedTooltip(away)}`}
+					iconOnly
+				/>
+			) : null}
+			{isConsistent ? (
+				<Pill
+					icon={House}
+					label="Regular"
+					style={CONSISTENT_PILL_STYLE}
+					tooltip={`Regular — ${consistentTooltip(regularNote)}`}
+					iconOnly
 				/>
 			) : null}
 		</>

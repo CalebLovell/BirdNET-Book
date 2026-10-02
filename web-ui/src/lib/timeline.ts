@@ -21,7 +21,6 @@ import {
 	anchorForDay,
 	daysInRange,
 	precedingWindows,
-	previousPeriodStart,
 	type TimelineAnchor,
 	type TimelineWindow,
 	windowFor,
@@ -54,9 +53,6 @@ export type TimelineRow = {
 	/** The day a New species was first recorded, "YYYY-MM-DD" -- its first day
 	    in this window. Null unless isNew. */
 	firstHeard: string | null;
-	/** Mean detection confidence across this window, 0–1. Null when the window
-	    holds no scored detections for the species. */
-	averageConfidence: number | null;
 	/**
 	 * Heard before the window, with only a handful of records ever (the
 	 * station's Rare threshold). Never on a first-ever arrival, and never on
@@ -66,9 +62,9 @@ export type TimelineRow = {
 	/** Heard every day of the lookback and the window -- or, for a year or all
 	    time, on most of its days. See lib/highlights-data.ts. */
 	isConsistent: boolean;
-	/** A Consistent bird's run: "15 days in a row", or "82% of days" for a
-	    year or all time. Null unless isConsistent. */
-	streak: string | null;
+	/** How much of the window a Regular bird filled: "14 of 18 hours", "every
+	    day this week", "93% of days". Null unless isConsistent. */
+	regularNote: string | null;
 	/** Heard before, silent for the whole lookback, back in the window. */
 	isReturned: boolean;
 	/** How long the species was away before this window heard it again, in
@@ -206,7 +202,6 @@ export async function loadTimelineData({
 	// asks for -- and at least the one just before, for the up/down line.
 	const longest = Math.max(
 		1,
-		lookbackFor(settings.consistent, period) - 1,
 		lookbackFor(settings.goneQuiet, period),
 		lookbackFor(settings.returned, period),
 		lookbackFor(settings.vocal, period),
@@ -215,104 +210,75 @@ export async function loadTimelineData({
 		period === "all" ? [] : precedingWindows(period, anchor, longest);
 	const tallyFrom = beforeWindows.at(-1)?.start ?? window?.start ?? null;
 
-	// Which period each detection falls in, as that period's first day -- the
-	// same "YYYY-MM-DD" a window's start is -- so a species' whole history
-	// reduces to the days, weeks or months it was heard in. A year or all time
-	// counts no runs, so needs none.
-	const periodStart =
-		period === "day"
-			? sql<string>`${detections.Date}`
-			: period === "week"
-				? sql<string>`date(${detections.Date}, '-' || ((cast(strftime('%w', ${detections.Date}) as integer) + 6) % 7) || ' days')`
-				: period === "month"
-					? sql<string>`strftime('%Y-%m-01', ${detections.Date})`
-					: null;
-
-	const [
-		rows,
-		tallyRows,
-		beforeRows,
-		confidenceRows,
-		lifetimeRows,
-		historyRows,
-		nav,
-	] = await Promise.all([
-		db
-			.select({
-				comName: detections.Com_Name,
-				sciName: detections.Sci_Name,
-				hour: sql<string>`strftime('%H', ${detections.Time})`,
-				count: sql<number>`count(*)`,
-			})
-			.from(detections)
-			.where(inWindow)
-			.groupBy(
-				detections.Com_Name,
-				detections.Sci_Name,
-				sql`strftime('%H', ${detections.Time})`,
-			),
-		// Every day from the start of the longest lookback to the window's end,
-		// per species: the evidence every highlight rule reads. All time takes
-		// every day there is.
-		db
-			.select({
-				date: detections.Date,
-				comName: detections.Com_Name,
-				count: sql<number>`count(*)`,
-			})
-			.from(detections)
-			.where(
-				window && tallyFrom
-					? and(
-							sql`${detections.Date} >= ${tallyFrom}`,
-							sql`${detections.Date} <= ${window.end}`,
-						)
-					: undefined,
-			)
-			.groupBy(detections.Date, detections.Com_Name),
-		// The last day each species was heard before this window opened. A
-		// species missing from this list is one the window introduced; the
-		// rest have a history to have been away from or gone quiet against.
-		// "All time" has no "before".
-		window
-			? db
-					.select({
-						comName: detections.Com_Name,
-						lastBefore: sql<string>`max(${detections.Date})`,
-					})
-					.from(detections)
-					.where(lt(detections.Date, window.start))
-					.groupBy(detections.Com_Name)
-			: Promise.resolve([]),
-		// Mean confidence per species inside the window.
-		db
-			.select({
-				comName: detections.Com_Name,
-				avgConfidence: sql<number | null>`avg(${detections.Confidence})`,
-			})
-			.from(detections)
-			.where(inWindow)
-			.groupBy(detections.Com_Name),
-		// Lifetime detection count per species, ignoring the window: what makes
-		// a species a rare visitor here at all.
-		db
-			.select({
-				comName: detections.Com_Name,
-				lifetime: sql<number>`count(*)`,
-			})
-			.from(detections)
-			.groupBy(detections.Com_Name),
-		// Every period before this one each species was heard in, back to the
-		// station's first: what a Consistent bird's run is counted against.
-		window && periodStart
-			? db
-					.select({ start: periodStart, comName: detections.Com_Name })
-					.from(detections)
-					.where(lt(detections.Date, window.start))
-					.groupBy(periodStart, detections.Com_Name)
-			: Promise.resolve([]),
-		loadTimelineNav(period, window),
-	]);
+	const [rows, tallyRows, beforeRows, lifetimeRows, streakRows, nav] =
+		await Promise.all([
+			db
+				.select({
+					comName: detections.Com_Name,
+					sciName: detections.Sci_Name,
+					hour: sql<string>`strftime('%H', ${detections.Time})`,
+					count: sql<number>`count(*)`,
+				})
+				.from(detections)
+				.where(inWindow)
+				.groupBy(
+					detections.Com_Name,
+					detections.Sci_Name,
+					sql`strftime('%H', ${detections.Time})`,
+				),
+			// Every day from the start of the longest lookback to the window's end,
+			// per species: the evidence every highlight rule reads. All time takes
+			// every day there is.
+			db
+				.select({
+					date: detections.Date,
+					comName: detections.Com_Name,
+					count: sql<number>`count(*)`,
+				})
+				.from(detections)
+				.where(
+					window && tallyFrom
+						? and(
+								sql`${detections.Date} >= ${tallyFrom}`,
+								sql`${detections.Date} <= ${window.end}`,
+							)
+						: undefined,
+				)
+				.groupBy(detections.Date, detections.Com_Name),
+			// The last day each species was heard before this window opened. A
+			// species missing from this list is one the window introduced; the
+			// rest have a history to have been away from or gone quiet against.
+			// "All time" has no "before".
+			window
+				? db
+						.select({
+							comName: detections.Com_Name,
+							lastBefore: sql<string>`max(${detections.Date})`,
+						})
+						.from(detections)
+						.where(lt(detections.Date, window.start))
+						.groupBy(detections.Com_Name)
+				: Promise.resolve([]),
+			// Lifetime detection count per species, ignoring the window: what makes
+			// a species a rare visitor here at all.
+			db
+				.select({
+					comName: detections.Com_Name,
+					lifetime: sql<number>`count(*)`,
+				})
+				.from(detections)
+				.groupBy(detections.Com_Name),
+			// Every day before this one each species was heard on, back to the
+			// station's first: what a Day's Regular streak is counted against.
+			period === "day" && window
+				? db
+						.select({ date: detections.Date, comName: detections.Com_Name })
+						.from(detections)
+						.where(lt(detections.Date, window.start))
+						.groupBy(detections.Date, detections.Com_Name)
+				: Promise.resolve([]),
+			loadTimelineNav(period, window),
+		]);
 
 	const bySpecies = new Map<
 		string,
@@ -379,13 +345,14 @@ export async function loadTimelineData({
 		{
 			period,
 			window: windowDays,
+			inProgress: window != null && window.end >= today,
 			before: beforeWindows.map((w) => daysOf(w.start, w.end)),
-			history: historyBefore(
-				period,
-				anchor,
-				historyRows,
+			daysBefore: daysHeardBefore(
+				windowStart,
+				streakRows,
 				nav.stationRange?.first ?? null,
 			),
+
 			hourCounts,
 			lifetime: lifetimeByName,
 			heardBefore: new Set(beforeRows.map((row) => row.comName)),
@@ -393,10 +360,6 @@ export async function loadTimelineData({
 			silentDays,
 		},
 		settings,
-	);
-
-	const avgConfidenceByName = new Map(
-		confidenceRows.map((row) => [row.comName, row.avgConfidence]),
 	);
 
 	const withImages = Array.from(bySpecies.values()).map((entry) => {
@@ -412,10 +375,9 @@ export async function loadTimelineData({
 			firstHeard: flag?.isNew
 				? (firstDayByName.get(entry.comName) ?? null)
 				: null,
-			averageConfidence: avgConfidenceByName.get(entry.comName) ?? null,
 			isRare: flag?.isRare ?? false,
 			isConsistent: flag?.isConsistent ?? false,
-			streak: flag?.streak ?? null,
+			regularNote: flag?.regularNote ?? null,
 			isReturned: flag?.isReturned ?? false,
 			away: flag?.away ?? null,
 			vocal: flag?.vocal ?? null,
@@ -430,34 +392,28 @@ export async function loadTimelineData({
 }
 
 /**
- * Every period before the window, nearest first, back to the station's first:
- * the species heard in each. A period with no row at all comes back as an
- * empty set -- the station recording nothing then.
+ * Every day before `start`, nearest first, back to the station's first: the
+ * species heard on each. A day with no row at all comes back as an empty set
+ * -- the station recording nothing then.
  */
-function historyBefore(
-	period: TimelinePeriod,
-	anchor: TimelineAnchor,
-	rows: { start: string; comName: string }[],
+function daysHeardBefore(
+	start: string,
+	rows: { date: string; comName: string }[],
 	stationFirst: string | null,
 ): Set<string>[] {
-	if (!stationFirst || period === "all" || period === "year") return [];
+	if (!stationFirst || rows.length === 0) return [];
 	const heard = new Map<string, Set<string>>();
-	for (const { start, comName } of rows) {
-		const species = heard.get(start) ?? new Set<string>();
+	for (const { date, comName } of rows) {
+		const species = heard.get(date) ?? new Set<string>();
 		species.add(comName);
-		heard.set(start, species);
+		heard.set(date, species);
 	}
-	const firstPeriod = windowFor(
-		period,
-		anchorForDay(period, stationFirst),
-	).start;
-	const history: Set<string>[] = [];
-	let current = anchor;
-	for (;;) {
-		const start = previousPeriodStart(period, current);
-		if (start == null || start < firstPeriod) break;
-		history.push(heard.get(start) ?? new Set());
-		current = anchorForDay(period, start);
-	}
-	return history;
+	const days: Set<string>[] = [];
+	for (
+		let day = addDays(start, -1);
+		day >= stationFirst;
+		day = addDays(day, -1)
+	)
+		days.push(heard.get(day) ?? new Set());
+	return days;
 }

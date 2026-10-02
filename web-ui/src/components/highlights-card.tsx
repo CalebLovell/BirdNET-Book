@@ -1,9 +1,9 @@
 import { Link } from "@tanstack/react-router";
 import {
 	AudioLines,
-	CalendarCheck,
 	Clock,
 	Gem,
+	House,
 	type LucideIcon,
 	MoveRight,
 	Sparkles,
@@ -12,9 +12,10 @@ import {
 	Undo2,
 	VolumeX,
 } from "lucide-react";
-import { Fragment, type ReactNode } from "react";
+import { type CSSProperties, Fragment, type ReactNode } from "react";
 
 import { EmptyNote } from "~/components/empty-state.tsx";
+import { BADGE_STYLES } from "~/components/species-flag-pills.tsx";
 import { InfoTip } from "~/components/ui/info-tip.tsx";
 import {
 	type HighlightPeriod,
@@ -25,7 +26,6 @@ import type {
 	HighlightBird,
 	SpeciesHighlightKind,
 } from "~/lib/highlights-data.ts";
-import { thanPhrase } from "~/lib/highlights-data.ts";
 import { comNameToSlug } from "~/lib/species-slug.ts";
 import { hourLabel } from "~/lib/time-ago.ts";
 
@@ -93,45 +93,55 @@ function HighlightsInfo({ period }: { period: HighlightPeriod }) {
 					</li>
 				))}
 			</ul>
-			<p>
-				A line only shows when a bird earns it, and a bird can earn several.
-			</p>
 		</InfoTip>
 	);
 }
 
 type SpeciesLine = Extract<Highlight, { kind: SpeciesHighlightKind }>;
 
+// Every line's glyph wears a tint: the species-row badge's own for the lines
+// that share a badge's name, and for the rest -- which have no badge -- a hue
+// of their own that no badge uses: olive for up, a light red for down,
+// sunrise orange for the busiest hour, slate for gone quiet. An unchanged count
+// keeps the neutral icon well.
+const UP_TINT: CSSProperties = {
+	backgroundColor: "color-mix(in oklab, #6b8a3a 22%, var(--paper-raised))",
+	color: "#3d5220",
+};
+const DOWN_TINT: CSSProperties = {
+	backgroundColor: "color-mix(in oklab, #c4524a 20%, var(--paper-raised))",
+	color: "#7d2a24",
+};
+const LINE_TINTS: Record<
+	Exclude<Highlight["kind"], "activity">,
+	CSSProperties
+> = {
+	...BADGE_STYLES,
+	"busiest-hour": {
+		backgroundColor: "color-mix(in oklab, #c8703c 22%, var(--paper-raised))",
+		color: "#7a3f1c",
+	},
+	routine: {
+		backgroundColor: "color-mix(in oklab, #5f6f82 20%, var(--paper-raised))",
+		color: "#3a4654",
+	},
+};
+
+// Each line leads with its badge's own name, so the card and the species
+// rows say the same thing: "2 rare", "1 gone quiet", "4 vocal".
 const SPECIES_NOTES: Record<
 	SpeciesHighlightKind,
 	{ icon: LucideIcon; lead: (line: SpeciesLine) => string }
 > = {
-	new: {
-		icon: Sparkles,
-		lead: ({ total }) => `first-ever ${total === 1 ? "visitor" : "visitors"}`,
-	},
-	rare: {
-		icon: Gem,
-		lead: ({ total }) => `rare ${total === 1 ? "visitor" : "visitors"}`,
-	},
-	// Says what "every day" covers, since each period has its own stretch.
+	new: { icon: Sparkles, lead: () => "new" },
+	rare: { icon: Gem, lead: () => "rare" },
 	consistent: {
-		icon: CalendarCheck,
-		lead: ({ scope }) => `species heard ${scope ?? "every day"}`,
+		icon: House,
+		lead: ({ total }) => (total === 1 ? "regular" : "regulars"),
 	},
-	routine: {
-		icon: VolumeX,
-		lead: ({ total }) => `${total === 1 ? "regular" : "regulars"} gone quiet`,
-	},
-	// "species" carries the count where the lead has no noun of its own, so
-	// the line never opens on a bare "1 heard ...".
-	returned: { icon: Undo2, lead: () => "species back after time away" },
-	// Says what "usual" is, since each period compares with its own stretch.
-	vocal: {
-		icon: AudioLines,
-		lead: ({ comparedWith }) =>
-			`species heard far more ${thanPhrase(comparedWith)}`,
-	},
+	routine: { icon: VolumeX, lead: () => "gone quiet" },
+	returned: { icon: Undo2, lead: () => "returned" },
+	vocal: { icon: AudioLines, lead: () => "vocal" },
 };
 
 function HighlightNote({ highlight }: { highlight: Highlight }) {
@@ -140,14 +150,14 @@ function HighlightNote({ highlight }: { highlight: Highlight }) {
 			return <ActivityNote highlight={highlight} />;
 		case "busiest-hour":
 			return (
-				<Note icon={Clock}>
+				<Note icon={Clock} badge={LINE_TINTS["busiest-hour"]}>
 					Busiest at <Figure>{hourLabel(highlight.hour)}</Figure>.
 				</Note>
 			);
 		default: {
 			const { icon, lead } = SPECIES_NOTES[highlight.kind];
 			return (
-				<Note icon={icon}>
+				<Note icon={icon} badge={LINE_TINTS[highlight.kind]}>
 					<Figure>{highlight.total}</Figure> {lead(highlight)}:{" "}
 					<BirdNames birds={highlight.birds} total={highlight.total} />.
 				</Note>
@@ -157,19 +167,16 @@ function HighlightNote({ highlight }: { highlight: Highlight }) {
 }
 
 /**
- * "Up 42% from last week: 240 more detections, 4 more species." Always written
- * when the period before recorded anything, whatever the size of the change.
- * The percentage is the detections' change; the species clause says the
- * difference outright, since a species count is too small for a percentage to
- * mean much.
+ * "Up 42% from last week: 240 more detections." Always written when the
+ * period before recorded anything, whatever the size of the change.
  */
 function ActivityNote({
 	highlight,
 }: {
 	highlight: Extract<Highlight, { kind: "activity" }>;
 }) {
-	const { direction, percent, baselineLabel, detectionsDelta, speciesDelta } =
-		highlight;
+	const { direction, percent, baselineLabel, count, delta } = highlight;
+	const noun = (n: number) => (n === 1 ? "detection" : "detections");
 
 	return (
 		<Note
@@ -180,31 +187,24 @@ function ActivityNote({
 						? TrendingDown
 						: MoveRight
 			}
+			badge={
+				direction === "up"
+					? UP_TINT
+					: direction === "down"
+						? DOWN_TINT
+						: undefined
+			}
 		>
 			{direction === "level" ? (
-				<>The same as {baselineLabel}</>
+				<>
+					The same as {baselineLabel}: <Figure>{count.toLocaleString()}</Figure>{" "}
+					{noun(count)}
+				</>
 			) : (
 				<>
 					{direction === "up" ? "Up" : "Down"} <Figure>{percent}%</Figure> from{" "}
-					{baselineLabel}
-				</>
-			)}
-			:{" "}
-			{detectionsDelta === 0 ? (
-				"the same number of detections"
-			) : (
-				<>
-					<Figure>{Math.abs(detectionsDelta).toLocaleString()}</Figure>{" "}
-					{detectionsDelta > 0 ? "more" : "fewer"}{" "}
-					{Math.abs(detectionsDelta) === 1 ? "detection" : "detections"}
-				</>
-			)}
-			{speciesDelta === 0 ? (
-				", the same number of species"
-			) : (
-				<>
-					, <Figure>{Math.abs(speciesDelta)}</Figure>{" "}
-					{speciesDelta > 0 ? "more" : "fewer"} species
+					{baselineLabel}: <Figure>{Math.abs(delta).toLocaleString()}</Figure>{" "}
+					{delta > 0 ? "more" : "fewer"} {noun(Math.abs(delta))}
 				</>
 			)}
 			.
@@ -215,26 +215,34 @@ function ActivityNote({
 /** One highlight: its glyph, then the sentence, hairlines between notes. */
 function Note({
 	icon: Icon,
+	badge,
 	children,
 }: {
 	icon: LucideIcon;
+	/** The line's tint (see LINE_TINTS); without one the glyph sits in the
+	    neutral icon well. */
+	badge?: CSSProperties;
 	children: ReactNode;
 }) {
 	return (
-		<li className="flex items-baseline gap-2.5 border-[var(--line)] border-t py-2.5 text-[13px] leading-normal first:border-t-0 first:pt-1.5 last:pb-0 max-[400px]:gap-2">
-			<Icon
-				className="size-3.5 shrink-0 translate-y-0.5 text-muted-foreground"
+		<li className="flex items-start gap-2.5 border-[var(--line)] border-t py-2.5 text-[13px] leading-normal first:border-t-0 first:pt-1.5 last:pb-0 max-[400px]:gap-2">
+			<span
+				className="grid size-5 shrink-0 place-items-center rounded-full bg-[var(--icon-well)] text-muted-foreground"
+				style={badge}
 				aria-hidden="true"
-			/>
-			<span className="min-w-0">{children}</span>
+			>
+				<Icon className="size-3" />
+			</span>
+			<span className="min-w-0 pt-px">{children}</span>
 		</li>
 	);
 }
 
 /**
- * The birds a note is about, as a sentence would list them, each with what
- * earned it its place: "Wood Thrush (23 days) and Veery (16 days)", or past
- * the named few, "... and 3 more".
+ * The birds a note is about, by name alone, as a sentence would list them:
+ * "Wood Thrush, Veery and Cedar Waxwing", or past the named few, "... and 3
+ * more". The figures behind each (its run, its time away) stay in the share
+ * text; the card keeps to names.
  */
 function BirdNames({
 	birds,
@@ -262,20 +270,16 @@ function BirdNames({
 }
 
 /** A named bird, linked to its species page in the sentence's own colour --
- * underlined only on hover, like species links elsewhere -- then what earned
- * it its place. */
+ * underlined only on hover, like species links elsewhere. */
 function BirdName({ bird }: { bird: HighlightBird }) {
 	return (
-		<>
-			<Link
-				to="/species/$comName"
-				params={{ comName: comNameToSlug(bird.comName) }}
-				className="text-[inherit]! no-underline hover:underline"
-			>
-				{bird.comName}
-			</Link>
-			{bird.note ? ` (${bird.note})` : null}
-		</>
+		<Link
+			to="/species/$comName"
+			params={{ comName: comNameToSlug(bird.comName) }}
+			className="text-[inherit]! no-underline hover:underline"
+		>
+			{bird.comName}
+		</Link>
 	);
 }
 

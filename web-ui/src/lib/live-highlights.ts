@@ -49,7 +49,6 @@ export const getLiveHighlights = createServerFn({ method: "GET" }).handler(
 		const nowMs = Date.now();
 		const longest = Math.max(
 			1,
-			lookbackFor(settings.consistent, "live") - 1,
 			lookbackFor(settings.goneQuiet, "live"),
 			lookbackFor(settings.returned, "live"),
 			lookbackFor(settings.vocal, "live"),
@@ -97,8 +96,8 @@ export const getLiveHighlights = createServerFn({ method: "GET" }).handler(
 					)
 					.groupBy(daySlice, detections.Com_Name),
 				// Every 24-hour slice before the window each species was heard in,
-				// back to the station's first: what a Consistent bird's run is
-				// counted against.
+				// back to the station's first: what a Regular streak is counted
+				// against.
 				db
 					.select({ slice: daySlice, comName: detections.Com_Name })
 					.from(detections)
@@ -145,24 +144,25 @@ export const getLiveHighlights = createServerFn({ method: "GET" }).handler(
 		for (const [comName, n] of slices[0])
 			if (!lifetime.has(comName)) lifetime.set(comName, n);
 
+		const hourCounts = Array<number>(24).fill(0);
+		for (const row of hourRows) hourCounts[Number(row.hour)] = row.count;
+
 		// Slice 1 first: the 24 hours before the window, then the 24 before that.
 		const oldestSlice = Math.max(0, ...streakRows.map((row) => row.slice));
-		const history = Array.from(
+		const daysBefore = Array.from(
 			{ length: oldestSlice },
 			() => new Set<string>(),
 		);
 		for (const { slice, comName } of streakRows)
-			if (slice >= 1) history[slice - 1].add(comName);
-
-		const hourCounts = Array<number>(24).fill(0);
-		for (const row of hourRows) hourCounts[Number(row.hour)] = row.count;
+			if (slice >= 1) daysBefore[slice - 1].add(comName);
 
 		const { highlights } = judgeHighlights(
 			{
 				period: "live",
 				window: [slices[0]],
+				inProgress: false,
 				before: slices.slice(1).map((slice) => [slice]),
-				history,
+				daysBefore,
 				hourCounts,
 				lifetime,
 				heardBefore: new Set(historyRows.map((row) => row.comName)),

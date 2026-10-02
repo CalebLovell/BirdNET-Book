@@ -103,8 +103,8 @@ test("carries the page's highlights after its own lines", () => {
 					direction: "up",
 					percent: 42,
 					baselineLabel: "last week",
-					detectionsDelta: 30,
-					speciesDelta: 2,
+					count: 100,
+					delta: 30,
 				},
 				{ kind: "busiest-hour", hour: 6 },
 				{
@@ -122,23 +122,9 @@ test("carries the page's highlights after its own lines", () => {
 
 	assert.deepEqual(lines.slice(-3), [
 		"🌅 Peak hour: 6 AM · 40 detections",
-		"📈 Up 42% from last week · 30 more detections, 2 more species",
-		"🐣 First ever: Indigo Bunting, Wood Thrush, Veery",
+		"📈 Up 42% from last week · 30 more detections",
+		"🐣 New: Indigo Bunting, Wood Thrush, Veery",
 	]);
-});
-
-test("reports the share of detections heard after dark", () => {
-	const text = formatTimelineShareCard(
-		cardWith({
-			rows: [rowWith({ hourCounts: hours({ 2: 25, 12: 75 }) })],
-		}),
-	);
-
-	assert.match(text, /^🌙 25% heard after dark$/m);
-});
-
-test("stays quiet about the night when nothing was heard in it", () => {
-	assert.doesNotMatch(formatTimelineShareCard(cardWith()), /🌙/);
 });
 
 test("says so plainly when the window holds nothing", () => {

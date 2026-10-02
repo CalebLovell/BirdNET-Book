@@ -21,10 +21,11 @@ export type Lookback = { days: number; weeks: number; months: number };
 export type HighlightThresholds = {
 	/** Rare: heard before, with at most this many records ever. */
 	rareMax: number;
-	/** Regular: heard in at least this many periods in a row, this one
-	    included -- or, for a year or all time, on more than this share of its
-	    days. */
-	consistent: Lookback & { yearShare: number; allTimeShare: number };
+	/** Regular: for Live and Day, heard every day for at least `streakDays`
+	    days straight, this one included; for a week or a month, on every
+	    recorded day of it; for a year or all time, on more than `yearShare`% or
+	    `allTimeShare`% of its days. */
+	consistent: { streakDays: number; yearShare: number; allTimeShare: number };
 	/** Gone quiet: heard in each period of the lookback, not in the window. */
 	goneQuiet: Lookback;
 	/** Returned: silent for the whole lookback, heard in the window. */
@@ -37,17 +38,11 @@ export type HighlightThresholds = {
 
 /** Every lookback is the same short stretch -- ten days for Live and Day, the
     one week, month or year before -- so the rules agree on what "before"
-    means. Regular asks for a longer run, so it stays news. */
+    means. */
 export const HIGHLIGHT_THRESHOLDS: HighlightThresholds = {
 	rareMax: 5,
-	consistent: {
-		days: 10,
-		weeks: 10,
-		months: 3,
-		yearShare: 75,
-		allTimeShare: 75,
-	},
-	goneQuiet: { days: 10, weeks: 1, months: 1 },
+	consistent: { streakDays: 10, yearShare: 90, allTimeShare: 90 },
+	goneQuiet: { days: 10, weeks: 3, months: 3 },
 	returned: { days: 10, weeks: 1, months: 1 },
 	vocal: {
 		days: 10,
@@ -88,7 +83,8 @@ const UNIT: Record<
 	{ one: string; this: string; last: string }
 > = {
 	live: { one: "day", this: "today", last: "yesterday" },
-	day: { one: "day", this: "this day", last: "the day before" },
+	// The card says "yesterday" for the day before any Day, so the guide does.
+	day: { one: "day", this: "today", last: "yesterday" },
 	week: { one: "week", this: "this week", last: "last week" },
 	month: { one: "month", this: "this month", last: "last month" },
 	year: { one: "year", this: "this year", last: "last year" },
@@ -102,16 +98,13 @@ export function highlightGuide(
 	period: HighlightPeriod,
 	thresholds: HighlightThresholds = HIGHLIGHT_THRESHOLDS,
 ): HighlightGuideEntry[] {
-	const busiest = {
-		name: "Busiest hour",
-		meaning: "The hour with the most detections.",
-	};
+	const busiest = { name: "Busiest hour", meaning: "Most detections." };
 	if (period === "all")
 		return [
 			busiest,
 			{
 				name: "Regular",
-				meaning: `Heard on over ${thresholds.consistent.allTimeShare}% of all the days the station has recorded.`,
+				meaning: `Heard on over ${thresholds.consistent.allTimeShare}% of days.`,
 			},
 		];
 
@@ -121,43 +114,35 @@ export function highlightGuide(
 		const n = lookbackFor(lookback, period);
 		return n === 1 ? unit.last : `the past ${n} ${unit.one}s`;
 	};
-	const run = lookbackFor(thresholds.consistent, period);
 
 	return [
 		{
 			name: "Up or down",
-			meaning:
-				period === "live"
-					? "Detections and species in the last 24 hours against the 24 before."
-					: `Detections and species ${unit.this} against ${unit.last}.`,
+			meaning: `Compared with ${period === "live" ? "the 24 hours before" : unit.last}.`,
 		},
 		busiest,
-		{ name: "New", meaning: "Recorded here for the first time ever." },
+		{ name: "New", meaning: "First record ever." },
+		{ name: "Rare", meaning: `${thresholds.rareMax} or fewer records.` },
 		{
-			name: "Rare",
-			meaning: `Heard before, but no more than ${thresholds.rareMax} times ever.`,
+			name: "Vocal",
+			meaning: `${thresholds.vocal.ratio}× its usual, vs. ${past(thresholds.vocal)}.`,
+		},
+		{
+			name: "Returned",
+			meaning: `Silent ${past(thresholds.returned)}, back ${unit.this}.`,
 		},
 		{
 			name: "Regular",
 			meaning:
-				period === "year"
-					? `Heard on over ${thresholds.consistent.yearShare}% of days this year.`
-					: `Heard every ${unit.one} for at least ${run} ${unit.one}s in a row.`,
+				period === "live" || period === "day"
+					? `Heard ${thresholds.consistent.streakDays}+ days straight.`
+					: period === "year"
+						? `Heard on over ${thresholds.consistent.yearShare}% of days.`
+						: `Heard every day ${unit.this}.`,
 		},
 		{
 			name: "Gone quiet",
-			meaning:
-				lookbackFor(thresholds.goneQuiet, period) === 1
-					? `Heard ${unit.last}, but not ${unit.this}.`
-					: `Heard every ${unit.one} of ${past(thresholds.goneQuiet)}, but not ${unit.this}.`,
-		},
-		{
-			name: "Returned",
-			meaning: `Heard before, silent ${lookbackFor(thresholds.returned, period) === 1 ? "all" : "for"} ${past(thresholds.returned)}, and back ${unit.this}.`,
-		},
-		{
-			name: "Vocal",
-			meaning: `Heard at least ${thresholds.vocal.ratio}× as much as usual, compared with ${past(thresholds.vocal)}.`,
+			meaning: `Heard ${past(thresholds.goneQuiet)}, not ${unit.this}.`,
 		},
 	];
 }

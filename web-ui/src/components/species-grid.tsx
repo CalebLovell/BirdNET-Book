@@ -1,6 +1,5 @@
 import { Link } from "@tanstack/react-router";
 import type { ReactNode } from "react";
-import { ConfidencePill } from "~/components/confidence-pill.tsx";
 import { EmptyNote } from "~/components/empty-state.tsx";
 import { SpeciesFlagPills } from "~/components/species-flag-pills.tsx";
 import { SpeciesHourBars } from "~/components/species-hour-bars.tsx";
@@ -15,14 +14,13 @@ export type SpeciesGridItem = {
 	sciName: string;
 	imageUrl: string | null;
 	count: number;
-	averageConfidence: number | null;
 	isNew: boolean;
 	/** The day a New bird was first recorded. Null unless isNew. */
 	firstHeard: string | null;
 	isRare: boolean;
 	isConsistent: boolean;
-	/** A Regular bird's run ("15 days in a row"). */
-	streak: string | null;
+	/** How much of the window a Regular bird filled ("every day this week"). */
+	regularNote: string | null;
 	isReturned: boolean;
 	/** How long a returning bird was away ("3 weeks"), or null unless
 	    isReturned. */
@@ -148,13 +146,12 @@ function SpeciesGridRow({
 				<div className="flex shrink-0 flex-col items-end gap-1.5">
 					<span className="count-figure">{item.count.toLocaleString()}</span>
 					<div className="flex flex-wrap items-center justify-end gap-1.5">
-						<ConfidencePill confidence={item.averageConfidence} average />
 						<SpeciesFlagPills
 							isNew={item.isNew}
 							isReturned={item.isReturned}
 							isRare={item.isRare}
 							isConsistent={item.isConsistent}
-							streak={item.streak}
+							regularNote={item.regularNote}
 							away={item.away}
 							vocal={item.vocal}
 							firstHeard={item.firstHeard}

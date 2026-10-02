@@ -50,8 +50,8 @@ test("each highlight reads as one sentence", async () => {
 				direction: "up",
 				percent: 42,
 				baselineLabel: "last week",
-				detectionsDelta: 1812,
-				speciesDelta: -3,
+				count: 6127,
+				delta: 1812,
 			},
 			{ kind: "busiest-hour", hour: 6 },
 			{
@@ -65,24 +65,15 @@ test("each highlight reads as one sentence", async () => {
 			{
 				kind: "routine",
 				total: 7,
-				birds: [{ comName: "Carolina Wren", note: "silent 3 days" }],
+				birds: [{ comName: "Carolina Wren", note: "3 days silent" }],
 			},
 		],
 	});
 	const text = markup.replace(/<[^>]+>/g, "");
-	assert.match(
-		text,
-		/Up 42% from last week: 1,812 more detections, 3 fewer species\./,
-	);
+	assert.match(text, /Up 42% from last week: 1,812 more detections\./);
 	assert.match(text, /Busiest at 6 AM\./);
-	assert.match(
-		text,
-		/2 species back after time away: Wood Thrush \(23 days\) and Veery \(16 days\)\./,
-	);
-	assert.match(
-		text,
-		/7 regulars gone quiet: Carolina Wren \(silent 3 days\) and 6 more\./,
-	);
+	assert.match(text, /2 returned: Wood Thrush and Veery\./);
+	assert.match(text, /7 gone quiet: Carolina Wren and 6 more\./);
 	assert.match(
 		markup,
 		/<a[^>]*href="\/species\/wood-thrush"[^>]*>Wood Thrush<\/a>/,
@@ -99,33 +90,32 @@ test("an unchanged window reads as level", () => {
 					direction: "level",
 					percent: 0,
 					baselineLabel: "yesterday",
-					detectionsDelta: -1,
-					speciesDelta: 0,
+					count: 412,
+					delta: -1,
 				},
 			]}
 		/>,
 	);
 	assert.match(
 		markup.replace(/<[^>]+>/g, ""),
-		/The same as yesterday: 1 fewer detection, the same number of species\./,
+		/The same as yesterday: 412 detections\./,
 	);
 });
 
-test("the Regular line says what every day covers", async () => {
+test("the Regular line names each bird's run", async () => {
 	const markup = await renderCard({
 		emptyMessage: "",
 		highlights: [
 			{
 				kind: "consistent",
 				total: 1,
-				birds: [{ comName: "Northern Cardinal", note: "4 weeks in a row" }],
-				scope: "every day",
+				birds: [{ comName: "Northern Cardinal", note: "4 weeks straight" }],
 			},
 		],
 	});
 	assert.match(
 		markup.replace(/<[^>]+>/g, ""),
-		/1 species heard every day: Northern Cardinal \(4 weeks in a row\)\./,
+		/1 regular: Northern Cardinal\./,
 	);
 });
 
@@ -145,7 +135,7 @@ test("an all-zero day gets the hour card's own empty note", () => {
 	assert.doesNotMatch(markup, /<svg/);
 });
 
-test("the Vocal line says what the birds were heard far more than", async () => {
+test("the Vocal line leads with its badge's name", async () => {
 	const markup = await renderCard({
 		emptyMessage: "",
 		highlights: [
@@ -159,12 +149,11 @@ test("the Vocal line says what the birds were heard far more than", async () => 
 					},
 					{ comName: "Swainson's Thrush", note: "30 this week, usually 9" },
 				],
-				comparedWith: "the past 3 weeks",
 			},
 		],
 	});
 	assert.match(
 		markup.replace(/<[^>]+>/g, ""),
-		/2 species heard far more than in the past 3 weeks: Rose-breasted Grosbeak \(41 this week, usually 12\) and Swainson(&#x27;|')s Thrush \(30 this week, usually 9\)\./,
+		/2 vocal: Rose-breasted Grosbeak and Swainson(&#x27;|')s Thrush\./,
 	);
 });
