@@ -20,15 +20,29 @@ export function ChartValueTooltip({
 }) {
 	const raw = payload?.[0]?.value;
 	const value = Number(raw);
-	if (!active || raw == null || Number.isNaN(value)) return null;
+	const shown = active && raw != null && !Number.isNaN(value);
 
 	const bucket = formatLabel ? formatLabel(label) : String(label ?? "");
 	const noun = value === 1 ? "detection" : "detections";
 
+	// A live region, as recharts' own tooltip content is: stepping the chart
+	// with the arrow keys reads each value aloud. It stays mounted while empty
+	// because screen readers skip a region whose text arrives with it.
 	return (
-		<div className="rounded-sm border border-[var(--line)] bg-[var(--paper-raised)] px-2 py-1 text-[13px] text-[var(--ink)]">
-			<span className="font-semibold">{bucket}</span>
-			{` — ${value.toLocaleString()} ${noun}`}
-		</div>
+		<output
+			aria-live="assertive"
+			className={
+				shown
+					? "block rounded-sm border border-[var(--line)] bg-[var(--paper-raised)] px-2 py-1 text-[13px] text-[var(--ink)]"
+					: undefined
+			}
+		>
+			{shown && (
+				<>
+					<span className="font-semibold">{bucket}</span>
+					{` — ${value.toLocaleString()} ${noun}`}
+				</>
+			)}
+		</output>
 	);
 }

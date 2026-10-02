@@ -8,6 +8,7 @@ import {
 	YAxis,
 } from "recharts";
 
+import { ChartDataTable } from "~/components/chart-data-table.tsx";
 import { ChartValueTooltip } from "~/components/chart-tooltip.tsx";
 import { EmptyNote } from "~/components/empty-state.tsx";
 import { CHART_MARGIN, X_AXIS_HEIGHT } from "~/lib/chart-style.ts";
@@ -54,6 +55,7 @@ export function DetectionsByMonthCard({
 					<ResponsiveContainer width="100%" height="100%" minHeight={220}>
 						<BarChart
 							data={trend}
+							aria-label="Detections by month chart. Use the left and right arrow keys to read each month."
 							// No extra right margin for "Dec": each label is centred in its
 							// month's band, so the last one sits half a band in from the edge.
 							margin={CHART_MARGIN}
@@ -87,9 +89,6 @@ export function DetectionsByMonthCard({
 								cursor={{ fill: "var(--sage)", fillOpacity: 0.2 }}
 							/>
 							{/* One series, so no legend -- the kicker above names it. The
-							    rounded top is on the data end only; the baseline end stays
-							    square so the bar reads as sitting on zero. */}
-							{/* One series, so no legend -- the kicker above names it. The
 							    rounded corners are on the data end only; the baseline end
 							    stays square so each bar reads as sitting on zero.
 
@@ -107,6 +106,11 @@ export function DetectionsByMonthCard({
 							/>
 						</BarChart>
 					</ResponsiveContainer>
+					<ChartDataTable
+						caption="Detections by month"
+						bucketHeading="Month"
+						rows={trend}
+					/>
 				</div>
 			)}
 		</section>

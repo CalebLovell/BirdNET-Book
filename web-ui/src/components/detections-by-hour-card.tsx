@@ -10,6 +10,7 @@ import {
 	YAxis,
 } from "recharts";
 
+import { ChartDataTable } from "~/components/chart-data-table.tsx";
 import { ChartValueTooltip } from "~/components/chart-tooltip.tsx";
 import { EmptyNote } from "~/components/empty-state.tsx";
 import {
@@ -68,7 +69,11 @@ export function DetectionsByHourCard({
 			    definite height. The floor makes the chart render wherever the card
 			    is put, and it still grows past it when a row does stretch. */}
 				<ResponsiveContainer width="100%" height="100%" minHeight={220}>
-					<AreaChart data={activity} margin={CHART_MARGIN}>
+					<AreaChart
+						data={activity}
+						margin={CHART_MARGIN}
+						aria-label="Detections by hour chart. Use the left and right arrow keys to read each hour."
+					>
 						<defs>
 							<linearGradient id={fillId} x1="0" y1="0" x2="0" y2="1">
 								<stop offset="0%" stopColor="var(--moss)" stopOpacity={0.2} />
@@ -126,6 +131,14 @@ export function DetectionsByHourCard({
 						/>
 					</AreaChart>
 				</ResponsiveContainer>
+				<ChartDataTable
+					caption="Detections by hour"
+					bucketHeading="Hour"
+					rows={activity.map((point) => ({
+						label: hourLabel(point.hour),
+						count: point.count,
+					}))}
+				/>
 			</div>
 		</section>
 	);
