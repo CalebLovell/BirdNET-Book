@@ -468,7 +468,8 @@ function HeatMapDay({
 }) {
 	const count = point?.count ?? 0;
 	const dateLabel = formatDate(bucketForDate(date));
-	const label = `${dateLabel}: ${count.toLocaleString()} detections`;
+	const noun = count === 1 ? "detection" : "detections";
+	const label = `${dateLabel}: ${count.toLocaleString()} ${noun}`;
 	const fill = { backgroundColor: heatColor(count, maximum) };
 
 	// Inside a link the swatch is decoration: the link already carries the label,
@@ -491,7 +492,7 @@ function HeatMapDay({
 		<Tooltip>
 			<TooltipTrigger asChild>{swatch}</TooltipTrigger>
 			<TooltipContent>
-				{dateLabel} — {count.toLocaleString()}{" "}
+				{dateLabel} — {count.toLocaleString()} {noun}
 			</TooltipContent>
 		</Tooltip>
 	);
