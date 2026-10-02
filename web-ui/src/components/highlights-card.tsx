@@ -18,6 +18,7 @@ import type {
 	HighlightBird,
 	SpeciesHighlightKind,
 } from "~/lib/highlights-data.ts";
+import { thanPhrase } from "~/lib/highlights-data.ts";
 import { comNameToSlug } from "~/lib/species-slug.ts";
 import { hourLabel } from "~/lib/time-ago.ts";
 
@@ -67,7 +68,10 @@ export function HighlightsCard({
 
 const SPECIES_NOTES: Record<
 	SpeciesHighlightKind,
-	{ icon: LucideIcon; lead: (total: number) => string }
+	{
+		icon: LucideIcon;
+		lead: (total: number, comparedWith: string | undefined) => string;
+	}
 > = {
 	new: {
 		icon: Sparkles,
@@ -80,9 +84,11 @@ const SPECIES_NOTES: Record<
 		icon: Gem,
 		lead: (total) => `rare ${total === 1 ? "visitor" : "visitors"}`,
 	},
+	// Says what "usual" is, since each period compares with its own stretch.
 	vocal: {
 		icon: AudioLines,
-		lead: () => "species heard more often than usual",
+		lead: (_, comparedWith) =>
+			`species heard far more ${thanPhrase(comparedWith)}`,
 	},
 	routine: {
 		icon: VolumeX,
@@ -104,7 +110,8 @@ function HighlightNote({ highlight }: { highlight: Highlight }) {
 			const { icon, lead } = SPECIES_NOTES[highlight.kind];
 			return (
 				<Note icon={icon}>
-					<Figure>{highlight.total}</Figure> {lead(highlight.total)}:{" "}
+					<Figure>{highlight.total}</Figure>{" "}
+					{lead(highlight.total, highlight.comparedWith)}:{" "}
 					<BirdNames birds={highlight.birds} total={highlight.total} />.
 				</Note>
 			);

@@ -4,7 +4,11 @@
 // say the same thing the same way -- and the same thing the Highlights card on
 // the page says, since the lines arrive already judged by highlights-data.ts.
 
-import type { Highlight, SpeciesHighlightKind } from "~/lib/highlights-data.ts";
+import {
+	type Highlight,
+	type SpeciesHighlightKind,
+	thanPhrase,
+} from "~/lib/highlights-data.ts";
 import { plural } from "~/lib/number-format.ts";
 
 /** Hours that count as after dark for the nightlife line, 9pm through 4am. */
@@ -18,7 +22,8 @@ const SPECIES_LEADS: Record<SpeciesHighlightKind, string> = {
 	new: "🐣 First ever",
 	returned: "🔁 Back",
 	rare: "💎 Rare",
-	vocal: "📣 More vocal than usual",
+	// Completed with what "usual" is: "📣 Heard far more than in 2025".
+	vocal: "📣 Heard far more",
 	routine: "🤐 Gone quiet",
 };
 
@@ -61,7 +66,11 @@ export function formatHighlightLines(highlights: Highlight[]): string[] {
 					);
 				const rest = highlight.total - named.length;
 				const more = rest > 0 ? ` +${rest} more` : "";
-				return [`${SPECIES_LEADS[highlight.kind]}: ${named.join(", ")}${more}`];
+				const lead =
+					highlight.kind === "vocal"
+						? `${SPECIES_LEADS.vocal} ${thanPhrase(highlight.comparedWith)}`
+						: SPECIES_LEADS[highlight.kind];
+				return [`${lead}: ${named.join(", ")}${more}`];
 			}
 		}
 	});

@@ -129,7 +129,7 @@ test("an all-zero day gets the hour card's own empty note", () => {
 	assert.doesNotMatch(markup, /<svg/);
 });
 
-test("the Vocal line says the birds were heard more often than usual", async () => {
+test("the Vocal line says what the birds were heard far more than", async () => {
 	const markup = await renderCard({
 		emptyMessage: "",
 		highlights: [
@@ -137,14 +137,15 @@ test("the Vocal line says the birds were heard more often than usual", async () 
 				kind: "vocal",
 				total: 2,
 				birds: [
-					{ comName: "Rose-breasted Grosbeak", note: "3.4×" },
-					{ comName: "Swainson's Thrush", note: "2.8×" },
+					{ comName: "Rose-breasted Grosbeak", note: "41, usually about 12" },
+					{ comName: "Swainson's Thrush", note: "30, usually about 9" },
 				],
+				comparedWith: "the four weeks before",
 			},
 		],
 	});
 	assert.match(
 		markup.replace(/<[^>]+>/g, ""),
-		/2 species heard more often than usual: Rose-breasted Grosbeak \(3\.4×\) and Swainson(&#x27;|')s Thrush \(2\.8×\)\./,
+		/2 species heard far more than the four weeks before: Rose-breasted Grosbeak \(41, usually about 12\) and Swainson(&#x27;|')s Thrush \(30, usually about 9\)\./,
 	);
 });

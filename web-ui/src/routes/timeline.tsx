@@ -405,7 +405,7 @@ function TimelineCards({
 		isRare: row.isRare,
 		isReturned: row.isReturned,
 		daysAway: row.daysAway,
-		vocalRatio: row.vocalRatio,
+		vocal: row.vocal,
 		hourCounts: row.hourCounts,
 	}));
 

@@ -5,6 +5,7 @@ import { SpeciesFlagPills } from "~/components/species-flag-pills.tsx";
 import { SpeciesImage } from "~/components/species-image.tsx";
 import { TooltipProvider } from "~/components/ui/tooltip.tsx";
 import { heatColor, heatInk, heatMaximum } from "~/lib/heatmap.ts";
+import type { VocalJump } from "~/lib/highlights-data.ts";
 import { compactCount } from "~/lib/number-format.ts";
 import { comNameToSlug } from "~/lib/species-slug.ts";
 import { hourLabel } from "~/lib/time-ago.ts";
@@ -30,7 +31,7 @@ export type SpeciesHourRow = {
 	isRare: boolean;
 	daysAway: number | null;
 	/** How many times its usual rate, when heard far more than usual. */
-	vocalRatio: number | null;
+	vocal: VocalJump | null;
 };
 
 const HOURS = Array.from({ length: 24 }, (_, hour) => hour);
@@ -240,7 +241,7 @@ function SpeciesHourRowView({
 						isReturned={row.isReturned}
 						isRare={row.isRare}
 						daysAway={row.daysAway}
-						vocalRatio={row.vocalRatio}
+						vocal={row.vocal}
 						firstHeard={row.firstHeard}
 					/>
 				</div>

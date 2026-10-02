@@ -10,7 +10,7 @@ import {
 	RETURN_AFTER_DAYS,
 	ROUTINE_MIN_SHARE,
 	ROUTINE_SILENT_DAYS,
-	vocalRatio,
+	vocalJump,
 } from "~/lib/highlights-data.ts";
 import { detectedAt, isLast24h } from "~/lib/now.ts";
 import { timestampToMillis } from "~/lib/visits.ts";
@@ -190,13 +190,14 @@ export const getLiveHighlights = createServerFn({ method: "GET" }).handler(
 						const before = history.get(row.comName);
 						if (!before || isRare.has(row.comName)) return [];
 						if (isReturning.has(row.comName)) return [];
-						const ratio = vocalRatio({
+						const jump = vocalJump({
 							windowCount: row.windowCount,
 							windowDays: 1,
 							baselineCount: before.baselineCount,
 							baselineDays: recorded.length,
+							daysHeard: before.daysInFortnight,
 						});
-						return ratio == null ? [] : [{ comName: row.comName, ratio }];
+						return jump == null ? [] : [{ comName: row.comName, ...jump }];
 					})
 					.sort((a, b) => b.ratio - a.ratio)
 			: [];
@@ -225,6 +226,7 @@ export const getLiveHighlights = createServerFn({ method: "GET" }).handler(
 				returning,
 				rare,
 				vocal,
+				comparedWith: sufficient ? "your two-week average" : null,
 				breakingRoutine,
 				activity,
 			}),

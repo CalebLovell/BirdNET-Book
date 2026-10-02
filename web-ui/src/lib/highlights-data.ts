@@ -44,9 +44,15 @@ export const BUSY_RATIO = 1.3;
 export const QUIET_RATIO = 0.7;
 
 /** How many times its usual daily rate a species must be heard at before the
-    window counts as more vocal than usual for it. Higher than the station-wide
-    BUSY_RATIO, since one species' counts swing far more than everything's. */
-export const VOCAL_RATIO = 2;
+    window counts as far more than usual for it. Well above the station-wide
+    BUSY_RATIO, since one species' counts swing far more than everything's --
+    a single day doubling its usual is ordinary noise. */
+export const VOCAL_RATIO = 3;
+
+/** Share of the comparison's recorded days a species must have been heard on
+    to have a "usual" at all. Below it the bird was barely around, and a jump
+    from four detections to eighty is an arrival, not a regular gone loud. */
+export const VOCAL_MIN_PRESENCE = 1 / 4;
 
 /** Detections a species needs in the window before it can be more vocal than
     usual, so a couple of stray calls from a quiet bird never count. */
@@ -89,6 +95,9 @@ export type Highlight =
 			total: number;
 			/** ...but only the first MAX_NAMED_BIRDS are named. */
 			birds: HighlightBird[];
+			/** For "vocal": what the birds are heard far more than, as the
+			    activity line names it ("the four weeks before"). */
+			comparedWith?: string;
 	  };
 
 /**
@@ -108,7 +117,10 @@ export type HighlightFacts = {
 	/** Heard in the window and barely ever otherwise. Fewest records first. */
 	rare: { comName: string; lifetimeCount: number }[];
 	/** Heard far more than usual in the window. Biggest jump first. */
-	vocal: { comName: string; ratio: number }[];
+	vocal: ({ comName: string } & VocalJump)[];
+	/** How the comparison stretch is named, for the vocal line. Null when
+	    there is none (all time, or too little history). */
+	comparedWith: string | null;
 	/** Regulars absent from the window. Most regular first. */
 	breakingRoutine: { comName: string; daysSilent: number }[];
 	/** The window's pace against the stretch before it. Null when there is no
@@ -129,26 +141,63 @@ export type HighlightFacts = {
 	} | null;
 };
 
+/** A species heard far more than usual: its count in the window, what its
+    usual daily rate comes to over as many days, and the multiple between. */
+export type VocalJump = { count: number; usual: number; ratio: number };
+
 /**
- * How many times its usual daily rate a species was heard at in the window, or
- * null unless that clears VOCAL_RATIO. A species the baseline never heard has
- * no usual rate to beat -- it's new or returning, which is the better story.
+ * A species heard far more than usual in the window, or null unless it clears
+ * VOCAL_RATIO. Only a bird that was properly around in the comparison stretch
+ * -- heard on VOCAL_MIN_PRESENCE of its recorded days -- has a usual to beat;
+ * one barely heard before is closer to an arrival, which a multiple over a
+ * handful of detections would wildly overstate.
  */
-export function vocalRatio({
+export function vocalJump({
 	windowCount,
 	windowDays,
 	baselineCount,
 	baselineDays,
+	daysHeard,
 }: {
 	windowCount: number;
 	windowDays: number;
 	baselineCount: number;
+	/** The comparison's recorded days. */
 	baselineDays: number;
-}): number | null {
+	/** How many of those days the species was heard on. */
+	daysHeard: number;
+}): VocalJump | null {
 	if (windowDays <= 0 || baselineDays <= 0 || baselineCount === 0) return null;
 	if (windowCount < VOCAL_MIN_DETECTIONS) return null;
-	const ratio = windowCount / windowDays / (baselineCount / baselineDays);
-	return ratio >= VOCAL_RATIO ? ratio : null;
+	if (daysHeard < VOCAL_MIN_PRESENCE * baselineDays) return null;
+	const usual = (baselineCount / baselineDays) * windowDays;
+	const ratio = windowCount / usual;
+	return ratio >= VOCAL_RATIO ? { count: windowCount, usual, ratio } : null;
+}
+
+/** "76, usually about 5" -- the window's count against its usual. */
+export function formatVocal({
+	count,
+	usual,
+}: {
+	count: number;
+	usual: number;
+}) {
+	const usually =
+		usual < 0.5 ? "under 1" : `about ${Math.round(usual).toLocaleString()}`;
+	return `${count.toLocaleString()}, usually ${usually}`;
+}
+
+/**
+ * "than the four weeks before", "than in September 2026": the comparison as
+ * the end of "heard far more ...". A label naming a period itself needs the
+ * "in"; one already reading as a stretch doesn't.
+ */
+export function thanPhrase(comparedWith: string | undefined | null): string {
+	if (!comparedWith) return "than usual";
+	return /^(the|your) /.test(comparedWith)
+		? `than ${comparedWith}`
+		: `than in ${comparedWith}`;
 }
 
 /**
@@ -161,11 +210,6 @@ export function formatAway(days: number): string {
 	if (days < 730) return `${Math.round(days / 30.44)} months`;
 	const years = Math.round(days / 365.25);
 	return `${years} ${plural(years, "year", "years")}`;
-}
-
-/** "3.2×", or a whole "12×" once a decimal stops adding anything. */
-export function formatRatio(ratio: number): string {
-	return ratio >= 10 ? `${Math.round(ratio)}×` : `${ratio.toFixed(1)}×`;
 }
 
 function plural(count: number, one: string, many: string): string {
@@ -262,9 +306,10 @@ export function buildHighlights(facts: HighlightFacts): Highlight[] {
 	}
 
 	if (facts.vocal.length > 0) {
-		lines.push(
-			speciesLine("vocal", facts.vocal, (row) => formatRatio(row.ratio)),
-		);
+		lines.push({
+			...speciesLine("vocal", facts.vocal, formatVocal),
+			...(facts.comparedWith ? { comparedWith: facts.comparedWith } : {}),
+		});
 	}
 
 	if (facts.breakingRoutine.length > 0) {

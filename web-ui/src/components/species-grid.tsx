@@ -7,6 +7,7 @@ import { SpeciesHourBars } from "~/components/species-hour-bars.tsx";
 import { SpeciesThumbnail } from "~/components/species-row.tsx";
 import { TooltipProvider } from "~/components/ui/tooltip.tsx";
 import { heatMaximum } from "~/lib/heatmap.ts";
+import type { VocalJump } from "~/lib/highlights-data.ts";
 import { comNameToSlug } from "~/lib/species-slug.ts";
 
 export type SpeciesGridItem = {
@@ -23,7 +24,7 @@ export type SpeciesGridItem = {
 	/** How long a returning bird was away, or null unless isReturned. */
 	daysAway: number | null;
 	/** How many times its usual rate, when heard far more than usual. */
-	vocalRatio: number | null;
+	vocal: VocalJump | null;
 	/** 24 detection counts, midnight first, for this species in the window.
 	    Absent when the caller has no hourly breakdown; the row then draws no
 	    chart. */
@@ -149,7 +150,7 @@ function SpeciesGridRow({
 							isReturned={item.isReturned}
 							isRare={item.isRare}
 							daysAway={item.daysAway}
-							vocalRatio={item.vocalRatio}
+							vocal={item.vocal}
 							firstHeard={item.firstHeard}
 						/>
 					</div>

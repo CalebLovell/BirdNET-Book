@@ -12,7 +12,8 @@ import {
 	ROUTINE_MIN_BASELINE_DAYS,
 	ROUTINE_MIN_SHARE,
 	ROUTINE_SILENT_DAYS,
-	vocalRatio,
+	type VocalJump,
+	vocalJump,
 } from "~/lib/highlights-data.ts";
 import { illustrationUrlFor } from "~/lib/illustrations.ts";
 import type { TimelinePeriod } from "~/lib/timeline-periods.ts";
@@ -78,12 +79,14 @@ export type TimelineRow = {
 	    Null unless isReturned. */
 	daysAway: number | null;
 	/**
-	 * How many times its usual daily rate the window heard this species at, when
-	 * that's at least VOCAL_RATIO -- judged against the same stretch before the
-	 * window as the Highlights' activity line. Null otherwise, and always for a
-	 * New, Rare or Returned species: at most one flag each.
+	 * Heard far more than usual: the window's count against what its usual
+	 * daily rate comes to over the window, when that's VOCAL_RATIO or more and
+	 * the bird was around for enough of the comparison stretch to have a usual
+	 * (see vocalJump) -- the same stretch as the Highlights' activity line.
+	 * Null otherwise, and always for a New, Rare or Returned species: at most
+	 * one flag each.
 	 */
-	vocalRatio: number | null;
+	vocal: VocalJump | null;
 };
 
 export type TimelineData = {
@@ -367,13 +370,14 @@ export async function loadTimelineData({
 				baselineStart != null &&
 				lastBefore != null &&
 				lastBefore < baselineStart;
-			const ratio =
+			const vocal =
 				!isNew && !isRare && !isReturned && usual?.sufficient
-					? vocalRatio({
+					? vocalJump({
 							windowCount: usual.windowCountByName.get(entry.comName) ?? 0,
 							windowDays: usual.windowDays,
 							baselineCount: usual.baselineCountByName.get(entry.comName) ?? 0,
 							baselineDays: usual.baselineDays,
+							daysHeard: usual.daysHeard.get(entry.comName)?.size ?? 0,
 						})
 					: null;
 			return {
@@ -389,7 +393,7 @@ export async function loadTimelineData({
 				isRare,
 				isReturned,
 				daysAway: isReturned ? away : null,
-				vocalRatio: ratio,
+				vocal,
 			};
 		}),
 	);
@@ -482,6 +486,18 @@ function summarizeBaseline({
 				]
 			: [],
 	);
+	// The stretch counts only when the station was listening for at least half
+	// of it -- a station that started last October has one day of "Jan 1 to
+	// Oct 1 last year", and one day is no year to compare with.
+	const fullBaselineDays = baselineWindows.reduce(
+		(sum, w) => sum + daysInRange(w.start, w.end),
+		0,
+	);
+	const recordedDays = new Set(
+		Array.from(daysHeard.values()).flatMap((days) => Array.from(days)),
+	).size;
+	const covered = fullBaselineDays > 0 && recordedDays * 2 >= fullBaselineDays;
+
 	const baselineCountByName = new Map<string, number>();
 	for (const period of recorded) {
 		for (const [comName, n] of period.bySpecies) {
@@ -513,7 +529,10 @@ function summarizeBaseline({
 		/** Enough of the baseline was recorded, and enough of the window is over,
 		    to judge the window against it at all. */
 		sufficient:
-			recorded.length >= Math.ceil(comparison.periods / 2) && windowDays > 0,
+			covered &&
+			recorded.length >= Math.ceil(comparison.periods / 2) &&
+			windowDays > 0,
+		covered,
 		inProgress,
 		today: dayIdFor(new Date()),
 		windowDays,
@@ -530,10 +549,7 @@ function summarizeBaseline({
 		baselineCountByName,
 		daysHeard,
 		/** The baseline's full length, recorded or not: the bar for a routine. */
-		fullBaselineDays: baselineWindows.reduce(
-			(sum, w) => sum + daysInRange(w.start, w.end),
-			0,
-		),
+		fullBaselineDays,
 	};
 }
 
@@ -579,11 +595,10 @@ function highlightFacts({
 			.sort((a, b) => a.lifetimeCount - b.lifetimeCount),
 		vocal: rows
 			.flatMap((row) =>
-				row.vocalRatio != null
-					? [{ comName: row.comName, ratio: row.vocalRatio }]
-					: [],
+				row.vocal != null ? [{ comName: row.comName, ...row.vocal }] : [],
 			)
 			.sort((a, b) => b.ratio - a.ratio),
+		comparedWith: usual?.label ?? null,
 		breakingRoutine: [],
 		activity: null,
 	};
@@ -606,7 +621,8 @@ function highlightFacts({
 	// window, and silent long enough to notice. The bar is the baseline's full
 	// length, so a station too new to have a routine has no regulars -- and a
 	// stretch too short to show one (a month only just begun) has none either.
-	if (usual.fullBaselineDays < ROUTINE_MIN_BASELINE_DAYS) return facts;
+	if (!usual.covered || usual.fullBaselineDays < ROUTINE_MIN_BASELINE_DAYS)
+		return facts;
 	const minDays = Math.ceil(ROUTINE_MIN_SHARE * usual.fullBaselineDays);
 	const heardInWindow = new Set(rows.map((row) => row.comName));
 	const silentUntil = usual.inProgress ? usual.today : window.end;

@@ -50,7 +50,7 @@ const robin: SpeciesGridItem = {
 	isRare: false,
 	isReturned: false,
 	daysAway: null,
-	vocalRatio: null,
+	vocal: null,
 	// 24-count fixture, midnight first, peak at 06:00 — lets the row show bars.
 	hourCounts: (() => {
 		const c = Array(24).fill(0);
@@ -127,9 +127,10 @@ test("a grid row without hourCounts draws no bars", async () => {
 	assert.doesNotMatch(markup, /data-hour-bar/);
 });
 
-test("a more-vocal-than-usual bird gets a Vocal chip", async () => {
-	const markup = await renderGrid([{ ...robin, vocalRatio: 3.2 }]);
+test("a bird heard far more than usual gets a Vocal chip", async () => {
+	const vocal = { count: 76, usual: 4.6, ratio: 16.5 };
+	const markup = await renderGrid([{ ...robin, vocal }]);
 	assert.match(markup, /lucide-audio-lines/);
 	assert.match(markup, /Vocal/);
-	assert.equal(vocalTooltip(3.2), "Heard more often than usual (3.2×).");
+	assert.equal(vocalTooltip(vocal), "Heard 76 times here; usually about 5.");
 });

@@ -4,12 +4,13 @@ import test from "node:test";
 import {
 	buildHighlights,
 	formatAway,
-	formatRatio,
+	formatVocal,
 	type HighlightFacts,
 	MAX_NAMED_BIRDS,
+	thanPhrase,
 	VOCAL_MIN_DETECTIONS,
 	VOLUME_BASELINE_MIN,
-	vocalRatio,
+	vocalJump,
 } from "./highlights-data.ts";
 
 const activity: NonNullable<HighlightFacts["activity"]> = {
@@ -34,6 +35,7 @@ function facts(overrides: Partial<HighlightFacts> = {}): HighlightFacts {
 		returning: [],
 		rare: [],
 		vocal: [],
+		comparedWith: "the four weeks before",
 		breakingRoutine: [],
 		activity,
 		...overrides,
@@ -141,7 +143,7 @@ test("orders the lines activity, hour, then the birds", () => {
 				newSpecies: ["Merlin"],
 				returning: [{ comName: "Redwing", daysAway: 20 }],
 				rare: [{ comName: "Hoopoe", lifetimeCount: 2 }],
-				vocal: [{ comName: "Blue Jay", ratio: 3 }],
+				vocal: [{ comName: "Blue Jay", count: 30, usual: 10, ratio: 3 }],
 				breakingRoutine: [{ comName: "Robin", daysSilent: 3 }],
 			}),
 		),
@@ -185,20 +187,30 @@ test("names only the first few birds but counts them all", () => {
 	assert.equal(line.total, MAX_NAMED_BIRDS + 3);
 });
 
-test("more vocal than usual needs twice the usual daily rate", () => {
-	const base = { windowDays: 7, baselineCount: 280, baselineDays: 28 };
-	// Usual is 10 a day; the week heard 20 a day.
-	assert.equal(vocalRatio({ ...base, windowCount: 140 }), 2);
-	assert.equal(vocalRatio({ ...base, windowCount: 139 }), null);
+test("heard far more than usual needs three times the usual daily rate", () => {
+	const base = {
+		windowDays: 7,
+		baselineCount: 280,
+		baselineDays: 28,
+		daysHeard: 28,
+	};
+	// Usual is 10 a day, so 70 over the week; the week heard 210.
+	assert.deepEqual(vocalJump({ ...base, windowCount: 210 }), {
+		count: 210,
+		usual: 70,
+		ratio: 3,
+	});
+	assert.equal(vocalJump({ ...base, windowCount: 209 }), null);
 });
 
-test("more vocal than usual ignores a handful of stray calls", () => {
+test("heard far more than usual ignores a handful of stray calls", () => {
 	assert.equal(
-		vocalRatio({
+		vocalJump({
 			windowCount: VOCAL_MIN_DETECTIONS - 1,
 			windowDays: 1,
-			baselineCount: 1,
+			baselineCount: 14,
 			baselineDays: 14,
+			daysHeard: 14,
 		}),
 		null,
 	);
@@ -206,19 +218,63 @@ test("more vocal than usual ignores a handful of stray calls", () => {
 
 test("a bird the baseline never heard is not vocal -- it has no usual", () => {
 	assert.equal(
-		vocalRatio({
+		vocalJump({
 			windowCount: 50,
 			windowDays: 1,
 			baselineCount: 0,
 			baselineDays: 14,
+			daysHeard: 0,
 		}),
 		null,
 	);
 });
 
-test("ratios read as a multiple", () => {
-	assert.equal(formatRatio(3.24), "3.2×");
-	assert.equal(formatRatio(12.6), "13×");
+test("a bird barely around before is an arrival, not a regular gone loud", () => {
+	// September's robins: 80 against 4 detections on 4 of August's 31 days.
+	const robin = {
+		windowCount: 80,
+		windowDays: 30,
+		baselineCount: 4,
+		baselineDays: 31,
+	};
+	assert.equal(vocalJump({ ...robin, daysHeard: 4 }), null);
+	assert.ok(vocalJump({ ...robin, daysHeard: 8 }));
+});
+
+test("the vocal note gives the count against its usual", () => {
+	assert.equal(formatVocal({ count: 76, usual: 4.6 }), "76, usually about 5");
+	assert.equal(
+		formatVocal({ count: 1148, usual: 247 }),
+		"1,148, usually about 247",
+	);
+	assert.equal(formatVocal({ count: 12, usual: 0.3 }), "12, usually under 1");
+});
+
+test("the vocal line names what usual is", () => {
+	assert.equal(thanPhrase("the two weeks before"), "than the two weeks before");
+	assert.equal(
+		thanPhrase("your two-week average"),
+		"than your two-week average",
+	);
+	assert.equal(thanPhrase("August 2026"), "than in August 2026");
+	assert.equal(
+		thanPhrase("the same stretch of 2025"),
+		"than the same stretch of 2025",
+	);
+	assert.equal(thanPhrase(null), "than usual");
+	const [line] = buildHighlights(
+		facts({
+			activity: null,
+			comparedWith: "August 2026",
+			vocal: [{ comName: "Blue Jay", count: 30, usual: 10, ratio: 3 }],
+		}),
+	).filter((l) => l.kind === "vocal");
+	assert.deepEqual(line, {
+		kind: "vocal",
+		total: 1,
+		birds: [{ comName: "Blue Jay", note: "30, usually about 10" }],
+		comparedWith: "August 2026",
+	});
 });
 
 test("time away reads at the scale it happened on", () => {
