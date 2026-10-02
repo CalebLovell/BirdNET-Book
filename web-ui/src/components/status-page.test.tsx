@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { Feather } from "lucide-react";
 import { renderToStaticMarkup } from "react-dom/server";
 
 import { StatusPage } from "~/components/status-page.tsx";
@@ -7,6 +8,7 @@ import { StatusPage } from "~/components/status-page.tsx";
 test("the section masthead stays and owns the only h1", () => {
 	const markup = renderToStaticMarkup(
 		<StatusPage
+			icon={Feather}
 			section="Species"
 			sectionDescription="Every species ever recorded at this station."
 			tone="missing"
@@ -24,6 +26,7 @@ test("the section masthead stays and owns the only h1", () => {
 test("the page wrapper matches a locked page's", () => {
 	const markup = renderToStaticMarkup(
 		<StatusPage
+			icon={Feather}
 			section="Day in review"
 			sectionDescription="One day at this station, hour by hour."
 			tone="missing"

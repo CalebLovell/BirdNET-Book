@@ -4,6 +4,7 @@ import {
 	useRouter,
 } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
+import { Settings } from "lucide-react";
 import { LockedPage } from "~/components/auth/locked-page.tsx";
 import { PageStatus } from "~/components/page-status.tsx";
 import { SessionCard } from "~/components/settings/session-card.tsx";
@@ -53,6 +54,7 @@ function SettingsRoute() {
 	if (!loaded)
 		return (
 			<LockedPage
+				icon={Settings}
 				title={SETTINGS_PAGE_TITLE}
 				description={SETTINGS_PAGE_DESCRIPTION}
 			/>

@@ -3,7 +3,13 @@ import {
 	Link,
 	stripSearchParams,
 } from "@tanstack/react-router";
-import { ArrowRight, Bird, LayoutDashboard, Rows3 } from "lucide-react";
+import {
+	ArrowRight,
+	Bird,
+	CalendarRange,
+	LayoutDashboard,
+	Rows3,
+} from "lucide-react";
 import { z } from "zod";
 import { DetectionsByHourCard } from "~/components/detections-by-hour-card.tsx";
 import { EmptyState } from "~/components/empty-state.tsx";
@@ -260,6 +266,7 @@ function TimelineHeader({
 
 	return (
 		<PageHeaderCard
+			icon={CalendarRange}
 			title={headerTitle(data, period, anchor)}
 			description={TIMELINE_DESCRIPTION}
 			action={data.hasAnyDetections ? share.trigger : undefined}
@@ -590,6 +597,7 @@ function OutOfRangeDay({
 		case "future":
 			return (
 				<StatusPage
+					icon={CalendarRange}
 					section={TIMELINE_SECTION}
 					sectionDescription={TIMELINE_SECTION_DESCRIPTION}
 					tone="missing"
@@ -602,6 +610,7 @@ function OutOfRangeDay({
 		case "before-station":
 			return (
 				<StatusPage
+					icon={CalendarRange}
 					section={TIMELINE_SECTION}
 					sectionDescription={TIMELINE_SECTION_DESCRIPTION}
 					tone="missing"
@@ -614,6 +623,7 @@ function OutOfRangeDay({
 		default:
 			return (
 				<StatusPage
+					icon={CalendarRange}
 					section={TIMELINE_SECTION}
 					sectionDescription={TIMELINE_SECTION_DESCRIPTION}
 					tone="missing"

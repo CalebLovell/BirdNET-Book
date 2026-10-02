@@ -4,6 +4,7 @@ import {
 	CircleAlert,
 	ListFilter,
 	RotateCcw,
+	SlidersHorizontal,
 	Trash2,
 	X,
 } from "lucide-react";
@@ -335,6 +336,7 @@ export function SpeciesControlPage({
 		<div className="page-wrap flex h-full min-h-0 flex-col gap-(--page-gap) py-4">
 			<div className="@container shrink-0 space-y-(--page-gap)">
 				<PageHeaderCard
+					icon={SlidersHorizontal}
 					title={SPECIES_CONTROL_PAGE_TITLE}
 					description={SPECIES_CONTROL_PAGE_DESCRIPTION}
 				/>

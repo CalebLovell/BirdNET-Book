@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import type { ComponentType, ReactNode } from "react";
 
 import { PageHeaderCard } from "~/components/page-header-card.tsx";
 import { PageStatus, type PageStatusTone } from "~/components/page-status.tsx";
@@ -13,6 +13,7 @@ import { PageStatus, type PageStatusTone } from "~/components/page-status.tsx";
  * keeps the page's shape from jumping once the address is corrected.
  */
 export function StatusPage({
+	icon,
 	section,
 	sectionDescription,
 	tone,
@@ -20,6 +21,7 @@ export function StatusPage({
 	actions,
 	children,
 }: {
+	icon: ComponentType<{ className?: string }>;
 	section: string;
 	sectionDescription: string;
 	tone: PageStatusTone;
@@ -29,7 +31,11 @@ export function StatusPage({
 }) {
 	return (
 		<div className="page-wrap space-y-(--page-gap) py-4">
-			<PageHeaderCard title={section} description={sectionDescription} />
+			<PageHeaderCard
+				icon={icon}
+				title={section}
+				description={sectionDescription}
+			/>
 			{/* h2: the masthead above is already this page's h1. */}
 			<PageStatus tone={tone} title={title} heading="h2" actions={actions}>
 				{children}

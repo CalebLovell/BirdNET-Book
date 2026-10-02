@@ -1,5 +1,6 @@
 import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
+import { SlidersHorizontal } from "lucide-react";
 import { LockedPage } from "~/components/auth/locked-page.tsx";
 import { PageStatus } from "~/components/page-status.tsx";
 import {
@@ -29,6 +30,7 @@ function SpeciesControlRoute() {
 	if (!initialData)
 		return (
 			<LockedPage
+				icon={SlidersHorizontal}
 				title={SPECIES_CONTROL_PAGE_TITLE}
 				description={SPECIES_CONTROL_PAGE_DESCRIPTION}
 			/>

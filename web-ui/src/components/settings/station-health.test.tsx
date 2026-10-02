@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { Settings } from "lucide-react";
 import { renderToStaticMarkup } from "react-dom/server";
 
 import { PageHeaderCard } from "~/components/page-header-card.tsx";
@@ -32,6 +33,7 @@ test("becomes ordinary masthead figures, icon and all", () => {
 test("renders through the shared header rather than a panel of its own", () => {
 	const markup = renderToStaticMarkup(
 		<PageHeaderCard
+			icon={Settings}
 			title="Settings"
 			description="Configure this station."
 			stats={healthStats(health)}

@@ -1,4 +1,4 @@
-import { AlertTriangle, CheckCircle2 } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Settings } from "lucide-react";
 import { type ReactNode, useState } from "react";
 
 import { PageHeaderCard } from "~/components/page-header-card.tsx";
@@ -64,6 +64,7 @@ export function SettingsPage({
 	return (
 		<div className="page-wrap space-y-(--page-gap) py-4">
 			<PageHeaderCard
+				icon={Settings}
 				title={SETTINGS_PAGE_TITLE}
 				description={SETTINGS_PAGE_DESCRIPTION}
 				stats={health ? healthStats(health) : []}

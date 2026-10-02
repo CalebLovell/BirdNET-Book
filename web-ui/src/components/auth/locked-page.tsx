@@ -1,3 +1,5 @@
+import type { ComponentType } from "react";
+
 import { UnlockGate } from "~/components/auth/unlock-gate.tsx";
 import { PageHeaderCard } from "~/components/page-header-card.tsx";
 
@@ -16,15 +18,17 @@ import { PageHeaderCard } from "~/components/page-header-card.tsx";
  * render for someone who cannot see the page.
  */
 export function LockedPage({
+	icon,
 	title,
 	description,
 }: {
+	icon: ComponentType<{ className?: string }>;
 	title: string;
 	description: string;
 }) {
 	return (
 		<div className="page-wrap space-y-(--page-gap) py-4">
-			<PageHeaderCard title={title} description={description} />
+			<PageHeaderCard icon={icon} title={title} description={description} />
 			<UnlockGate />
 		</div>
 	);

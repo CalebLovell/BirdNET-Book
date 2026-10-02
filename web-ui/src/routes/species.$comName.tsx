@@ -8,6 +8,7 @@ import { useServerFn } from "@tanstack/react-start";
 import {
 	CalendarDays,
 	ChartNoAxesColumnIncreasing,
+	Feather,
 	Gauge,
 	Sunrise,
 } from "lucide-react";
@@ -213,6 +214,7 @@ function UndetectedSpecies({
 	return (
 		<div className="page-wrap space-y-(--page-gap) py-4">
 			<PageHeaderCard
+				icon={Feather}
 				title={SPECIES_SECTION}
 				description={SPECIES_SECTION_DESCRIPTION}
 			/>
@@ -263,6 +265,7 @@ function SpeciesNotFound() {
 
 	return (
 		<StatusPage
+			icon={Feather}
 			section={SPECIES_SECTION}
 			sectionDescription={SPECIES_SECTION_DESCRIPTION}
 			tone="missing"

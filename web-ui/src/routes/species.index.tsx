@@ -197,6 +197,7 @@ function Species() {
 	return (
 		<div className="page-wrap flex min-h-full flex-col gap-(--page-gap) py-4">
 			<PageHeaderCard
+				icon={Feather}
 				title="Species"
 				description="Every species ever recorded at this station."
 				stats={stats}

@@ -27,6 +27,7 @@ const COLUMN_CLASSES: Record<number, string> = {
  * divided panel, so the header and every figure read as their own thing.
  */
 export function PageHeaderCard({
+	icon: Icon,
 	title,
 	description,
 	stats = [],
@@ -34,6 +35,9 @@ export function PageHeaderCard({
 	afterHeader,
 	children,
 }: {
+	/** The page's sidebar icon, so the masthead names the page the same way
+	 * the nav entry you clicked did. Required: every masthead carries one. */
+	icon: ComponentType<{ className?: string }>;
 	title: string;
 	description: string;
 	/** Omit for a title-only masthead; otherwise up to four figures. */
@@ -53,11 +57,21 @@ export function PageHeaderCard({
 				{/* Under 400px the action drops beneath the description instead of
 				    squeezing the title and description into a narrow column beside it. */}
 				<div className="flex items-start justify-between gap-3 max-[400px]:flex-col max-[400px]:gap-2">
-					<div className="min-w-0">
-						<h1 className="display-title font-bold text-xl leading-tight">
-							{title}
-						</h1>
-						<p className="mt-1 text-muted-foreground text-sm">{description}</p>
+					{/* The icon sits in the same sage well as the figures' icons below,
+					    a step larger since it stands for the whole page. Centred on the
+					    title and description together, so it never sits off a lone line. */}
+					<div className="flex min-w-0 items-center gap-4 max-[400px]:gap-3">
+						<div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-[var(--icon-well)] text-[var(--moss)] max-[400px]:size-8">
+							<Icon aria-hidden="true" className="size-5 max-[400px]:size-4" />
+						</div>
+						<div className="min-w-0">
+							<h1 className="display-title font-bold text-xl leading-tight">
+								{title}
+							</h1>
+							<p className="mt-1 text-muted-foreground text-sm">
+								{description}
+							</p>
+						</div>
 					</div>
 					{action}
 				</div>

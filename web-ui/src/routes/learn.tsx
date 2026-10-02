@@ -4,7 +4,7 @@ import {
 	useRouter,
 	useRouterState,
 } from "@tanstack/react-router";
-import { Bird } from "lucide-react";
+import { Bird, Lightbulb } from "lucide-react";
 import { z } from "zod";
 
 import { EmptyNote, EmptyState } from "~/components/empty-state.tsx";
@@ -49,6 +49,7 @@ function Learn() {
 	return (
 		<div className="page-wrap py-4">
 			<PageHeaderCard
+				icon={Lightbulb}
 				title="Learn the calls"
 				description="Ear training on the recordings your own station captured."
 			/>
