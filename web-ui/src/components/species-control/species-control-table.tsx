@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import type { CSSProperties } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import { EmptyNote } from "~/components/empty-state.tsx";
 import { IndexDot } from "~/components/index-dot.tsx";
 import { Badge } from "~/components/ui/badge.tsx";
@@ -143,6 +143,7 @@ export function SpeciesControlTable({
 	onSortChange,
 	onSelectedChange,
 	onPageChange,
+	actions,
 }: {
 	rows: SpeciesControlViewRow[];
 	page: number;
@@ -153,6 +154,9 @@ export function SpeciesControlTable({
 	onSortChange: (key: SpeciesSortKey) => void;
 	onSelectedChange: (next: Set<string>) => void;
 	onPageChange: (page: number) => void;
+	/** Held at the footer's left, opposite the pager -- where the detections
+	 *  table keeps its selection bar. */
+	actions?: ReactNode;
 }) {
 	if (rows.length === 0) {
 		return <EmptyNote>No installed species match that search.</EmptyNote>;
@@ -207,13 +211,12 @@ export function SpeciesControlTable({
 				role="table"
 				className="grid h-full min-w-min @min-[36rem]:grid-cols-(--cols-md) @min-[54rem]:grid-cols-(--cols-lg) grid-cols-(--cols-sm) grid-rows-[auto_minmax(0,1fr)]"
 				style={COLUMN_GRID}
-				containerClassName="-ml-(--page-gap) -mr-(--card-edge) min-h-0 flex-1 overflow-x-auto overflow-y-hidden pr-0 pl-0"
+				containerClassName="-ml-(--page-gap) -mr-(--card-edge) -mt-(--page-gap) min-h-0 flex-1 overflow-x-auto overflow-y-hidden pr-0 pl-0"
 			>
-				{/* The detections header band, with a rule above it too: here it
-				    starts under the card's own header rather than at its top edge. */}
+				{/* The detections header band, run up to the card's top edge. */}
 				<TableHeader
 					role="rowgroup"
-					className="col-span-full grid grid-cols-subgrid overflow-hidden border-y bg-[var(--surface-strong)] [scrollbar-gutter:stable] [&_th]:h-auto @min-[36rem]:[&_th]:pt-4 [&_th]:pt-[calc(var(--page-gap)/2+1px)] @min-[36rem]:[&_th]:pb-[15px] [&_th]:pb-[calc(var(--page-gap)/2)] [&_th]:leading-none [&_th_button]:leading-none [&_tr]:h-auto [&_tr]:border-none"
+					className="col-span-full grid grid-cols-subgrid overflow-hidden border-b bg-[var(--surface-strong)] [scrollbar-gutter:stable] [&_th]:h-auto @min-[36rem]:[&_th]:pt-4 [&_th]:pt-[calc(var(--page-gap)/2+1px)] @min-[36rem]:[&_th]:pb-[15px] [&_th]:pb-[calc(var(--page-gap)/2)] [&_th]:leading-none [&_th_button]:leading-none [&_tr]:h-auto [&_tr]:border-none"
 				>
 					<TableRow role="row" className={GRID_ROW}>
 						<TableHead
@@ -361,9 +364,11 @@ export function SpeciesControlTable({
 			</Table>
 
 			{/* The detections footer: a band the header's height, its rule run out
-			    through the card's side padding, with the pager held right. The card
-			    drops its bottom padding for it. */}
+			    through the card's side padding, with the selection's actions at the
+			    left and the pager held right. The card drops its bottom padding for
+			    it. */}
 			<div className="-mr-(--card-edge) -ml-(--page-gap) flex shrink-0 flex-wrap items-center gap-2 border-t pt-[calc(var(--page-gap)/2)] pr-(--card-edge) pb-[calc(var(--page-gap)/2+1px)] pl-(--page-gap) text-sm">
+				{actions}
 				<PageStepper
 					className="ml-auto"
 					label="Species pages"

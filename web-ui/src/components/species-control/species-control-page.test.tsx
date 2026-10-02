@@ -10,7 +10,10 @@ import {
 import { renderToStaticMarkup } from "react-dom/server";
 
 import type { SpeciesControlPageData } from "~/lib/species-control-data.ts";
-import { SpeciesControlPage } from "./species-control-page.tsx";
+import {
+	SpeciesControlPage,
+	SpeciesSelectionBar,
+} from "./species-control-page.tsx";
 
 const data: SpeciesControlPageData = {
 	revision: "fixture-revision",
@@ -77,7 +80,6 @@ test("renders the complete species policy workspace", async () => {
 	assert.match(markup, />Species control</);
 	assert.doesNotMatch(markup, /Detection mode/);
 	assert.match(markup, /aria-label="Search installed species"/);
-	assert.match(markup, />Installed species</);
 	for (const heading of ["Species", "Scientific name", "Count", "Status"]) {
 		assert.match(markup, new RegExp(`>${heading}<`));
 	}
@@ -87,7 +89,7 @@ test("renders the complete species policy workspace", async () => {
 	assert.match(markup, /Old species_Old name/);
 });
 
-test("keeps page tools outside the table and bulk status in its header", async () => {
+test("keeps page tools outside the table and drops the card's own header", async () => {
 	const markup = await renderPage();
 	const toolbarStart = markup.indexOf('data-layout="species-control-toolbar"');
 	const installedStart = markup.indexOf('aria-label="Installed species"');
@@ -110,8 +112,8 @@ test("keeps page tools outside the table and bulk status in its header", async (
 	assert.equal(toolbar.match(/h-9/g)?.length, 4);
 
 	const installed = markup.slice(installedStart);
-	assert.match(installed, /data-layout="installed-species-header"/);
-	assert.match(installed, />Installed species</);
+	assert.doesNotMatch(installed, /data-layout="installed-species-header"/);
+	assert.doesNotMatch(installed, /island-kicker">Installed species</);
 	assert.equal(installed.match(/<select/g)?.length, 1);
 	assert.match(installed, /<select[^>]*aria-label="Sort species by"/);
 	assert.doesNotMatch(installed, />Import lists</);
@@ -138,41 +140,45 @@ test("status is the only verdict the table states", async () => {
 	}
 });
 
-test("offers four explicit bulk status actions", async () => {
+test("bulk status waits in the footer until species are picked", async () => {
 	const markup = await renderPage();
-	for (const [status, borderClass] of [
-		["Automatic", "border-[var(--line)]"],
-		["Custom", "border-[color-mix(in_oklab,var(--sage)_65%,var(--line))]"],
-		[
-			"Always detect",
-			"border-[color-mix(in_oklab,var(--sand)_65%,var(--line))]",
-		],
-		[
-			"Never detect",
-			"border-[color-mix(in_oklab,var(--clay)_45%,var(--line))]",
-		],
-	] as const) {
-		const button = markup.match(
-			new RegExp(
-				`<button(?=[^>]*aria-label="Set selected species to ${status}")(?=[^>]*disabled="")[^>]*>`,
-			),
-		)?.[0];
-		assert.ok(button, `expected the ${status} bulk action`);
-		assert.match(button, /data-variant="outline"/);
-		assert.ok(
-			button.includes(borderClass),
-			`expected the ${status} action to use its tinted border`,
-		);
-	}
-	assert.doesNotMatch(
-		markup,
-		/<select[^>]*aria-label="Set selected species status"/,
-	);
+	assert.doesNotMatch(markup, /aria-label="Set selected species to /);
+	assert.doesNotMatch(markup, /Select species for bulk changes/);
 });
 
-test("the four statuses are explained on demand rather than above the table", async () => {
+test("the selection bar offers the count, a clear and four statuses", () => {
+	const markup = renderToStaticMarkup(
+		<SpeciesSelectionBar count={3} onClear={() => {}} onStatus={() => {}} />,
+	);
+	assert.match(markup, />3<\/span><span[^>]*>selected</);
+	assert.match(markup, /aria-label="Clear selection"/);
+	let previous = -1;
+	for (const status of [
+		"Automatic",
+		"Custom",
+		"Always detect",
+		"Never detect",
+	]) {
+		const index = markup.indexOf(
+			`aria-label="Set selected species to ${status}"`,
+		);
+		assert.ok(index > previous, `expected the ${status} action in order`);
+		previous = index;
+	}
+	assert.doesNotMatch(markup, /disabled=""/);
+});
+
+test("the four statuses are explained beside the actions, in the footer", async () => {
 	const markup = await renderPage();
-	assert.match(markup, /aria-label="About Installed species"/);
+	const info = markup.indexOf('aria-label="About Species statuses"');
+	assert.ok(
+		info < markup.indexOf('aria-label="Species pages"'),
+		"expected the info tip ahead of the pager",
+	);
+	assert.ok(
+		info > markup.lastIndexOf('role="row"'),
+		"expected the info tip below the rows",
+	);
 	assert.doesNotMatch(markup, /Normal mode|Custom mode|Detection mode/);
 });
 

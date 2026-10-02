@@ -2,7 +2,6 @@ import Fuse from "fuse.js";
 import {
 	Check,
 	CircleAlert,
-	ListFilter,
 	RotateCcw,
 	SlidersHorizontal,
 	Trash2,
@@ -63,6 +62,8 @@ type ProposedDialog =
 	  }
 	| { kind: "reset" };
 
+// Each status's button wears its badge's ink, so the bar reads as the four
+// verdicts the Status column shows; the tint comes in on hover.
 const BULK_STATUS_ACTIONS: Array<{
 	status: SpeciesStatus;
 	label: string;
@@ -71,28 +72,76 @@ const BULK_STATUS_ACTIONS: Array<{
 	{
 		status: "automatic",
 		label: "Automatic",
-		className:
-			"border-[var(--line)] bg-muted text-muted-foreground shadow-[inset_0_1px_0_color-mix(in_oklab,var(--paper-raised)_70%,transparent)] hover:border-[var(--hover-line)] hover:bg-muted/80 focus-visible:border-[var(--hover-line)]",
+		className: "text-muted-foreground hover:bg-muted",
 	},
 	{
 		status: "custom",
 		label: "Custom",
 		className:
-			"border-[color-mix(in_oklab,var(--sage)_65%,var(--line))] bg-[color-mix(in_oklab,var(--sage)_35%,var(--paper-raised))] text-[var(--moss)] shadow-[inset_0_1px_0_color-mix(in_oklab,var(--paper-raised)_70%,transparent)] hover:border-[color-mix(in_oklab,var(--sage)_85%,var(--line))] hover:bg-[color-mix(in_oklab,var(--sage)_45%,var(--paper-raised))] focus-visible:border-[color-mix(in_oklab,var(--sage)_85%,var(--line))]",
+			"text-[var(--moss)] hover:bg-[color-mix(in_oklab,var(--sage)_35%,var(--paper-raised))]",
 	},
 	{
 		status: "always",
 		label: "Always detect",
 		className:
-			"border-[color-mix(in_oklab,var(--sand)_65%,var(--line))] bg-[color-mix(in_oklab,var(--sand)_30%,var(--paper-raised))] text-[var(--bark)] shadow-[inset_0_1px_0_color-mix(in_oklab,var(--paper-raised)_70%,transparent)] hover:border-[color-mix(in_oklab,var(--sand)_85%,var(--line))] hover:bg-[color-mix(in_oklab,var(--sand)_40%,var(--paper-raised))] focus-visible:border-[color-mix(in_oklab,var(--sand)_85%,var(--line))]",
+			"text-[var(--bark)] hover:bg-[color-mix(in_oklab,var(--sand)_30%,var(--paper-raised))]",
 	},
 	{
 		status: "never",
 		label: "Never detect",
 		className:
-			"border-[color-mix(in_oklab,var(--clay)_45%,var(--line))] bg-[color-mix(in_oklab,var(--clay)_15%,var(--paper-raised))] text-destructive shadow-[inset_0_1px_0_color-mix(in_oklab,var(--paper-raised)_70%,transparent)] hover:border-[color-mix(in_oklab,var(--clay)_65%,var(--line))] hover:bg-[color-mix(in_oklab,var(--clay)_22%,var(--paper-raised))] focus-visible:border-[color-mix(in_oklab,var(--clay)_65%,var(--line))]",
+			"text-destructive hover:bg-[color-mix(in_oklab,var(--clay)_15%,var(--paper-raised))]",
 	},
 ];
+
+/**
+ * The detections table's selection bar, with the four statuses where its
+ * Delete sits: the count, a clear, then the verdicts to apply. It only shows
+ * once species are picked, so there are no dead buttons.
+ */
+export function SpeciesSelectionBar({
+	count,
+	onClear,
+	onStatus,
+}: {
+	count: number;
+	onClear: () => void;
+	onStatus: (status: SpeciesStatus) => void;
+}) {
+	return (
+		<fieldset
+			aria-label="Set selected species status"
+			className="flex h-7 w-fit max-w-full shrink-0 overflow-hidden rounded-md border border-input bg-card text-sm"
+		>
+			<span className="flex items-center gap-[0.5ch] @min-[36rem]:px-3 px-2 text-muted-foreground">
+				<span className="tabular-data font-semibold text-foreground">
+					{count}
+				</span>
+				<span className="sr-only @min-[36rem]:not-sr-only">selected</span>
+			</span>
+			<button
+				type="button"
+				aria-label="Clear selection"
+				title="Clear selection"
+				onClick={onClear}
+				className="flex w-7 shrink-0 items-center justify-center border-input border-l text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+			>
+				<X className="size-4" aria-hidden="true" />
+			</button>
+			{BULK_STATUS_ACTIONS.map((action) => (
+				<button
+					key={action.status}
+					type="button"
+					aria-label={`Set selected species to ${action.label}`}
+					onClick={() => onStatus(action.status)}
+					className={`flex items-center whitespace-nowrap border-input border-l @min-[36rem]:px-3 px-2 transition-colors ${action.className}`}
+				>
+					{action.label}
+				</button>
+			))}
+		</fieldset>
+	);
+}
 
 function setFrom(
 	data: SpeciesControlPageData,
@@ -376,58 +425,14 @@ export function SpeciesControlPage({
 				) : null}
 			</div>
 
-			{/* The detections card: the table's rows and footer run out to its
-			    edges and take its padding as their own inset, so the right padding
-			    is the narrower card edge and there is none at the bottom -- the
-			    header strip above the table takes the difference back on the
-			    right. With nothing to list, it keeps its natural size. */}
+			{/* The detections card: the table's header band, rows and footer run
+			    out to its edges and take its padding as their own inset, so the
+			    right padding is the narrower card edge and there is none at the
+			    bottom. With nothing to list, it keeps its natural size. */}
 			<section
 				aria-label="Installed species"
 				className={`@container feature-card flex min-h-0 flex-col overflow-hidden rounded-md p-(--page-gap) [--card-edge:min(var(--page-gap),0.75rem)] ${pagedRows.length ? "flex-1 pr-(--card-edge) pb-0" : "shrink-0"}`}
 			>
-				<div
-					data-layout="installed-species-header"
-					className="mb-(--page-gap) flex shrink-0 @min-[38rem]:flex-row flex-col @min-[38rem]:items-center @min-[38rem]:justify-between @min-[38rem]:gap-3 gap-2 pr-[calc(var(--page-gap)-var(--card-edge))]"
-				>
-					<div className="flex items-center gap-1.5">
-						<div className="island-kicker">Installed species</div>
-						<InfoTip label="Installed species">
-							<p>
-								<strong>Automatic</strong> uses BirdNET's usual species rules.{" "}
-								<strong>Custom</strong> adds the species to your custom list.{" "}
-								<strong>Always detect</strong> skips its species-frequency
-								check, and <strong>Never detect</strong> excludes it outright.
-							</p>
-						</InfoTip>
-					</div>
-					<div className="flex flex-wrap items-center @min-[38rem]:justify-end gap-2">
-						<ListFilter className="size-4 text-muted-foreground" />
-						<span className="text-muted-foreground text-xs">
-							{selected.size
-								? `${selected.size} selected`
-								: "Select species for bulk changes"}
-						</span>
-						<fieldset
-							aria-label="Set selected species status"
-							className="flex min-w-0 flex-wrap items-center justify-end gap-1.5 border-0 p-0"
-						>
-							{BULK_STATUS_ACTIONS.map((action) => (
-								<Button
-									key={action.status}
-									aria-label={`Set selected species to ${action.label}`}
-									className={action.className}
-									disabled={!selected.size}
-									size="xs"
-									variant="outline"
-									onClick={() => proposeBulkStatus(action.status)}
-								>
-									{action.label}
-								</Button>
-							))}
-						</fieldset>
-					</div>
-				</div>
-
 				<SpeciesControlTable
 					rows={pagedRows}
 					page={safePage}
@@ -444,6 +449,25 @@ export function SpeciesControlPage({
 						setSelected(new Set());
 						onSearchChange({ ...search, page });
 					}}
+					actions={
+						<>
+							<InfoTip label="Species statuses">
+								<p>
+									<strong>Automatic</strong> uses BirdNET's usual species rules.{" "}
+									<strong>Custom</strong> adds the species to your custom list.{" "}
+									<strong>Always detect</strong> skips its species-frequency
+									check, and <strong>Never detect</strong> excludes it outright.
+								</p>
+							</InfoTip>
+							{selected.size > 0 ? (
+								<SpeciesSelectionBar
+									count={selected.size}
+									onClear={() => setSelected(new Set())}
+									onStatus={proposeBulkStatus}
+								/>
+							) : null}
+						</>
+					}
 				/>
 			</section>
 
