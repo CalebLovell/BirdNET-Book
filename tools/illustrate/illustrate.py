@@ -52,8 +52,8 @@ REFERENCES_DIR = HERE / 'references'
 WORK_DIR = HERE / 'work'
 CUT_DIR = WORK_DIR / 'cut'
 PICKS_PATH = WORK_DIR / 'picks.json'
-# The new set ships beside the bundled one; the sidebar's Old/New switch
-# (web-ui/src/lib/illustration-set.ts) shows it for the species in NEW_SLUGS.
+# The site shows these for the species in NEW_SLUGS (see illustrationUrlFor
+# in web-ui/src/lib/illustrations.ts).
 PUBLIC_DIR = REPO_ROOT / 'web-ui' / 'public' / 'illustrations-new'
 SLUGS_TS = REPO_ROOT / 'web-ui' / 'src' / 'lib' / 'illustrations-new.ts'
 SLUGS_NAME = 'NEW_SLUGS'

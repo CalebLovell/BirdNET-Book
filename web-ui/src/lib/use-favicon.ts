@@ -1,10 +1,5 @@
 import { useEffect } from "react";
 
-import {
-	inIllustrationSet,
-	useIllustrationSet,
-} from "~/lib/illustration-set.ts";
-
 /** What the tab shows on any page that cannot name a bird of its own. */
 export const DEFAULT_FAVICON = "/illustrations/nest.webp";
 
@@ -22,9 +17,7 @@ export const DEFAULT_FAVICON = "/illustrations/nest.webp";
  * though that would server-render it -- the root's link is already in the
  * document, so a route-level one only ever arrives as the second.
  */
-export function useFavicon(illustration: string | null) {
-	// Follows the sidebar's illustration switch, like every species picture.
-	const href = inIllustrationSet(illustration, useIllustrationSet());
+export function useFavicon(href: string | null) {
 	useEffect(() => {
 		const link = document.querySelector<HTMLLinkElement>('link[rel~="icon"]');
 		if (!link) return;

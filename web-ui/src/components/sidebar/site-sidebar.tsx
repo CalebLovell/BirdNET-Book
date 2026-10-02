@@ -1,6 +1,5 @@
 import { Link } from "@tanstack/react-router";
 
-import { IllustrationSwitch } from "~/components/sidebar/illustration-switch.tsx";
 import { SidebarNav } from "~/components/sidebar/sidebar-nav.tsx";
 import { StationStatus } from "~/components/sidebar/station-status.tsx";
 
@@ -25,7 +24,6 @@ export function SidebarBody({ onNavigate }: { onNavigate?: () => void }) {
 			    on a short one -- `mt-auto` does both. */}
 			<div className="mt-auto">
 				<hr className="mx-4 border-0 border-[var(--line)] border-t" />
-				<IllustrationSwitch />
 				<StationStatus />
 			</div>
 		</div>

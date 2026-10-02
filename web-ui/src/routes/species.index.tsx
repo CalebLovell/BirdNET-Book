@@ -502,7 +502,8 @@ function DirectionButton({
 			title={reverse ? "Reversed" : "Reverse order"}
 			onClick={onReverse}
 			className={cn(
-				"flex shrink-0 items-center justify-center border-input bg-card transition-colors hover:bg-accent hover:text-accent-foreground",
+				// Reversed wears the selected sort's green, so it reads as on.
+				"flex shrink-0 items-center justify-center border-input bg-card transition-colors hover:bg-accent hover:text-accent-foreground aria-pressed:border-primary aria-pressed:bg-primary aria-pressed:text-primary-foreground aria-pressed:hover:bg-primary/90 aria-pressed:hover:text-primary-foreground",
 				className,
 			)}
 		>
@@ -541,16 +542,24 @@ function SpeciesCard({ card }: { card: LifeListCard }) {
 				</div>
 			</div>
 
-			<div className="flex h-40 w-full items-center justify-center overflow-hidden">
-				<SpeciesImage
-					imageUrl={card.imageUrl}
-					alt={card.comName}
-					glyphClassName="size-16"
-					loading="lazy"
-				/>
+			{/* The bird takes whatever height the row leaves over, so the count
+			    stays pinned to the top, the name block to the bottom, and no card
+			    shows a blank band when a neighbour in its row runs taller. The image
+			    sits in an absolute layer so its native size can't stretch the card.
+			    Positioning lifts it over the whole-card link, so it lets clicks
+			    through to that link. */}
+			<div className="pointer-events-none relative min-h-40 w-full flex-1">
+				<div className="absolute inset-0 flex items-center justify-center overflow-hidden">
+					<SpeciesImage
+						imageUrl={card.imageUrl}
+						alt={card.comName}
+						glyphClassName="size-16"
+						loading="lazy"
+					/>
+				</div>
 			</div>
 
-			<div className="flex flex-1 flex-col gap-3 max-[400px]:gap-2">
+			<div className="flex flex-col gap-3 max-[400px]:gap-2">
 				<div>
 					<h2 className="display-title font-bold text-base">{card.comName}</h2>
 					<p className="text-[var(--bark)] text-xs italic">{card.sciName}</p>

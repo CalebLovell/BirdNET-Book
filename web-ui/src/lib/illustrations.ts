@@ -1,42 +1,13 @@
-import { NEW_SLUGS } from "~/lib/illustrations-new.ts";
+import { NEW_FLIGHT_SLUGS, NEW_SLUGS } from "~/lib/illustrations-new.ts";
 
-// Locally-bundled kachō-e style illustrations pulled from Twarner491/AvianVisitors
-// (see public/illustrations/ATTRIBUTION.md) for the species detected in this
-// project's own birds.db. A species without one shows the generic bird glyph
-// (see SpeciesImage) -- never a photo from elsewhere.
-const AVAILABLE_SLUGS = new Set([
-	"agelaius-phoeniceus",
-	"archilochus-colubris",
-	"baeolophus-bicolor",
-	"bombycilla-cedrorum",
-	"bubo-virginianus",
-	"cardinalis-cardinalis",
-	"corvus-brachyrhynchos",
-	"cyanocitta-cristata",
-	"dryobates-pubescens",
-	"gavia-immer",
-	"haemorhous-mexicanus",
-	"junco-hyemalis",
-	"megascops-asio",
-	"melospiza-melodia",
-	"passer-domesticus",
-	"poecile-atricapillus",
-	"quiscalus-quiscula",
-	"sitta-canadensis",
-	"sitta-carolinensis",
-	"spinus-tristis",
-	"strix-varia",
-	"sturnus-vulgaris",
-	"thryothorus-ludovicianus",
-	"turdus-migratorius",
-	"zenaida-macroura",
-	"zonotrichia-albicollis",
-]);
+// The kachō-e style illustrations painted with tools/illustrate
+// (public/illustrations-new/, listed in illustrations-new.ts). A species
+// without one shows the generic bird glyph (see SpeciesImage) -- never a
+// photo from elsewhere.
 
 /**
- * Every bundled species ships two poses. "perched" reads clearly at thumbnail
- * size, so it stays the default for lists; "flight" is for the large hero
- * slots where the spread wings have room.
+ * "perched" reads clearly at thumbnail size, so it stays the default for
+ * lists; "flight" is for the large hero slots where the spread wings have room.
  */
 export type IllustrationPose = "perched" | "flight";
 
@@ -44,21 +15,16 @@ function slugify(sciName: string): string {
 	return sciName.trim().toLowerCase().replaceAll(/\s+/g, "-");
 }
 
-/** Whether the bundled set has this species. */
-export function hasBundledIllustration(slug: string): boolean {
-	return AVAILABLE_SLUGS.has(slug);
-}
-
 /**
- * The bundled URL for the species, also handed out for a species only the new
- * set has: `inIllustrationSet` (applied at render) swaps it for the new file,
- * or drops it again when the bundled set is showing.
+ * The species' picture, or null when it has none. A species painted perched
+ * only shows that pose in the flight slot too.
  */
 export function illustrationUrlFor(
 	sciName: string,
 	pose: IllustrationPose = "perched",
 ): string | null {
 	const slug = slugify(sciName);
-	if (!AVAILABLE_SLUGS.has(slug) && !NEW_SLUGS.has(slug)) return null;
-	return `/illustrations/${slug}${pose === "flight" ? "-2" : ""}.png`;
+	if (!NEW_SLUGS.has(slug)) return null;
+	const flight = pose === "flight" && NEW_FLIGHT_SLUGS.has(slug);
+	return `/illustrations-new/${slug}${flight ? "-2" : ""}.png`;
 }
