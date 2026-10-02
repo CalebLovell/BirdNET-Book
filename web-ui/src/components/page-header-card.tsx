@@ -39,7 +39,8 @@ export function PageHeaderCard({
 	 * the nav entry you clicked did. Required: every masthead carries one. */
 	icon: ComponentType<{ className?: string }>;
 	title: string;
-	description: string;
+	/** A sentence, or one with figures set into it. */
+	description: ReactNode;
 	/** Omit for a title-only masthead; otherwise up to four figures. */
 	stats?: PageHeaderStat[];
 	/** A control for the page as a whole, set against the title. */

@@ -10,20 +10,15 @@ import {
 	ArrowUpNarrowWide,
 	BarChart3,
 	Bird,
-	ChartNoAxesColumnIncreasing,
 	ChevronDown,
 	Clock,
-	Clock3,
 	Feather,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useDebouncedCallback } from "use-debounce";
 import { z } from "zod";
 import { EmptyNote, EmptyState } from "~/components/empty-state.tsx";
-import {
-	PageHeaderCard,
-	type PageHeaderStat,
-} from "~/components/page-header-card.tsx";
+import { PageHeaderCard } from "~/components/page-header-card.tsx";
 import { SpeciesActions } from "~/components/species-actions.tsx";
 import { SpeciesImage } from "~/components/species-image.tsx";
 import { PageStepper } from "~/components/ui/page-stepper.tsx";
@@ -33,7 +28,6 @@ import { formatDateTime } from "~/lib/date-format.ts";
 import { getLifeListCards, type LifeListCard } from "~/lib/detections.ts";
 import { pageTitle } from "~/lib/page-title.ts";
 import { comNameToSlug } from "~/lib/species-slug.ts";
-import { hourLabel } from "~/lib/time-ago.ts";
 import { cn } from "~/lib/utils.ts";
 
 const SORT_KEYS = ["count", "recent", "alpha"] as const;
@@ -124,54 +118,10 @@ function Species() {
 
 	// Derived from the whole life list, never the search: the header describes
 	// the station, and only the grid below answers the query.
-	const stats = useMemo<PageHeaderStat[]>(() => {
-		// An empty station has nothing to describe, so the row comes off
-		// entirely rather than reading as a line of zeros.
-		if (cards.length === 0) return [];
-
-		const detections = cards.reduce((sum, card) => sum + card.allTimeCount, 0);
-		// Ranked by count regardless of the current sort, so this always names the
-		// most-detected species rather than whatever the toggle put on top.
-		const mostActive = cards.reduce(
-			(top, card) => (card.allTimeCount > top.allTimeCount ? card : top),
-			cards[0],
-		);
-		// Hourly histograms folded across every species, so the peak names the
-		// station's busiest hour of day rather than any one bird's.
-		const hourTotals = cards.reduce((totals, card) => {
-			for (let hour = 0; hour < 24; hour += 1)
-				totals[hour] += card.hourCounts[hour] ?? 0;
-			return totals;
-		}, new Array<number>(24).fill(0));
-		const peakHour = hourTotals.reduce(
-			(best, count, hour) => (count > hourTotals[best] ? hour : best),
-			0,
-		);
-		const hasPeak = hourTotals[peakHour] > 0;
-
-		return [
-			{
-				label: "Total detections",
-				value: detections,
-				icon: ChartNoAxesColumnIncreasing,
-			},
-			{
-				label: "Species",
-				value: cards.length,
-				icon: Feather,
-			},
-			{
-				label: "Most active",
-				value: mostActive.comName,
-				icon: Bird,
-			},
-			{
-				label: "Most active hour",
-				value: hasPeak ? hourLabel(peakHour) : "—",
-				icon: Clock3,
-			},
-		] satisfies PageHeaderStat[];
-	}, [cards]);
+	const detections = useMemo(
+		() => cards.reduce((sum, card) => sum + card.allTimeCount, 0),
+		[cards],
+	);
 
 	// A new sort starts in its natural direction; the direction button flips
 	// whichever sort is current. Both go back to page one, since the page you
@@ -199,8 +149,25 @@ function Species() {
 			<PageHeaderCard
 				icon={Feather}
 				title="Species"
-				description="Every species ever recorded at this station."
-				stats={stats}
+				description={
+					// An empty station has nothing to tally, so it keeps the plain line
+					// rather than reading as a pair of zeros.
+					cards.length > 0 ? (
+						<>
+							This station has recorded{" "}
+							<span className="count-figure">
+								{detections.toLocaleString()}
+							</span>{" "}
+							total {detections === 1 ? "detection" : "detections"} from{" "}
+							<span className="count-figure">
+								{cards.length.toLocaleString()}
+							</span>{" "}
+							species.
+						</>
+					) : (
+						"Every species ever recorded at this station."
+					)
+				}
 			/>
 
 			{/* Gated on the life list rather than the current result, so a search
