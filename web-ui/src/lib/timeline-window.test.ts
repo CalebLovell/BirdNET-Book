@@ -3,6 +3,7 @@ import test from "node:test";
 
 import {
 	anchorForDay,
+	comparisonFor,
 	currentAnchor,
 	daysInRange,
 	isValidAnchor,
@@ -160,4 +161,69 @@ test("daysInRange counts both ends", () => {
 	assert.equal(daysInRange("2026-02-27", "2026-03-01"), 3);
 	assert.equal(daysInRange("2026-03-01", "2026-03-01"), 1);
 	assert.equal(daysInRange("2026-03-02", "2026-03-01"), 0);
+});
+
+test("each period is compared with its own stretch before it", () => {
+	const today = "2027-06-01"; // every window below is long finished
+	const of = (period: "day" | "week" | "month" | "year", anchor: string) => {
+		const c = comparisonFor(period, anchor, today);
+		assert.ok(c);
+		return {
+			label: c.label,
+			start: c.start,
+			periods: c.windows.length,
+			last: c.windows.at(-1)?.end,
+		};
+	};
+	assert.deepEqual(of("day", "2026-07-28"), {
+		label: "the two weeks before",
+		start: "2026-07-14",
+		periods: 14,
+		last: "2026-07-14",
+	});
+	assert.deepEqual(of("week", "2026-W20"), {
+		label: "the four weeks before",
+		start: "2026-04-13",
+		periods: 4,
+		last: "2026-04-19",
+	});
+	assert.deepEqual(of("month", "2026-10"), {
+		label: "September 2026",
+		start: "2026-09-01",
+		periods: 1,
+		last: "2026-09-30",
+	});
+	assert.deepEqual(of("year", "2026"), {
+		label: "2025",
+		start: "2025-01-01",
+		periods: 1,
+		last: "2025-12-31",
+	});
+	assert.equal(comparisonFor("all", "", today), null);
+});
+
+test("a year or month still running is compared with the same days before it", () => {
+	const year = comparisonFor("year", "2026", "2026-10-02");
+	assert.equal(year?.label, "the same stretch of 2025");
+	assert.deepEqual(
+		year?.windows.map((w) => [w.start, w.end]),
+		[["2025-01-01", "2025-10-01"]],
+	);
+	// The whole stretch still bounds "away": a bird last heard in November
+	// 2025 hasn't been gone for all of last year.
+	assert.equal(year?.start, "2025-01-01");
+	assert.equal(year?.lastComplete, "2026-10-01");
+
+	// A month longer than the one before it is cut at that month's end.
+	const month = comparisonFor("month", "2026-10", "2026-10-31");
+	assert.equal(month?.label, "the same stretch of September 2026");
+	assert.deepEqual(
+		month?.windows.map((w) => [w.start, w.end]),
+		[["2026-09-01", "2026-09-30"]],
+	);
+
+	// A week is short enough to keep its whole four weeks.
+	const week = comparisonFor("week", "2026-W40", "2026-10-02");
+	assert.equal(week?.label, "the four weeks before");
+	assert.equal(week?.windows[0].end, "2026-09-27");
 });

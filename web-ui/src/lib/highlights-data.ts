@@ -11,8 +11,10 @@
 
 import { QUIET_AFTER_DAYS } from "~/lib/migration-data.ts";
 
-/** Silence long enough that coming back is news. The same fortnight the
-    timeline's quiet list uses, so the pages never disagree about "away". */
+/** Silence long enough that coming back is news on the Live page. The same
+    fortnight the timeline's quiet list uses, and the same fortnight a Day on
+    the timeline is compared with -- longer periods ask for a bird to have been
+    away for their whole comparison stretch instead. */
 export const RETURN_AFTER_DAYS = QUIET_AFTER_DAYS;
 
 /** Records ever, at or below which a species is still a rare visitor here. */
@@ -25,6 +27,10 @@ export const ROUTINE_MIN_SHARE = 10 / 14;
 
 /** How long such a regular must have been silent before it is worth saying. */
 export const ROUTINE_SILENT_DAYS = 2;
+
+/** The least stretch that can show a routine at all: a month two days in has
+    one day of last month to compare with, and one day is not a routine. */
+export const ROUTINE_MIN_BASELINE_DAYS = 7;
 
 /**
  * Detections per day below which the activity comparison stays quiet. A station
@@ -145,6 +151,18 @@ export function vocalRatio({
 	return ratio >= VOCAL_RATIO ? ratio : null;
 }
 
+/**
+ * How long a bird was away, at the scale that reads naturally: "23 days" up to
+ * two months, then "5 months", then "2 years" -- so a bird back on the yearly
+ * view isn't "back after 412 days".
+ */
+export function formatAway(days: number): string {
+	if (days < 60) return `${days} ${plural(days, "day", "days")}`;
+	if (days < 730) return `${Math.round(days / 30.44)} months`;
+	const years = Math.round(days / 365.25);
+	return `${years} ${plural(years, "year", "years")}`;
+}
+
 /** "3.2×", or a whole "12×" once a decimal stops adding anything. */
 export function formatRatio(ratio: number): string {
 	return ratio >= 10 ? `${Math.round(ratio)}×` : `${ratio.toFixed(1)}×`;
@@ -226,7 +244,9 @@ export function buildHighlights(facts: HighlightFacts): Highlight[] {
 
 	if (facts.returning.length > 0) {
 		lines.push(
-			speciesLine("returned", facts.returning, (row) => `${row.daysAway} days`),
+			speciesLine("returned", facts.returning, (row) =>
+				formatAway(row.daysAway),
+			),
 		);
 	}
 

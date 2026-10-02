@@ -3,6 +3,7 @@ import test from "node:test";
 
 import {
 	buildHighlights,
+	formatAway,
 	formatRatio,
 	type HighlightFacts,
 	MAX_NAMED_BIRDS,
@@ -218,4 +219,13 @@ test("a bird the baseline never heard is not vocal -- it has no usual", () => {
 test("ratios read as a multiple", () => {
 	assert.equal(formatRatio(3.24), "3.2×");
 	assert.equal(formatRatio(12.6), "13×");
+});
+
+test("time away reads at the scale it happened on", () => {
+	assert.equal(formatAway(1), "1 day");
+	assert.equal(formatAway(34), "34 days");
+	assert.equal(formatAway(59), "59 days");
+	assert.equal(formatAway(60), "2 months");
+	assert.equal(formatAway(412), "14 months");
+	assert.equal(formatAway(800), "2 years");
 });

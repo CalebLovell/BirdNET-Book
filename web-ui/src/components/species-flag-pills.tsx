@@ -2,7 +2,7 @@ import { AudioLines, Gem, Sparkles, Undo2 } from "lucide-react";
 import type { CSSProperties } from "react";
 import { Pill } from "~/components/pill.tsx";
 import { formatDate } from "~/lib/date-format.ts";
-import { formatRatio } from "~/lib/highlights-data.ts";
+import { formatAway, formatRatio } from "~/lib/highlights-data.ts";
 
 /** "First recorded here on Sep 22, 2026." -- the day itself, not the window. */
 export function newTooltip(firstHeard: string | null): string {
@@ -12,7 +12,7 @@ export function newTooltip(firstHeard: string | null): string {
 
 export function returnedTooltip(daysAway: number | null): string {
 	if (daysAway == null) return "Back after time away.";
-	return `Back after ${daysAway} days away.`;
+	return `Back after ${formatAway(daysAway)} away.`;
 }
 
 /** "Heard more often than usual (3.2×)." -- the Highlights line's words. */
