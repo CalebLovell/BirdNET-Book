@@ -2,61 +2,18 @@
 // remarking on, shared by the Live page (the rolling last 24 hours) and the
 // timeline (whichever calendar window is selected). Pure on purpose -- the SQL
 // that gathers the evidence lives in lib/live-highlights.ts and lib/timeline.ts,
-// so the judgement itself can be tested against hand-written facts rather than
-// a seeded database, and the two pages can never disagree about what counts.
+// and both hand it over in the same day-by-day shape, so the judgement can be
+// tested against hand-written tallies and the two pages can never disagree
+// about what counts.
 //
-// Every line but the busiest hour is gated: it speaks only when something
-// deviates from this station's own baseline. A card that finds something to
-// say every time is wallpaper, and stops being read.
+// The thresholds live in lib/highlight-thresholds.ts, beside the guide the
+// card's info tip shows. A bird gets every tag it qualifies for.
 
-import { QUIET_AFTER_DAYS } from "~/lib/migration-data.ts";
-
-/** Silence long enough that coming back is news on the Live page. The same
-    fortnight the timeline's quiet list uses, and the same fortnight a Day on
-    the timeline is compared with -- longer periods ask for a bird to have been
-    away for their whole comparison stretch instead. */
-export const RETURN_AFTER_DAYS = QUIET_AFTER_DAYS;
-
-/** Records ever, at or below which a species is still a rare visitor here. */
-export const RARE_LIFETIME_MAX = 5;
-
-/** Share of the baseline's days a species must have been heard on before its
-    silence counts as breaking a routine rather than just a gap: 10 of the 14
-    days before a Live window. */
-export const ROUTINE_MIN_SHARE = 10 / 14;
-
-/** How long such a regular must have been silent before it is worth saying. */
-export const ROUTINE_SILENT_DAYS = 2;
-
-/** The least stretch that can show a routine at all: a month two days in has
-    one day of last month to compare with, and one day is not a routine. */
-export const ROUTINE_MIN_BASELINE_DAYS = 7;
-
-/**
- * Detections per day below which the activity comparison stays quiet. A station
- * averaging a handful of detections swings by hundreds of percent on noise
- * alone, and "up 200%" on three detections is not a highlight.
- */
-export const VOLUME_BASELINE_MIN = 20;
-
-/** How far from the baseline's daily rate counts as busy, and as quiet. */
-export const BUSY_RATIO = 1.3;
-export const QUIET_RATIO = 0.7;
-
-/** How many times its usual daily rate a species must be heard at before the
-    window counts as far more than usual for it. Well above the station-wide
-    BUSY_RATIO, since one species' counts swing far more than everything's --
-    a single day doubling its usual is ordinary noise. */
-export const VOCAL_RATIO = 3;
-
-/** Share of the comparison's recorded days a species must have been heard on
-    to have a "usual" at all. Below it the bird was barely around, and a jump
-    from four detections to eighty is an arrival, not a regular gone loud. */
-export const VOCAL_MIN_PRESENCE = 1 / 4;
-
-/** Detections a species needs in the window before it can be more vocal than
-    usual, so a couple of stray calls from a quiet bird never count. */
-export const VOCAL_MIN_DETECTIONS = 10;
+import {
+	type HighlightPeriod,
+	type HighlightThresholds,
+	lookbackFor,
+} from "~/lib/highlight-thresholds.ts";
 
 /** Birds a line names before summing up the rest, so a migration week doesn't
     turn one line into a paragraph. */
@@ -67,26 +24,26 @@ export type HighlightBird = { comName: string; note: string | null };
 
 export type SpeciesHighlightKind =
 	| "new"
-	| "returned"
 	| "rare"
-	| "vocal"
-	| "routine";
+	| "consistent"
+	| "routine"
+	| "returned"
+	| "vocal";
 
 export type Highlight =
 	| {
 			kind: "activity";
-			direction: "up" | "down";
-			/** How far the window's daily rate sits from the baseline's, rounded. */
+			direction: "up" | "down" | "level";
+			/** How far the window's detections sit from the period before's,
+			    rounded. Zero reads as "The same as". */
 			percent: number;
-			/** What the window is compared against: "the four weeks before". */
+			/** The period before, as the sentence names it: "yesterday",
+			    "last week", "last month", "last year". */
 			baselineLabel: string;
-			/** The window's detections -- or, for a window still in progress, its
-			    detections per day so far (see `perDay`). */
-			detections: number;
-			perDay: boolean;
-			/** Species against the baseline's usual count. Null for a window still
-			    in progress, whose species list isn't finished yet. */
-			speciesDelta: number | null;
+			/** The window's detections against the period before's. */
+			detectionsDelta: number;
+			/** The window's species count against the period before's. */
+			speciesDelta: number;
 	  }
 	| { kind: "busiest-hour"; hour: number }
 	| {
@@ -95,235 +52,472 @@ export type Highlight =
 			total: number;
 			/** ...but only the first MAX_NAMED_BIRDS are named. */
 			birds: HighlightBird[];
-			/** For "vocal": what the birds are heard far more than, as the
-			    activity line names it ("the four weeks before"). */
+			/** For "vocal": the stretch the birds are heard far more than in
+			    ("the past 3 weeks"). */
 			comparedWith?: string;
+			/** For "consistent": what "every day" covers ("the past 14 days and
+			    today", "over 75% of days this year"). */
+			scope?: string;
 	  };
 
+/** One day's detections by species -- for the Live page, one 24-hour slice.
+    An empty tally is a day the station recorded nothing, which the rules
+    treat as the station being down rather than every bird going silent. */
+export type DayTally = Map<string, number>;
+
 /**
- * Everything the rules need, already gathered. Each species list arrives
- * ordered by how strongly it qualifies, because only the first few are named.
+ * A window and its history, day by day, as both pages gather it. Every
+ * comparison is between whole calendar periods, even while the window is
+ * still running.
  */
-export type HighlightFacts = {
-	/** Detections inside the window. Zero means nothing to say at all. */
-	detections: number;
-	/** 24 counts, midnight first, summed across every species in the window. */
+export type HighlightEvidence = {
+	period: HighlightPeriod;
+	/** The window's days, oldest first -- through today for a window still
+	    running, every recorded day for all time. */
+	window: DayTally[];
+	/** Whole periods before the window, nearest first, each its own days oldest
+	    first: as many as the longest lookback any rule asks for, fewer for a
+	    station younger than that. Empty for all time. */
+	before: DayTally[][];
+	/** Every period before the window, nearest first, back to the station's
+	    first: the species heard in each, for counting a Consistent bird's run
+	    to its true start. An empty set is a period the station recorded
+	    nothing in. */
+	history: Set<string>[];
+	/** 24 counts, midnight first, across every species in the window. */
 	hourCounts: number[];
-	/** Heard in the window, never heard before it. Most detections first. */
-	newSpecies: string[];
-	/** Heard in the window after RETURN_AFTER_DAYS or more away. Longest
-	    absence first. */
-	returning: { comName: string; daysAway: number }[];
-	/** Heard in the window and barely ever otherwise. Fewest records first. */
-	rare: { comName: string; lifetimeCount: number }[];
-	/** Heard far more than usual in the window. Biggest jump first. */
-	vocal: ({ comName: string } & VocalJump)[];
-	/** How the comparison stretch is named, for the vocal line. Null when
-	    there is none (all time, or too little history). */
-	comparedWith: string | null;
-	/** Regulars absent from the window. Most regular first. */
-	breakingRoutine: { comName: string; daysSilent: number }[];
-	/** The window's pace against the stretch before it. Null when there is no
-	    stretch before it to compare with (all time, or too little history). */
-	activity: {
-		baselineLabel: string;
-		/** The window's detections per day. */
-		windowPerDay: number;
-		/** The baseline's detections per day. */
-		baselinePerDay: number;
-		/** The window's detections, for the sentence. */
-		windowDetections: number;
-		/** Whether the window is still running, so its figures are "so far". */
-		inProgress: boolean;
-		windowSpecies: number;
-		/** Mean distinct species per period across the baseline. */
-		baselineSpecies: number;
-	} | null;
+	/** Records ever per species, the window included. */
+	lifetime: Map<string, number>;
+	/** Species heard at any point before the window. */
+	heardBefore: Set<string>;
+	/** For a species heard in the window that had been heard before: days from
+	    its last record before the window to its first in it. */
+	awayDays: Map<string, number>;
+	/** For a species heard before but not in the window: days since its last
+	    record. */
+	silentDays: Map<string, number>;
 };
 
 /** A species heard far more than usual: its detections a day in the window,
     its usual detections a day, and the multiple between. Daily on both sides,
-    so the figures mean the same thing for a day, a week, a month or a year,
-    and for a window still in progress. */
-export type VocalJump = { perDay: number; usualPerDay: number; ratio: number };
+    so the figures mean the same thing for a day, a week, a month or a year. */
+export type VocalJump = {
+	/** Detections in the window. */
+	count: number;
+	/** Its usual detections per period over the lookback: per day for Live and
+	    Day, per week for a week, per month for a month, per year for a year. */
+	usual: number;
+	ratio: number;
+	/** The window it was judged in, so the badge can say "today" or "this
+	    week". */
+	period: HighlightPeriod;
+};
+
+/** Every tag a species heard in the window carries. They stack. */
+export type SpeciesFlags = {
+	isNew: boolean;
+	isRare: boolean;
+	isConsistent: boolean;
+	/** What a Consistent bird's run looks like: "15 days in a row", "3 weeks
+	    in a row" -- or, for a year or all time, "82% of days". Null unless
+	    isConsistent. */
+	streak: string | null;
+	isReturned: boolean;
+	/** How long a Returned bird was away, in the window's own unit: "12 days",
+	    "3 weeks", "2 months". Null unless isReturned. */
+	away: string | null;
+	vocal: VocalJump | null;
+};
+
+export type HighlightJudgement = {
+	highlights: Highlight[];
+	/** Tags for every species heard in the window. */
+	flags: Map<string, SpeciesFlags>;
+};
+
+const AWAY_UNITS: Partial<
+	Record<HighlightPeriod, { size: number; one: string; many: string }>
+> = {
+	week: { size: 7, one: "week", many: "weeks" },
+	month: { size: 30.44, one: "month", many: "months" },
+	year: { size: 365.25, one: "year", many: "years" },
+};
 
 /**
- * A species heard far more than usual in the window, or null unless it clears
- * VOCAL_RATIO. Only a bird that was properly around in the comparison stretch
- * -- heard on VOCAL_MIN_PRESENCE of its recorded days -- has a usual to beat;
- * one barely heard before is closer to an arrival, which a multiple over a
- * handful of detections would wildly overstate.
+ * How long a returning bird was away, counted in the window's own unit so it
+ * reads against the period on screen: days for Live and Day, weeks for a week,
+ * months for a month, years for a year. Never less than one of them -- a bird
+ * back on the weekly view was away at least the week before.
  */
-export function vocalJump({
-	windowCount,
-	windowDays,
-	baselineCount,
-	baselineDays,
-	daysHeard,
-}: {
-	windowCount: number;
-	windowDays: number;
-	baselineCount: number;
-	/** The comparison's recorded days. */
-	baselineDays: number;
-	/** How many of those days the species was heard on. */
-	daysHeard: number;
-}): VocalJump | null {
-	if (windowDays <= 0 || baselineDays <= 0 || baselineCount === 0) return null;
-	if (windowCount < VOCAL_MIN_DETECTIONS) return null;
-	if (daysHeard < VOCAL_MIN_PRESENCE * baselineDays) return null;
-	const perDay = windowCount / windowDays;
-	const usualPerDay = baselineCount / baselineDays;
-	const ratio = perDay / usualPerDay;
-	return ratio >= VOCAL_RATIO ? { perDay, usualPerDay, ratio } : null;
+export function formatAwayIn(days: number, period: HighlightPeriod): string {
+	const unit = AWAY_UNITS[period];
+	if (!unit) return `${days} ${plural(days, "day", "days")}`;
+	const count = Math.max(1, Math.round(days / unit.size));
+	return `${count} ${plural(count, unit.one, unit.many)}`;
 }
 
-/** A daily rate as the vocal figures print it: a decimal while it's small
-    enough for one to matter ("4.6"), whole past ten ("43"). */
-export function formatDailyRate(rate: number): string {
-	if (rate < 0.05) return "under 0.1";
-	if (rate < 10) return String(Number(rate.toFixed(1)));
-	return Math.round(rate).toLocaleString();
+/** A vocal figure as the card prints it: a whole number ("5", "1,234"),
+    or "under 1" for a usual too small to round to one -- never a bare 0. */
+export function formatRate(rate: number): string {
+	const whole = Math.round(rate);
+	return whole === 0 && rate > 0 ? "under 1" : whole.toLocaleString();
 }
 
-/** "76 a day, usually 4.6" -- the window's daily rate against its usual. */
-export function formatVocal({ perDay, usualPerDay }: VocalJump): string {
-	return `${formatDailyRate(perDay)} a day, usually ${formatDailyRate(usualPerDay)}`;
+/** The window as a sentence names it: "today", "this week". */
+export function windowPhrase(period: HighlightPeriod): string {
+	return period === "live" || period === "day"
+		? "today"
+		: period === "all"
+			? "all time"
+			: `this ${period}`;
 }
 
-/**
- * "than the four weeks before", "than in September 2026": the comparison as
- * the end of "heard far more ...". A label naming a period itself needs the
- * "in"; one already reading as a stretch doesn't.
- */
+/** "300 this week, usually 40" -- the window's count against its usual. */
+export function formatVocal({
+	count,
+	usual,
+	period,
+}: Pick<VocalJump, "count" | "usual" | "period">): string {
+	return `${formatRate(count)} ${windowPhrase(period)}, usually ${formatRate(usual)}`;
+}
+
+/** "than in the past 3 weeks", "than last year": the end of "heard far more". */
 export function thanPhrase(comparedWith: string | undefined | null): string {
 	if (!comparedWith) return "than usual";
-	return /^(the|your) /.test(comparedWith)
+	return /^(last |yesterday)/.test(comparedWith)
 		? `than ${comparedWith}`
 		: `than in ${comparedWith}`;
 }
 
-/**
- * How long a bird was away, at the scale that reads naturally: "23 days" up to
- * two months, then "5 months", then "2 years" -- so a bird back on the yearly
- * view isn't "back after 412 days".
- */
-export function formatAway(days: number): string {
-	if (days < 60) return `${days} ${plural(days, "day", "days")}`;
-	if (days < 730) return `${Math.round(days / 30.44)} months`;
-	const years = Math.round(days / 365.25);
-	return `${years} ${plural(years, "year", "years")}`;
-}
+/** The period just before the window, as everyday speech names it. Live's
+    previous 24 hours read as yesterday, like a Day's. */
+export const PREVIOUS_PERIOD: Record<HighlightPeriod, string> = {
+	live: "yesterday",
+	day: "yesterday",
+	week: "last week",
+	month: "last month",
+	year: "last year",
+	all: "",
+};
 
 function plural(count: number, one: string, many: string): string {
 	return count === 1 ? one : many;
+}
+
+/** "the past 10 days", "last week", "last year": a rule's lookback named.
+    A single unit is the period just before, so it reads like the up/down
+    line does ("yesterday", "last month"). */
+export function lookbackLabel(count: number, period: HighlightPeriod): string {
+	if (period === "year" || count === 1) return PREVIOUS_PERIOD[period];
+	const unit =
+		period === "week" ? "week" : period === "month" ? "month" : "day";
+	return `the past ${count} ${unit}s`;
+}
+
+const STREAK_UNIT: Partial<Record<HighlightPeriod, [string, string]>> = {
+	live: ["day", "days"],
+	day: ["day", "days"],
+	week: ["week", "weeks"],
+	month: ["month", "months"],
+};
+
+const recorded = (day: DayTally) => day.size > 0;
+
+function total(days: DayTally[], comName?: string): number {
+	let sum = 0;
+	for (const day of days) {
+		if (comName == null) for (const n of day.values()) sum += n;
+		else sum += day.get(comName) ?? 0;
+	}
+	return sum;
+}
+
+function speciesIn(days: DayTally[]): Set<string> {
+	const names = new Set<string>();
+	for (const day of days) for (const name of day.keys()) names.add(name);
+	return names;
 }
 
 function speciesLine<Row extends { comName: string }>(
 	kind: SpeciesHighlightKind,
 	rows: Row[],
 	noteFor: (row: Row) => string | null,
-): Highlight {
+	extra: { comparedWith?: string; scope?: string } = {},
+): Highlight | null {
+	if (rows.length === 0) return null;
 	return {
 		kind,
 		total: rows.length,
 		birds: rows
 			.slice(0, MAX_NAMED_BIRDS)
 			.map((row) => ({ comName: row.comName, note: noteFor(row) })),
-	};
-}
-
-function activityLine(facts: HighlightFacts): Highlight | null {
-	const activity = facts.activity;
-	// Volume speaks only when the baseline is worth comparing against, so a
-	// quiet station's normal variation never gets dressed up as a trend.
-	if (!activity || activity.baselinePerDay < VOLUME_BASELINE_MIN) return null;
-
-	const ratio = activity.windowPerDay / activity.baselinePerDay;
-	if (ratio < BUSY_RATIO && ratio > QUIET_RATIO) return null;
-
-	return {
-		kind: "activity",
-		direction: ratio >= BUSY_RATIO ? "up" : "down",
-		percent: Math.round(Math.abs(ratio - 1) * 100),
-		baselineLabel: activity.baselineLabel,
-		detections: activity.inProgress
-			? Math.round(activity.windowPerDay)
-			: activity.windowDetections,
-		perDay: activity.inProgress,
-		speciesDelta: activity.inProgress
-			? null
-			: activity.windowSpecies - Math.round(activity.baselineSpecies),
+		...extra,
 	};
 }
 
 /**
- * The window's highlights, in the order they read best: how the window compared
- * with the stretch before it, when it was busiest, then the birds -- arrivals,
- * returns, rarities and unusually vocal regulars first, absences last. Empty only for a window with no
- * detections, which the card reports with its empty note instead.
+ * The window's highlights and every heard species' tags, in the order the card
+ * reads them: how the window compared with the period before, when it was
+ * busiest, then the birds -- new, rare, consistent, gone quiet, returned,
+ * vocal. Empty for a window with no detections, which the card reports with
+ * its empty note instead: a silent window is almost always the station being
+ * down, not every bird falling silent at once.
  */
-export function buildHighlights(facts: HighlightFacts): Highlight[] {
-	// A window with nothing in it is almost always the station being down, not
-	// every bird falling silent at once -- so it says nothing about routines or
-	// volume either.
-	if (facts.detections === 0) return [];
+export function judgeHighlights(
+	evidence: HighlightEvidence,
+	settings: HighlightThresholds,
+): HighlightJudgement {
+	const { period, window, before } = evidence;
+	const flags = new Map<string, SpeciesFlags>();
+	const windowTotal = total(window);
+	if (windowTotal === 0) return { highlights: [], flags };
 
-	const lines: Highlight[] = [];
+	const isAll = period === "all";
+	const units = (n: number) => before.slice(0, n);
+	// A lookback only means something once the station was listening from its
+	// start: a station two days old has no three-week streak to keep, and no
+	// regulars to lose. Periods it was down for in between are skipped, not
+	// held against a bird.
+	const watched = (n: number) => {
+		const span = units(n);
+		return span.length === n && (span.at(-1)?.some(recorded) ?? false);
+	};
+	const windowCount = new Map<string, number>();
+	for (const day of window)
+		for (const [name, n] of day)
+			windowCount.set(name, (windowCount.get(name) ?? 0) + n);
+	const heard = Array.from(windowCount.keys());
 
-	const activity = activityLine(facts);
-	if (activity) lines.push(activity);
+	// New: its first record ever is in the window. Rare: heard before, with
+	// only a handful of records ever. All time has neither -- every species is
+	// trivially first heard in it, and its list is lifetime counts already.
+	const isNew = (name: string) => !isAll && !evidence.heardBefore.has(name);
+	const isRare = (name: string) =>
+		!isAll &&
+		evidence.heardBefore.has(name) &&
+		(evidence.lifetime.get(name) ?? 0) <= settings.rareMax;
 
-	lines.push({
-		kind: "busiest-hour",
-		hour: facts.hourCounts.indexOf(Math.max(...facts.hourCounts)),
-	});
+	// Consistent: heard in the window and in every period of the lookback --
+	// every day for Live and Day, every week for a week, every month for a
+	// month -- or, for a year or all time, on more than a share of its days.
+	const consistentShare =
+		period === "year"
+			? settings.consistent.yearShare
+			: isAll
+				? settings.consistent.allTimeShare
+				: null;
+	// The setting is the run's length with this period in it, so the periods
+	// before it that must have heard the bird are one fewer.
+	const consistentUnits = Math.max(
+		0,
+		lookbackFor(settings.consistent, period) - 1,
+	);
+	const windowRecordedDays = window.filter(recorded);
+	const consistentShareOf = new Map<string, number>();
+	// A period counts toward a run if the bird was heard in it at all. Periods
+	// the station was down for are stepped over rather than breaking it.
+	const heardIn = (unit: DayTally[], name: string) =>
+		unit.some((day) => day.has(name));
+	// The run a Consistent bird is on: this window plus every period before it,
+	// back to the first it went unheard in, across the station's whole history.
+	const streakOf = (name: string) => {
+		let count = 1;
+		for (const species of evidence.history) {
+			if (species.size === 0) continue;
+			if (!species.has(name)) break;
+			count++;
+		}
+		return count;
+	};
+	const isConsistent = (name: string) => {
+		if (consistentShare != null) {
+			if (windowRecordedDays.length === 0) return false;
+			const share =
+				windowRecordedDays.filter((day) => day.has(name)).length /
+				windowRecordedDays.length;
+			consistentShareOf.set(name, share);
+			return share * 100 > consistentShare;
+		}
+		if (!watched(consistentUnits)) return false;
+		return units(consistentUnits)
+			.filter((unit) => unit.some(recorded))
+			.every((unit) => heardIn(unit, name));
+	};
 
-	if (facts.newSpecies.length > 0) {
-		lines.push(
-			speciesLine(
-				"new",
-				facts.newSpecies.map((comName) => ({ comName })),
-				() => null,
-			),
-		);
-	}
+	// Returned: heard before, silent for every unit of the lookback, back now.
+	const returnedUnits = units(lookbackFor(settings.returned, period));
+	const returnedSilentIn = speciesIn(returnedUnits.flat());
+	const isReturned = (name: string) =>
+		!isAll && evidence.heardBefore.has(name) && !returnedSilentIn.has(name);
 
-	if (facts.returning.length > 0) {
-		lines.push(
-			speciesLine("returned", facts.returning, (row) =>
-				formatAway(row.daysAway),
-			),
-		);
-	}
+	// Vocal: far above its usual count per period over the lookback -- a week
+	// against its usual week, a day against its usual day -- for a bird that
+	// was properly around in it, heard plenty in the window.
+	const vocalN = lookbackFor(settings.vocal, period);
+	const vocalUnits = units(vocalN).filter((unit) => unit.some(recorded));
+	const vocalDays = vocalUnits.flat().filter(recorded);
+	const vocalLabel = lookbackLabel(vocalN, period);
+	const vocalJump = (name: string): VocalJump | null => {
+		if (isAll || vocalDays.length === 0) return null;
+		const count = windowCount.get(name) ?? 0;
+		if (count < settings.vocal.minDetections) return null;
+		const daysHeard = vocalDays.filter((day) => day.has(name)).length;
+		if (daysHeard === 0) return null;
+		if ((daysHeard / vocalDays.length) * 100 < settings.vocal.presence)
+			return null;
+		const usual = total(vocalDays, name) / vocalUnits.length;
+		const ratio = count / usual;
+		return ratio >= settings.vocal.ratio
+			? { count, usual, ratio, period }
+			: null;
+	};
 
-	if (facts.rare.length > 0) {
-		lines.push(
-			speciesLine(
-				"rare",
-				facts.rare,
-				(row) =>
-					`${row.lifetimeCount} ${plural(row.lifetimeCount, "record", "records")} ever`,
-			),
-		);
-	}
+	const awayFor = (name: string) => {
+		const days = evidence.awayDays.get(name);
+		return isReturned(name) && days != null ? formatAwayIn(days, period) : null;
+	};
 
-	if (facts.vocal.length > 0) {
-		lines.push({
-			...speciesLine("vocal", facts.vocal, formatVocal),
-			...(facts.comparedWith ? { comparedWith: facts.comparedWith } : {}),
+	const streakRun = new Map<string, number>();
+	const streakFor = (name: string): string | null => {
+		const share = consistentShareOf.get(name);
+		if (share != null) return `${Math.round(share * 100)}% of days`;
+		const unit = STREAK_UNIT[period];
+		if (!unit) return null;
+		const count = streakOf(name);
+		streakRun.set(name, count);
+		return `${count} ${plural(count, unit[0], unit[1])} in a row`;
+	};
+
+	for (const name of heard) {
+		const returned = isReturned(name);
+		const consistent = isConsistent(name);
+		flags.set(name, {
+			isNew: isNew(name),
+			isRare: isRare(name),
+			isConsistent: consistent,
+			streak: consistent ? streakFor(name) : null,
+			isReturned: returned,
+			away: awayFor(name),
+			vocal: vocalJump(name),
 		});
 	}
 
-	if (facts.breakingRoutine.length > 0) {
-		lines.push(
-			speciesLine(
-				"routine",
-				facts.breakingRoutine,
-				(row) => `silent ${row.daysSilent} days`,
-			),
+	// Gone quiet: heard in each unit of the lookback, not once in the window.
+	const quietN = lookbackFor(settings.goneQuiet, period);
+	const quietUnits = units(quietN).filter((unit) => unit.some(recorded));
+	const goneQuiet =
+		isAll || !watched(quietN)
+			? []
+			: Array.from(speciesIn(quietUnits.flat()))
+					.filter(
+						(name) =>
+							!windowCount.has(name) &&
+							quietUnits.every((unit) => unit.some((day) => day.has(name))),
+					)
+					.map((name) => ({
+						comName: name,
+						daysSilent: evidence.silentDays.get(name) ?? null,
+						before: total(quietUnits.flat(), name),
+					}))
+					.sort((a, b) => b.before - a.before);
+
+	const lines: Highlight[] = [];
+
+	// Up or down on the period just before, whatever the size of the change --
+	// unless that period recorded nothing to compare with.
+	const previous = before[0] ?? [];
+	const previousTotal = total(previous);
+	if (previousTotal > 0) {
+		const percent = Math.round(
+			(Math.abs(windowTotal - previousTotal) / previousTotal) * 100,
 		);
+		lines.push({
+			kind: "activity",
+			direction:
+				percent === 0 ? "level" : windowTotal > previousTotal ? "up" : "down",
+			percent,
+			baselineLabel: PREVIOUS_PERIOD[period],
+			detectionsDelta: windowTotal - previousTotal,
+			speciesDelta: heard.length - speciesIn(previous).size,
+		});
 	}
 
-	return lines;
+	lines.push({
+		kind: "busiest-hour",
+		hour: evidence.hourCounts.indexOf(Math.max(...evidence.hourCounts)),
+	});
+
+	const byCount = (a: string, b: string) =>
+		(windowCount.get(b) ?? 0) - (windowCount.get(a) ?? 0);
+	const tagged = (pick: (f: SpeciesFlags) => boolean) =>
+		heard.filter((name) => pick(flags.get(name) as SpeciesFlags));
+
+	const consistentScope =
+		consistentShare != null
+			? `on over ${consistentShare}% of ${isAll ? "all days" : "days this year"}`
+			: `every ${STREAK_UNIT[period]?.[0] ?? "day"}`;
+
+	for (const line of [
+		speciesLine(
+			"new",
+			tagged((f) => f.isNew)
+				.sort(byCount)
+				.map((comName) => ({ comName })),
+			() => null,
+		),
+		speciesLine(
+			"rare",
+			tagged((f) => f.isRare)
+				.map((comName) => ({
+					comName,
+					lifetime: evidence.lifetime.get(comName) ?? 0,
+				}))
+				.sort((a, b) => a.lifetime - b.lifetime),
+			(row) =>
+				`${row.lifetime} ${plural(row.lifetime, "record", "records")} ever`,
+		),
+		speciesLine(
+			"consistent",
+			tagged((f) => f.isConsistent)
+				.sort(
+					(a, b) =>
+						(streakRun.get(b) ?? 0) - (streakRun.get(a) ?? 0) ||
+						(consistentShareOf.get(b) ?? 0) - (consistentShareOf.get(a) ?? 0) ||
+						byCount(a, b),
+				)
+				.map((comName) => ({ comName })),
+			(row) => flags.get(row.comName)?.streak ?? null,
+			{ scope: consistentScope },
+		),
+		speciesLine("routine", goneQuiet, (row) =>
+			row.daysSilent == null
+				? null
+				: `silent ${formatAwayIn(row.daysSilent, period)}`,
+		),
+		speciesLine(
+			"returned",
+			tagged((f) => f.isReturned)
+				.map((comName) => ({
+					comName,
+					daysAway: evidence.awayDays.get(comName) ?? null,
+				}))
+				.sort((a, b) => (b.daysAway ?? 0) - (a.daysAway ?? 0)),
+			(row) =>
+				row.daysAway == null ? null : formatAwayIn(row.daysAway, period),
+		),
+		speciesLine(
+			"vocal",
+			heard
+				.flatMap((comName) => {
+					const jump = flags.get(comName)?.vocal;
+					return jump ? [{ comName, ...jump }] : [];
+				})
+				.sort((a, b) => b.ratio - a.ratio),
+			formatVocal,
+			{ comparedWith: vocalLabel },
+		),
+	])
+		if (line) lines.push(line);
+
+	return { highlights: lines, flags };
 }

@@ -29,7 +29,10 @@ export type SpeciesHourRow = {
 	isReturned: boolean;
 	/** Heard only a handful of times ever at this station. */
 	isRare: boolean;
-	daysAway: number | null;
+	isConsistent: boolean;
+	/** A Regular bird's run ("15 days in a row"). */
+	streak: string | null;
+	away: string | null;
 	/** How many times its usual rate, when heard far more than usual. */
 	vocal: VocalJump | null;
 };
@@ -240,7 +243,9 @@ function SpeciesHourRowView({
 						isNew={row.isNew}
 						isReturned={row.isReturned}
 						isRare={row.isRare}
-						daysAway={row.daysAway}
+						isConsistent={row.isConsistent}
+						streak={row.streak}
+						away={row.away}
 						vocal={row.vocal}
 						firstHeard={row.firstHeard}
 					/>

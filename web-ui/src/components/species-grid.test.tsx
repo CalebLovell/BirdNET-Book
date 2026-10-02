@@ -48,8 +48,10 @@ const robin: SpeciesGridItem = {
 	isNew: false,
 	firstHeard: null,
 	isRare: false,
+	isConsistent: false,
+	streak: null,
 	isReturned: false,
-	daysAway: null,
+	away: null,
 	vocal: null,
 	// 24-count fixture, midnight first, peak at 06:00 — lets the row show bars.
 	hourCounts: (() => {
@@ -94,7 +96,7 @@ test("a rare visitor gets a Rare chip with the gem icon", async () => {
 
 test("a returned visitor gets a Returned chip", async () => {
 	const markup = await renderGrid([
-		{ ...robin, isReturned: true, daysAway: 23 },
+		{ ...robin, isReturned: true, away: "3 weeks" },
 	]);
 	assert.match(markup, /lucide-undo-2/);
 	assert.match(markup, /Returned/);
@@ -103,7 +105,7 @@ test("a returned visitor gets a Returned chip", async () => {
 test("the Returned tooltip says how long the bird was away", () => {
 	// The tooltip content lives in a Radix portal that only mounts on hover, so
 	// it never reaches the static markup above -- test the copy at its source.
-	assert.equal(returnedTooltip(23), "Back after 23 days away.");
+	assert.equal(returnedTooltip("3 weeks"), "Back after 3 weeks away.");
 	assert.equal(returnedTooltip(null), "Back after time away.");
 });
 
@@ -128,9 +130,18 @@ test("a grid row without hourCounts draws no bars", async () => {
 });
 
 test("a bird heard far more than usual gets a Vocal chip", async () => {
-	const vocal = { perDay: 76, usualPerDay: 4.6, ratio: 16.5 };
+	const vocal = {
+		count: 76,
+		usual: 4.6,
+		ratio: 16.5,
+		period: "day" as const,
+	};
 	const markup = await renderGrid([{ ...robin, vocal }]);
 	assert.match(markup, /lucide-audio-lines/);
 	assert.match(markup, /Vocal/);
-	assert.equal(vocalTooltip(vocal), "Heard 76 times a day; usually 4.6.");
+	assert.equal(vocalTooltip(vocal), "Heard 76 times today, usually only 5.");
+	assert.equal(
+		vocalTooltip({ ...vocal, count: 300, usual: 40, period: "week" }),
+		"Heard 300 times this week, usually only 40.",
+	);
 });

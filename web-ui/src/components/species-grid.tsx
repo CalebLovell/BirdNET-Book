@@ -20,9 +20,13 @@ export type SpeciesGridItem = {
 	/** The day a New bird was first recorded. Null unless isNew. */
 	firstHeard: string | null;
 	isRare: boolean;
+	isConsistent: boolean;
+	/** A Regular bird's run ("15 days in a row"). */
+	streak: string | null;
 	isReturned: boolean;
-	/** How long a returning bird was away, or null unless isReturned. */
-	daysAway: number | null;
+	/** How long a returning bird was away ("3 weeks"), or null unless
+	    isReturned. */
+	away: string | null;
 	/** How many times its usual rate, when heard far more than usual. */
 	vocal: VocalJump | null;
 	/** 24 detection counts, midnight first, for this species in the window.
@@ -149,7 +153,9 @@ function SpeciesGridRow({
 							isNew={item.isNew}
 							isReturned={item.isReturned}
 							isRare={item.isRare}
-							daysAway={item.daysAway}
+							isConsistent={item.isConsistent}
+							streak={item.streak}
+							away={item.away}
 							vocal={item.vocal}
 							firstHeard={item.firstHeard}
 						/>

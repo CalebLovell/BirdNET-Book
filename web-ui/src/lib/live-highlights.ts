@@ -4,34 +4,24 @@ import { count, sql } from "drizzle-orm";
 import { db } from "~/db/index.ts";
 import { detections } from "~/db/schema.ts";
 import {
-	buildHighlights,
+	HIGHLIGHT_THRESHOLDS,
+	lookbackFor,
+} from "~/lib/highlight-thresholds.ts";
+import {
+	type DayTally,
 	type Highlight,
-	RARE_LIFETIME_MAX,
-	RETURN_AFTER_DAYS,
-	ROUTINE_MIN_SHARE,
-	ROUTINE_SILENT_DAYS,
-	vocalJump,
+	judgeHighlights,
 } from "~/lib/highlights-data.ts";
 import { detectedAt, isLast24h } from "~/lib/now.ts";
 import { timestampToMillis } from "~/lib/visits.ts";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
-/**
- * The fortnight the baseline averages over. It ends where the 24-hour window
- * begins, hence the 15 days in `isBaseline` below: day -15 to day -1 is the
- * fourteen whole days before the window, with no overlap to double-count.
- */
-const BASELINE_DAYS = 14;
-
 /** Everything before the rolling 24-hour window the rest of the page uses. */
 const isBeforeWindow = sql`${detectedAt} < datetime('now', '-24 hours', 'localtime')`;
 
-/** The fortnight before the window: what "usual" means for this station. */
-const isBaseline = sql`${detectedAt} >= datetime('now', '-15 days', 'localtime') and ${isBeforeWindow}`;
-
 /** Which 24-hour slice back from now a detection falls in: 0 is the window
-    itself, 1-14 the fortnight before it. */
+    itself, 1 the 24 hours before it, and so on. The Live page's "days". */
 const daySlice = sql<number>`cast(julianday('now', 'localtime') - julianday(${detectedAt}) as integer)`;
 
 export type LiveHighlights = {
@@ -42,8 +32,9 @@ export type LiveHighlights = {
 };
 
 /**
- * The last 24 hours' highlights, by the same rules the timeline's Highlights
- * card applies to a calendar window.
+ * The last 24 hours' highlights, by the same rules -- the same function -- the
+ * timeline's Highlights card applies to a Day: each 24-hour slice back from
+ * now stands in for a calendar day.
  *
  * Deliberately not part of getNowSnapshot: the Live page repolls that every
  * ten seconds, and none of these judgements can change that fast. This runs
@@ -52,32 +43,35 @@ export type LiveHighlights = {
  */
 export const getLiveHighlights = createServerFn({ method: "GET" }).handler(
 	async (): Promise<LiveHighlights> => {
+		const settings = HIGHLIGHT_THRESHOLDS;
 		// One clock read for every age in the card, so two lines can never
 		// disagree about how long a bird has been away.
 		const nowMs = Date.now();
+		const longest = Math.max(
+			1,
+			lookbackFor(settings.consistent, "live") - 1,
+			lookbackFor(settings.goneQuiet, "live"),
+			lookbackFor(settings.returned, "live"),
+			lookbackFor(settings.vocal, "live"),
+		);
 
-		const [windowRows, historyRows, hourRows, sliceRows, [volume]] =
+		const [windowRows, historyRows, hourRows, sliceRows, streakRows, [volume]] =
 			await Promise.all([
 				db
 					.select({
 						comName: detections.Com_Name,
-						windowCount: count(),
 						firstInWindow: sql<string>`min(${detectedAt})`,
 					})
 					.from(detections)
 					.where(isLast24h)
-					.groupBy(detections.Com_Name)
-					.orderBy(sql`count(*) desc`),
-				// Everything the rules need to know about life before the window, in
-				// one grouped pass: how often a species has ever been heard, when it
-				// was last heard, and how much of the last fortnight it was around for.
+					.groupBy(detections.Com_Name),
+				// Life before the window, per species: how often it has been heard and
+				// when it was last heard.
 				db
 					.select({
 						comName: detections.Com_Name,
 						countBefore: count(),
 						lastBefore: sql<string>`max(${detectedAt})`,
-						daysInFortnight: sql<number>`count(distinct case when ${isBaseline} then ${detections.Date} end)`,
-						baselineCount: sql<number>`count(case when ${isBaseline} then 1 end)`,
 					})
 					.from(detections)
 					.where(isBeforeWindow)
@@ -90,17 +84,26 @@ export const getLiveHighlights = createServerFn({ method: "GET" }).handler(
 					.from(detections)
 					.where(isLast24h)
 					.groupBy(sql`strftime('%H', ${detections.Time})`),
-				// The fortnight as fourteen 24-hour slices, so the baseline can be a
-				// daily rate and a daily species count.
+				// The window and the longest lookback as 24-hour slices, per species.
 				db
 					.select({
 						slice: daySlice,
+						comName: detections.Com_Name,
 						count: count(),
-						species: sql<number>`count(distinct ${detections.Com_Name})`,
 					})
 					.from(detections)
-					.where(isBaseline)
-					.groupBy(daySlice),
+					.where(
+						sql`${detectedAt} >= datetime('now', ${`-${longest + 1} days`}, 'localtime')`,
+					)
+					.groupBy(daySlice, detections.Com_Name),
+				// Every 24-hour slice before the window each species was heard in,
+				// back to the station's first: what a Consistent bird's run is
+				// counted against.
+				db
+					.select({ slice: daySlice, comName: detections.Com_Name })
+					.from(detections)
+					.where(isBeforeWindow)
+					.groupBy(daySlice, detections.Com_Name),
 				db.select({ allTimeCount: count() }).from(detections),
 			]);
 
@@ -108,128 +111,67 @@ export const getLiveHighlights = createServerFn({ method: "GET" }).handler(
 			return { hasAnyDetections: false, highlights: [] };
 		}
 
-		const history = new Map(historyRows.map((row) => [row.comName, row]));
-		const heardInWindow = new Set(windowRows.map((row) => row.comName));
+		const slices: DayTally[] = Array.from(
+			{ length: longest + 1 },
+			() => new Map(),
+		);
+		for (const row of sliceRows) {
+			if (row.slice < 0 || row.slice > longest) continue;
+			slices[row.slice].set(row.comName, row.count);
+		}
+
 		const daysBetween = (fromMs: number, toMs: number) =>
 			Math.floor((toMs - fromMs) / DAY_MS);
-
-		const newSpecies = windowRows
-			.filter((row) => !history.has(row.comName))
-			.map((row) => row.comName);
-
-		const rare = windowRows
-			.flatMap((row) => {
-				const before = history.get(row.comName);
-				// New species are their own, better line -- never also "rare".
-				if (!before) return [];
-				const lifetimeCount = before.countBefore + row.windowCount;
-				return lifetimeCount <= RARE_LIFETIME_MAX
-					? [{ comName: row.comName, lifetimeCount }]
-					: [];
-			})
-			.sort((a, b) => a.lifetimeCount - b.lifetimeCount);
-
-		// A bird with three records ever has almost certainly also been away a
-		// fortnight, so left alone these two lines name the same birds twice.
-		// Rarity is the stronger claim, so it takes the bird.
-		const isRare = new Set(rare.map((row) => row.comName));
-
-		const returning = windowRows
-			.flatMap((row) => {
-				const before = history.get(row.comName);
-				if (!before || isRare.has(row.comName)) return [];
-				const daysAway = daysBetween(
-					timestampToMillis(before.lastBefore),
-					timestampToMillis(row.firstInWindow),
+		const firstInWindow = new Map(
+			windowRows.map((row) => [row.comName, row.firstInWindow]),
+		);
+		const lifetime = new Map<string, number>();
+		const awayDays = new Map<string, number>();
+		const silentDays = new Map<string, number>();
+		for (const row of historyRows) {
+			const lastMs = timestampToMillis(row.lastBefore);
+			const first = firstInWindow.get(row.comName);
+			lifetime.set(
+				row.comName,
+				row.countBefore + (slices[0].get(row.comName) ?? 0),
+			);
+			if (first)
+				awayDays.set(
+					row.comName,
+					daysBetween(lastMs, timestampToMillis(first)),
 				);
-				return daysAway >= RETURN_AFTER_DAYS
-					? [{ comName: row.comName, daysAway }]
-					: [];
-			})
-			.sort((a, b) => b.daysAway - a.daysAway);
+			else silentDays.set(row.comName, daysBetween(lastMs, nowMs));
+		}
+		for (const [comName, n] of slices[0])
+			if (!lifetime.has(comName)) lifetime.set(comName, n);
 
-		const routineMinDays = Math.ceil(ROUTINE_MIN_SHARE * BASELINE_DAYS);
-		const breakingRoutine = historyRows
-			.flatMap((row) => {
-				if (heardInWindow.has(row.comName)) return [];
-				if (row.daysInFortnight < routineMinDays) return [];
-				const daysSilent = daysBetween(
-					timestampToMillis(row.lastBefore),
-					nowMs,
-				);
-				return daysSilent >= ROUTINE_SILENT_DAYS
-					? [
-							{
-								comName: row.comName,
-								daysSilent,
-								daysInFortnight: row.daysInFortnight,
-							},
-						]
-					: [];
-			})
-			.sort((a, b) => b.daysInFortnight - a.daysInFortnight);
+		// Slice 1 first: the 24 hours before the window, then the 24 before that.
+		const oldestSlice = Math.max(0, ...streakRows.map((row) => row.slice));
+		const history = Array.from(
+			{ length: oldestSlice },
+			() => new Set<string>(),
+		);
+		for (const { slice, comName } of streakRows)
+			if (slice >= 1) history[slice - 1].add(comName);
 
 		const hourCounts = Array<number>(24).fill(0);
 		for (const row of hourRows) hourCounts[Number(row.hour)] = row.count;
-		const windowDetections = hourCounts.reduce((sum, n) => sum + n, 0);
 
-		// Slices with nothing in them are the station being down, not a silent
-		// day, so they don't drag the average -- and a fortnight with too few
-		// recorded days to call anything usual gets no comparison at all.
-		const recorded = sliceRows.filter(
-			(row) => row.slice >= 1 && row.slice <= BASELINE_DAYS && row.count > 0,
-		);
-		const sufficient = recorded.length >= BASELINE_DAYS / 2;
-
-		// Heard far more than its own usual: the same rule the timeline's Vocal
-		// flag applies, over the same recorded slices as the activity line.
-		const isReturning = new Set(returning.map((row) => row.comName));
-		const vocal = sufficient
-			? windowRows
-					.flatMap((row) => {
-						const before = history.get(row.comName);
-						if (!before || isRare.has(row.comName)) return [];
-						if (isReturning.has(row.comName)) return [];
-						const jump = vocalJump({
-							windowCount: row.windowCount,
-							windowDays: 1,
-							baselineCount: before.baselineCount,
-							baselineDays: recorded.length,
-							daysHeard: before.daysInFortnight,
-						});
-						return jump == null ? [] : [{ comName: row.comName, ...jump }];
-					})
-					.sort((a, b) => b.ratio - a.ratio)
-			: [];
-
-		const activity = sufficient
-			? {
-					baselineLabel: "your two-week average",
-					windowPerDay: windowDetections,
-					baselinePerDay:
-						recorded.reduce((sum, row) => sum + row.count, 0) / recorded.length,
-					windowDetections,
-					inProgress: false,
-					windowSpecies: windowRows.length,
-					baselineSpecies:
-						recorded.reduce((sum, row) => sum + row.species, 0) /
-						recorded.length,
-				}
-			: null;
-
-		return {
-			hasAnyDetections: true,
-			highlights: buildHighlights({
-				detections: windowDetections,
+		const { highlights } = judgeHighlights(
+			{
+				period: "live",
+				window: [slices[0]],
+				before: slices.slice(1).map((slice) => [slice]),
+				history,
 				hourCounts,
-				newSpecies,
-				returning,
-				rare,
-				vocal,
-				comparedWith: sufficient ? "your two-week average" : null,
-				breakingRoutine,
-				activity,
-			}),
-		};
+				lifetime,
+				heardBefore: new Set(historyRows.map((row) => row.comName)),
+				awayDays,
+				silentDays,
+			},
+			settings,
+		);
+
+		return { hasAnyDetections: true, highlights };
 	},
 );

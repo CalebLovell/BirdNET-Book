@@ -5,23 +5,23 @@ import { detections } from "~/db/schema.ts";
 import { dayIdFor } from "~/lib/day.ts";
 import { ebirdUrlFor } from "~/lib/ebird.ts";
 import {
-	buildHighlights,
+	type HighlightThresholds,
+	lookbackFor,
+} from "~/lib/highlight-thresholds.ts";
+import {
+	type DayTally,
 	type Highlight,
-	type HighlightFacts,
-	RARE_LIFETIME_MAX,
-	ROUTINE_MIN_BASELINE_DAYS,
-	ROUTINE_MIN_SHARE,
-	ROUTINE_SILENT_DAYS,
+	judgeHighlights,
 	type VocalJump,
-	vocalJump,
 } from "~/lib/highlights-data.ts";
 import { illustrationUrlFor } from "~/lib/illustrations.ts";
 import type { TimelinePeriod } from "~/lib/timeline-periods.ts";
 import {
+	addDays,
 	anchorForDay,
-	type Comparison,
-	comparisonFor,
 	daysInRange,
+	precedingWindows,
+	previousPeriodStart,
 	type TimelineAnchor,
 	type TimelineWindow,
 	windowFor,
@@ -58,35 +58,24 @@ export type TimelineRow = {
 	    holds no scored detections for the species. */
 	averageConfidence: number | null;
 	/**
-	 * A rare visitor here: its lifetime detection count at this station is at or
-	 * below RARE_LIFETIME_MAX, regardless of the selected window, and it is not a
-	 * first-ever arrival (see isNew) -- the two flags divide the species between
-	 * them rather than both landing on a newcomer. Matches the threshold the Live
-	 * page's Highlights use. Always false on "all time", whose list is every
-	 * species' lifetime count already -- the rare ones are plainly at the bottom.
+	 * Heard before the window, with only a handful of records ever (the
+	 * station's Rare threshold). Never on a first-ever arrival, and never on
+	 * "all time", whose list is every species' lifetime count already.
 	 */
 	isRare: boolean;
-	/**
-	 * Back after time away: the station had heard this species before, but not
-	 * once in the stretch the window is compared with (see comparisonFor) --
-	 * the two weeks before a day, the four before a week, the month before a
-	 * month, the year before a year. Excludes newcomers (isNew)
-	 * and rare visitors (isRare), so each species carries at most one of the
-	 * three flags -- a returning regular, not a bird that is barely ever here
-	 * anyway. Always false on "all time", which has no "before".
-	 */
+	/** Heard every day of the lookback and the window -- or, for a year or all
+	    time, on most of its days. See lib/highlights-data.ts. */
+	isConsistent: boolean;
+	/** A Consistent bird's run: "15 days in a row", or "82% of days" for a
+	    year or all time. Null unless isConsistent. */
+	streak: string | null;
+	/** Heard before, silent for the whole lookback, back in the window. */
 	isReturned: boolean;
-	/** How many days the species was away before this window heard it again.
-	    Null unless isReturned. */
-	daysAway: number | null;
-	/**
-	 * Heard far more than usual: the window's detections a day against its
-	 * usual detections a day, when that's VOCAL_RATIO or more and
-	 * the bird was around for enough of the comparison stretch to have a usual
-	 * (see vocalJump) -- the same stretch as the Highlights' activity line.
-	 * Null otherwise, and always for a New, Rare or Returned species: at most
-	 * one flag each.
-	 */
+	/** How long the species was away before this window heard it again, in
+	    the window's own unit ("3 weeks"). Null unless isReturned. */
+	away: string | null;
+	/** Heard far more than its usual daily rate over the lookback. Null
+	    otherwise. Every flag stacks: a bird carries all it qualifies for. */
 	vocal: VocalJump | null;
 };
 
@@ -195,12 +184,15 @@ export async function loadTimelineNav(
 
 /**
  * Plain-function form, so `timeline-page.ts` can compose the rows with the extra
- * queries a period needs without paying for a second round trip.
+ * queries a period needs without paying for a second round trip. The station's
+ * highlight thresholds come in from there, since reading the station config is
+ * server-only work this module doesn't import.
  */
 export async function loadTimelineData({
 	period,
 	anchor,
-}: TimelineRequest): Promise<TimelineData> {
+	settings,
+}: TimelineRequest & { settings: HighlightThresholds }): Promise<TimelineData> {
 	const window = windowFor(period, anchor);
 	const inWindow = window
 		? and(
@@ -208,17 +200,41 @@ export async function loadTimelineData({
 				sql`${detections.Date} <= ${window.end}`,
 			)
 		: undefined;
+	const today = dayIdFor(new Date());
 
-	const comparison = comparisonFor(period, anchor, dayIdFor(new Date()));
-	const baselineStart = comparison?.start ?? null;
+	// Whole periods before the window, as many as the longest lookback any rule
+	// asks for -- and at least the one just before, for the up/down line.
+	const longest = Math.max(
+		1,
+		lookbackFor(settings.consistent, period) - 1,
+		lookbackFor(settings.goneQuiet, period),
+		lookbackFor(settings.returned, period),
+		lookbackFor(settings.vocal, period),
+	);
+	const beforeWindows =
+		period === "all" ? [] : precedingWindows(period, anchor, longest);
+	const tallyFrom = beforeWindows.at(-1)?.start ?? window?.start ?? null;
+
+	// Which period each detection falls in, as that period's first day -- the
+	// same "YYYY-MM-DD" a window's start is -- so a species' whole history
+	// reduces to the days, weeks or months it was heard in. A year or all time
+	// counts no runs, so needs none.
+	const periodStart =
+		period === "day"
+			? sql<string>`${detections.Date}`
+			: period === "week"
+				? sql<string>`date(${detections.Date}, '-' || ((cast(strftime('%w', ${detections.Date}) as integer) + 6) % 7) || ' days')`
+				: period === "month"
+					? sql<string>`strftime('%Y-%m-01', ${detections.Date})`
+					: null;
 
 	const [
 		rows,
-		dayRows,
+		tallyRows,
 		beforeRows,
 		confidenceRows,
 		lifetimeRows,
-		baselineRows,
+		historyRows,
 		nav,
 	] = await Promise.all([
 		db
@@ -235,24 +251,29 @@ export async function loadTimelineData({
 				detections.Sci_Name,
 				sql`strftime('%H', ${detections.Time})`,
 			),
-		// The window day by day, per species: when each bird first turned up in
-		// it (for how long it had been away), and which days are already over
-		// (for the pace of a window still running). "All time" needs neither.
-		window
-			? db
-					.select({
-						date: detections.Date,
-						comName: detections.Com_Name,
-						count: sql<number>`count(*)`,
-					})
-					.from(detections)
-					.where(inWindow)
-					.groupBy(detections.Date, detections.Com_Name)
-			: Promise.resolve([]),
-		// The last day each species was heard before this window opened. A species
-		// missing from this list is one the window introduced (isNew); one last
-		// heard before the comparison stretch began has returned from an absence
-		// (isReturned). "All time" has no "before".
+		// Every day from the start of the longest lookback to the window's end,
+		// per species: the evidence every highlight rule reads. All time takes
+		// every day there is.
+		db
+			.select({
+				date: detections.Date,
+				comName: detections.Com_Name,
+				count: sql<number>`count(*)`,
+			})
+			.from(detections)
+			.where(
+				window && tallyFrom
+					? and(
+							sql`${detections.Date} >= ${tallyFrom}`,
+							sql`${detections.Date} <= ${window.end}`,
+						)
+					: undefined,
+			)
+			.groupBy(detections.Date, detections.Com_Name),
+		// The last day each species was heard before this window opened. A
+		// species missing from this list is one the window introduced; the
+		// rest have a history to have been away from or gone quiet against.
+		// "All time" has no "before".
 		window
 			? db
 					.select({
@@ -281,23 +302,14 @@ export async function loadTimelineData({
 			})
 			.from(detections)
 			.groupBy(detections.Com_Name),
-		// The stretch before the window, day by day per species: what "usual"
-		// means for the window's pace, its species count and its regulars.
-		window && baselineStart
+		// Every period before this one each species was heard in, back to the
+		// station's first: what a Consistent bird's run is counted against.
+		window && periodStart
 			? db
-					.select({
-						date: detections.Date,
-						comName: detections.Com_Name,
-						count: sql<number>`count(*)`,
-					})
+					.select({ start: periodStart, comName: detections.Com_Name })
 					.from(detections)
-					.where(
-						and(
-							sql`${detections.Date} >= ${baselineStart}`,
-							lt(detections.Date, window.start),
-						),
-					)
-					.groupBy(detections.Date, detections.Com_Name)
+					.where(lt(detections.Date, window.start))
+					.groupBy(periodStart, detections.Com_Name)
 			: Promise.resolve([]),
 		loadTimelineNav(period, window),
 	]);
@@ -319,327 +331,133 @@ export async function loadTimelineData({
 		entry.hourCounts[Number(row.hour)] = row.count;
 	}
 
+	const tallies = new Map<string, DayTally>();
+	for (const row of tallyRows) {
+		const day = tallies.get(row.date) ?? new Map<string, number>();
+		day.set(row.comName, row.count);
+		tallies.set(row.date, day);
+	}
+	const daysOf = (start: string, end: string): DayTally[] => {
+		const days: DayTally[] = [];
+		for (let day = start; day <= end; day = addDays(day, 1))
+			days.push(tallies.get(day) ?? new Map());
+		return days;
+	};
+
+	// The window's days run through today at the latest; all time's start at
+	// the station's first.
+	const windowStart = window?.start ?? nav.stationRange?.first ?? today;
+	const windowEnd = window && window.end < today ? window.end : today;
+	const windowDays = daysOf(windowStart, windowEnd);
+
 	const firstDayByName = new Map<string, string>();
-	for (const row of dayRows) {
+	for (const row of tallyRows) {
+		if (row.date < windowStart || row.date > windowEnd) continue;
 		const first = firstDayByName.get(row.comName);
 		if (!first || row.date < first) firstDayByName.set(row.comName, row.date);
 	}
 
-	const lastBeforeByName = new Map(
-		beforeRows.map((row) => [row.comName, row.lastBefore]),
+	const awayDays = new Map<string, number>();
+	const silentDays = new Map<string, number>();
+	for (const { comName, lastBefore } of beforeRows) {
+		const firstDay = firstDayByName.get(comName);
+		if (firstDay) awayDays.set(comName, daysInRange(lastBefore, firstDay) - 1);
+		else silentDays.set(comName, daysInRange(lastBefore, windowEnd) - 1);
+	}
+
+	const lifetimeByName = new Map(
+		lifetimeRows.map((row) => [row.comName, row.lifetime]),
+	);
+	const hourCounts = Array.from({ length: 24 }, (_, hour) =>
+		Array.from(bySpecies.values()).reduce(
+			(sum, entry) => sum + (entry.hourCounts[hour] ?? 0),
+			0,
+		),
+	);
+
+	const { highlights, flags } = judgeHighlights(
+		{
+			period,
+			window: windowDays,
+			before: beforeWindows.map((w) => daysOf(w.start, w.end)),
+			history: historyBefore(
+				period,
+				anchor,
+				historyRows,
+				nav.stationRange?.first ?? null,
+			),
+			hourCounts,
+			lifetime: lifetimeByName,
+			heardBefore: new Set(beforeRows.map((row) => row.comName)),
+			awayDays,
+			silentDays,
+		},
+		settings,
 	);
 
 	const avgConfidenceByName = new Map(
 		confidenceRows.map((row) => [row.comName, row.avgConfidence]),
 	);
-	const lifetimeByName = new Map(
-		lifetimeRows.map((row) => [row.comName, row.lifetime]),
-	);
 
-	const usual =
-		window && comparison
-			? summarizeBaseline({
-					window,
-					comparison,
-					dayRows,
-					baselineRows,
-					stationFirst: nav.stationRange?.first ?? null,
-				})
-			: null;
-
-	const withImages = await Promise.all(
-		Array.from(bySpecies.values()).map(async (entry) => {
-			const totalDetections = entry.hourCounts.reduce((a, b) => a + b, 0);
-			// New, Rare, Returned and Vocal divide the species between them rather
-			// than stacking: a first-ever arrival is "New"; failing that, a bird
-			// heard only a handful of times ever is "Rare"; failing that, one away
-			// for the whole comparison stretch is "Returned"; failing that, one heard
-			// far more than its usual is "Vocal". The guards encode that order.
-			const lastBefore = lastBeforeByName.get(entry.comName);
-			const isNew = window !== null && lastBefore == null;
-			const isRare =
-				window !== null &&
-				!isNew &&
-				(lifetimeByName.get(entry.comName) ?? 0) <= RARE_LIFETIME_MAX;
-			const firstDay = firstDayByName.get(entry.comName);
-			const away =
-				lastBefore != null && firstDay != null
-					? daysInRange(lastBefore, firstDay) - 1
-					: null;
-			const isReturned =
-				!isNew &&
-				!isRare &&
-				away != null &&
-				baselineStart != null &&
-				lastBefore != null &&
-				lastBefore < baselineStart;
-			const vocal =
-				!isNew && !isRare && !isReturned && usual?.sufficient
-					? vocalJump({
-							windowCount: usual.windowCountByName.get(entry.comName) ?? 0,
-							windowDays: usual.windowDays,
-							baselineCount: usual.baselineCountByName.get(entry.comName) ?? 0,
-							baselineDays: usual.baselineDays,
-							daysHeard: usual.daysHeard.get(entry.comName)?.size ?? 0,
-						})
-					: null;
-			return {
-				comName: entry.comName,
-				sciName: entry.sciName,
-				imageUrl: illustrationUrlFor(entry.sciName),
-				ebirdUrl: ebirdUrlFor(entry.sciName, entry.comName),
-				totalDetections,
-				hourCounts: entry.hourCounts,
-				isNew,
-				firstHeard: isNew ? (firstDay ?? null) : null,
-				averageConfidence: avgConfidenceByName.get(entry.comName) ?? null,
-				isRare,
-				isReturned,
-				daysAway: isReturned ? away : null,
-				vocal,
-			};
-		}),
-	);
-	const sorted = withImages.sort(
-		(a, b) => b.totalDetections - a.totalDetections,
-	);
+	const withImages = Array.from(bySpecies.values()).map((entry) => {
+		const flag = flags.get(entry.comName);
+		return {
+			comName: entry.comName,
+			sciName: entry.sciName,
+			imageUrl: illustrationUrlFor(entry.sciName),
+			ebirdUrl: ebirdUrlFor(entry.sciName, entry.comName),
+			totalDetections: entry.hourCounts.reduce((a, b) => a + b, 0),
+			hourCounts: entry.hourCounts,
+			isNew: flag?.isNew ?? false,
+			firstHeard: flag?.isNew
+				? (firstDayByName.get(entry.comName) ?? null)
+				: null,
+			averageConfidence: avgConfidenceByName.get(entry.comName) ?? null,
+			isRare: flag?.isRare ?? false,
+			isConsistent: flag?.isConsistent ?? false,
+			streak: flag?.streak ?? null,
+			isReturned: flag?.isReturned ?? false,
+			away: flag?.away ?? null,
+			vocal: flag?.vocal ?? null,
+		};
+	});
 
 	return {
-		rows: sorted,
-		highlights: buildHighlights(
-			highlightFacts({
-				rows: sorted,
-				window,
-				usual,
-				lastBeforeByName,
-				lifetimeByName,
-			}),
-		),
+		rows: withImages.sort((a, b) => b.totalDetections - a.totalDetections),
+		highlights,
 		...nav,
 	};
 }
 
-type DaySpeciesCount = { date: string; comName: string; count: number };
-
-type BaselineSummary = ReturnType<typeof summarizeBaseline>;
-
 /**
- * What "usual" means for a window: the stretch before it, period by period,
- * set against the window's own finished days. Shared by the activity line, the
- * Vocal flag and the regulars, so all three judge against the same stretch.
+ * Every period before the window, nearest first, back to the station's first:
+ * the species heard in each. A period with no row at all comes back as an
+ * empty set -- the station recording nothing then.
  */
-function summarizeBaseline({
-	window,
-	comparison,
-	dayRows,
-	baselineRows,
-	stationFirst,
-}: {
-	window: TimelineWindow;
-	comparison: Comparison;
-	dayRows: DaySpeciesCount[];
-	baselineRows: DaySpeciesCount[];
-	stationFirst: string | null;
-}) {
-	// Days before the station first recorded can't have heard anything, so they
-	// don't count toward a period's length -- a station's first, partial month
-	// isn't judged as a whole one.
-	const recordedFrom = (start: string) =>
-		stationFirst && stationFirst > start ? stationFirst : start;
-
-	// The baseline, period by period, and the days each species was heard on.
-	// Days fetched with the stretch but outside every period -- the rest of
-	// last year, for a year still running -- aren't part of it, so are skipped.
-	const baselineWindows = comparison.windows;
-	const periods = baselineWindows.map(() => ({
-		detections: 0,
-		species: new Set<string>(),
-		bySpecies: new Map<string, number>(),
-	}));
-	const daysHeard = new Map<string, Set<string>>();
-	for (const row of baselineRows) {
-		const period =
-			periods[
-				baselineWindows.findIndex(
-					(w) => row.date >= w.start && row.date <= w.end,
-				)
-			];
-		if (!period) continue;
-		period.detections += row.count;
-		period.species.add(row.comName);
-		period.bySpecies.set(
-			row.comName,
-			(period.bySpecies.get(row.comName) ?? 0) + row.count,
-		);
-		const days = daysHeard.get(row.comName) ?? new Set<string>();
-		days.add(row.date);
-		daysHeard.set(row.comName, days);
+function historyBefore(
+	period: TimelinePeriod,
+	anchor: TimelineAnchor,
+	rows: { start: string; comName: string }[],
+	stationFirst: string | null,
+): Set<string>[] {
+	if (!stationFirst || period === "all" || period === "year") return [];
+	const heard = new Map<string, Set<string>>();
+	for (const { start, comName } of rows) {
+		const species = heard.get(start) ?? new Set<string>();
+		species.add(comName);
+		heard.set(start, species);
 	}
-
-	// A period with nothing in it is the station being down (or not yet set
-	// up), not a silent spell, so it's left out of the average rather than
-	// dragging it down.
-	const recorded = baselineWindows.flatMap((w, index) =>
-		periods[index].detections > 0
-			? [
-					{
-						...periods[index],
-						days: Math.max(1, daysInRange(recordedFrom(w.start), w.end)),
-					},
-				]
-			: [],
-	);
-	// The stretch counts only when the station was listening for at least half
-	// of it -- a station that started last October has one day of "Jan 1 to
-	// Oct 1 last year", and one day is no year to compare with.
-	const fullBaselineDays = baselineWindows.reduce(
-		(sum, w) => sum + daysInRange(w.start, w.end),
-		0,
-	);
-	const recordedDays = new Set(
-		Array.from(daysHeard.values()).flatMap((days) => Array.from(days)),
-	).size;
-	const covered = fullBaselineDays > 0 && recordedDays * 2 >= fullBaselineDays;
-
-	const baselineCountByName = new Map<string, number>();
-	for (const period of recorded) {
-		for (const [comName, n] of period.bySpecies) {
-			baselineCountByName.set(
-				comName,
-				(baselineCountByName.get(comName) ?? 0) + n,
-			);
-		}
+	const firstPeriod = windowFor(
+		period,
+		anchorForDay(period, stationFirst),
+	).start;
+	const history: Set<string>[] = [];
+	let current = anchor;
+	for (;;) {
+		const start = previousPeriodStart(period, current);
+		if (start == null || start < firstPeriod) break;
+		history.push(heard.get(start) ?? new Set());
+		current = anchorForDay(period, start);
 	}
-
-	// A window still running is judged on its finished days alone: today's
-	// count is only as far as the clock has got, and a dawn-heavy morning would
-	// read as a boom. Today's own Day window has no finished days yet -- the
-	// Live page covers it.
-	const { inProgress, lastComplete } = comparison;
-	const windowCountByName = new Map<string, number>();
-	for (const row of dayRows) {
-		if (row.date > lastComplete) continue;
-		windowCountByName.set(
-			row.comName,
-			(windowCountByName.get(row.comName) ?? 0) + row.count,
-		);
-	}
-
-	const windowDays = daysInRange(recordedFrom(window.start), lastComplete);
-
-	return {
-		label: comparison.label,
-		/** Enough of the baseline was recorded, and enough of the window is over,
-		    to judge the window against it at all. */
-		sufficient:
-			covered &&
-			recorded.length >= Math.ceil(comparison.periods / 2) &&
-			windowDays > 0,
-		covered,
-		inProgress,
-		today: dayIdFor(new Date()),
-		windowDays,
-		windowCountByName,
-		windowDetections: Array.from(windowCountByName.values()).reduce(
-			(sum, n) => sum + n,
-			0,
-		),
-		baselineDays: recorded.reduce((sum, p) => sum + p.days, 0),
-		baselineDetections: recorded.reduce((sum, p) => sum + p.detections, 0),
-		baselineSpecies: recorded.length
-			? recorded.reduce((sum, p) => sum + p.species.size, 0) / recorded.length
-			: 0,
-		baselineCountByName,
-		daysHeard,
-		/** The baseline's full length, recorded or not: the bar for a routine. */
-		fullBaselineDays,
-	};
-}
-
-/**
- * The window's evidence for the shared highlight rules. The birds come straight
- * off the rows' flags; the activity comparison and the regulars need the
- * baseline summary.
- */
-function highlightFacts({
-	rows,
-	window,
-	usual,
-	lastBeforeByName,
-	lifetimeByName,
-}: {
-	rows: TimelineRow[];
-	window: TimelineWindow | null;
-	usual: BaselineSummary | null;
-	lastBeforeByName: Map<string, string>;
-	lifetimeByName: Map<string, number>;
-}): HighlightFacts {
-	const hourCounts = Array.from({ length: 24 }, (_, hour) =>
-		rows.reduce((sum, row) => sum + (row.hourCounts[hour] ?? 0), 0),
-	);
-
-	const facts: HighlightFacts = {
-		detections: hourCounts.reduce((sum, n) => sum + n, 0),
-		hourCounts,
-		newSpecies: rows.filter((row) => row.isNew).map((row) => row.comName),
-		returning: rows
-			.flatMap((row) =>
-				row.isReturned && row.daysAway != null
-					? [{ comName: row.comName, daysAway: row.daysAway }]
-					: [],
-			)
-			.sort((a, b) => b.daysAway - a.daysAway),
-		rare: rows
-			.filter((row) => row.isRare)
-			.map((row) => ({
-				comName: row.comName,
-				lifetimeCount: lifetimeByName.get(row.comName) ?? row.totalDetections,
-			}))
-			.sort((a, b) => a.lifetimeCount - b.lifetimeCount),
-		vocal: rows
-			.flatMap((row) =>
-				row.vocal != null ? [{ comName: row.comName, ...row.vocal }] : [],
-			)
-			.sort((a, b) => b.ratio - a.ratio),
-		comparedWith: usual?.label ?? null,
-		breakingRoutine: [],
-		activity: null,
-	};
-
-	if (!window || !usual) return facts;
-
-	if (usual.sufficient) {
-		facts.activity = {
-			baselineLabel: usual.label,
-			windowPerDay: usual.windowDetections / usual.windowDays,
-			baselinePerDay: usual.baselineDetections / usual.baselineDays,
-			windowDetections: usual.windowDetections,
-			inProgress: usual.inProgress,
-			windowSpecies: rows.length,
-			baselineSpecies: usual.baselineSpecies,
-		};
-	}
-
-	// Regulars gone quiet: heard on most of the baseline's days, not once in the
-	// window, and silent long enough to notice. The bar is the baseline's full
-	// length, so a station too new to have a routine has no regulars -- and a
-	// stretch too short to show one (a month only just begun) has none either.
-	if (!usual.covered || usual.fullBaselineDays < ROUTINE_MIN_BASELINE_DAYS)
-		return facts;
-	const minDays = Math.ceil(ROUTINE_MIN_SHARE * usual.fullBaselineDays);
-	const heardInWindow = new Set(rows.map((row) => row.comName));
-	const silentUntil = usual.inProgress ? usual.today : window.end;
-	facts.breakingRoutine = Array.from(usual.daysHeard.entries())
-		.flatMap(([comName, days]) => {
-			if (heardInWindow.has(comName) || days.size < minDays) return [];
-			const lastBefore = lastBeforeByName.get(comName);
-			if (!lastBefore) return [];
-			const daysSilent = daysInRange(lastBefore, silentUntil) - 1;
-			return daysSilent >= ROUTINE_SILENT_DAYS
-				? [{ comName, daysSilent, daysHeard: days.size }]
-				: [];
-		})
-		.sort((a, b) => b.daysHeard - a.daysHeard);
-
-	return facts;
+	return history;
 }

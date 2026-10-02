@@ -162,6 +162,7 @@ function Timeline() {
 					<TimelineCards
 						rows={data.body.rows}
 						highlights={data.body.highlights}
+						period={period}
 						jumpTo={jumpTarget(period, data)}
 						windowLabel={data.window?.label ?? null}
 						view={view}
@@ -360,6 +361,7 @@ function WindowSummary({ rows }: { rows: TimelineRow[] }) {
 function TimelineCards({
 	rows,
 	highlights,
+	period,
 	jumpTo,
 	windowLabel,
 	view,
@@ -367,6 +369,7 @@ function TimelineCards({
 }: {
 	rows: TimelineRow[];
 	highlights: TimelineData["highlights"];
+	period: TimelinePeriod;
 	/** The nearest window with detections, offered when this one has none. */
 	jumpTo: JumpTarget | null;
 	windowLabel: string | null;
@@ -403,8 +406,10 @@ function TimelineCards({
 		isNew: row.isNew,
 		firstHeard: row.firstHeard,
 		isRare: row.isRare,
+		isConsistent: row.isConsistent,
+		streak: row.streak,
 		isReturned: row.isReturned,
-		daysAway: row.daysAway,
+		away: row.away,
 		vocal: row.vocal,
 		hourCounts: row.hourCounts,
 	}));
@@ -470,6 +475,7 @@ function TimelineCards({
 				/>
 				<HighlightsCard
 					highlights={highlights}
+					period={period}
 					emptyMessage={emptyMessage}
 					className="self-start"
 				/>

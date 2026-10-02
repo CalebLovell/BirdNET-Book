@@ -9,7 +9,6 @@ import {
 	type SpeciesHighlightKind,
 	thanPhrase,
 } from "~/lib/highlights-data.ts";
-import { plural } from "~/lib/number-format.ts";
 
 /** Hours that count as after dark for the nightlife line, 9pm through 4am. */
 export const NIGHT_HOURS = new Set([21, 22, 23, 0, 1, 2, 3, 4]);
@@ -22,6 +21,9 @@ const SPECIES_LEADS: Record<SpeciesHighlightKind, string> = {
 	new: "🐣 First ever",
 	returned: "🔁 Back",
 	rare: "💎 Rare",
+	// Completed with what "every day" covers: "📅 Heard every day, the past 3
+	// weeks and this week".
+	consistent: "📅 Heard",
 	// Completed with what "usual" is: "📣 Heard far more than in 2025".
 	vocal: "📣 Heard far more",
 	routine: "🤐 Gone quiet",
@@ -30,20 +32,22 @@ const SPECIES_LEADS: Record<SpeciesHighlightKind, string> = {
 function activityLine(
 	highlight: Extract<Highlight, { kind: "activity" }>,
 ): string {
-	const { direction, percent, baselineLabel, detections, perDay } = highlight;
-	const lead = `${direction === "up" ? "📈 Up" : "📉 Down"} ${percent}% on ${baselineLabel}`;
-
-	if (perDay)
-		return `${lead} · ${plural(detections, "detection")} a day so far`;
+	const { direction, percent, baselineLabel, detectionsDelta } = highlight;
+	const lead =
+		direction === "level"
+			? `➡️ The same as ${baselineLabel}`
+			: `${direction === "up" ? "📈 Up" : "📉 Down"} ${percent}% from ${baselineLabel}`;
 
 	const delta = highlight.speciesDelta;
 	const species =
-		delta == null
-			? ""
-			: delta === 0
-				? ", the usual number of species"
-				: `, ${Math.abs(delta)} ${delta > 0 ? "more" : "fewer"} species`;
-	return `${lead} · ${plural(detections, "detection")}${species}`;
+		delta === 0
+			? ", the same number of species"
+			: `, ${Math.abs(delta)} ${delta > 0 ? "more" : "fewer"} species`;
+	const detections =
+		detectionsDelta === 0
+			? "the same number of detections"
+			: `${Math.abs(detectionsDelta).toLocaleString()} ${detectionsDelta > 0 ? "more" : "fewer"} ${Math.abs(detectionsDelta) === 1 ? "detection" : "detections"}`;
+	return `${lead} · ${detections}${species}`;
 }
 
 /**
@@ -69,7 +73,9 @@ export function formatHighlightLines(highlights: Highlight[]): string[] {
 				const lead =
 					highlight.kind === "vocal"
 						? `${SPECIES_LEADS.vocal} ${thanPhrase(highlight.comparedWith)}`
-						: SPECIES_LEADS[highlight.kind];
+						: highlight.kind === "consistent"
+							? `${SPECIES_LEADS.consistent} ${highlight.scope ?? "every day"}`
+							: SPECIES_LEADS[highlight.kind];
 				return [`${lead}: ${named.join(", ")}${more}`];
 			}
 		}

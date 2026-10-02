@@ -5,6 +5,7 @@ import { db } from "~/db/index.ts";
 import { detections } from "~/db/schema.ts";
 import { dayIdFor } from "~/lib/day.ts";
 import { classifyDay } from "~/lib/day-range.ts";
+import { HIGHLIGHT_THRESHOLDS } from "~/lib/highlight-thresholds.ts";
 import {
 	loadTimelineData,
 	loadTimelineNav,
@@ -76,6 +77,7 @@ export const getTimelinePage = createServerFn({ method: "GET" })
 		const { rows, highlights, ...nav } = await loadTimelineData({
 			period,
 			anchor,
+			settings: HIGHLIGHT_THRESHOLDS,
 		});
 		return { ...nav, body: { kind: "rows", rows, highlights } };
 	});

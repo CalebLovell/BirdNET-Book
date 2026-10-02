@@ -49,9 +49,8 @@ test("each highlight reads as one sentence", async () => {
 				kind: "activity",
 				direction: "up",
 				percent: 42,
-				baselineLabel: "the four weeks before",
-				detections: 1812,
-				perDay: false,
+				baselineLabel: "last week",
+				detectionsDelta: 1812,
 				speciesDelta: -3,
 			},
 			{ kind: "busiest-hour", hour: 6 },
@@ -73,7 +72,7 @@ test("each highlight reads as one sentence", async () => {
 	const text = markup.replace(/<[^>]+>/g, "");
 	assert.match(
 		text,
-		/Up 42% on the four weeks before: 1,812 detections, 3 fewer species\./,
+		/Up 42% from last week: 1,812 more detections, 3 fewer species\./,
 	);
 	assert.match(text, /Busiest at 6 AM\./);
 	assert.match(
@@ -90,26 +89,43 @@ test("each highlight reads as one sentence", async () => {
 	);
 });
 
-test("a window still running gives its pace so far", () => {
+test("an unchanged window reads as level", () => {
 	const markup = renderToStaticMarkup(
 		<HighlightsCard
 			emptyMessage=""
 			highlights={[
 				{
 					kind: "activity",
-					direction: "down",
-					percent: 35,
-					baselineLabel: "the four weeks before",
-					detections: 58,
-					perDay: true,
-					speciesDelta: null,
+					direction: "level",
+					percent: 0,
+					baselineLabel: "yesterday",
+					detectionsDelta: -1,
+					speciesDelta: 0,
 				},
 			]}
 		/>,
 	);
 	assert.match(
 		markup.replace(/<[^>]+>/g, ""),
-		/Down 35% on the four weeks before, at 58 detections a day so far\./,
+		/The same as yesterday: 1 fewer detection, the same number of species\./,
+	);
+});
+
+test("the Regular line says what every day covers", async () => {
+	const markup = await renderCard({
+		emptyMessage: "",
+		highlights: [
+			{
+				kind: "consistent",
+				total: 1,
+				birds: [{ comName: "Northern Cardinal", note: "4 weeks in a row" }],
+				scope: "every day",
+			},
+		],
+	});
+	assert.match(
+		markup.replace(/<[^>]+>/g, ""),
+		/1 species heard every day: Northern Cardinal \(4 weeks in a row\)\./,
 	);
 });
 
@@ -137,15 +153,18 @@ test("the Vocal line says what the birds were heard far more than", async () => 
 				kind: "vocal",
 				total: 2,
 				birds: [
-					{ comName: "Rose-breasted Grosbeak", note: "41 a day, usually 12" },
-					{ comName: "Swainson's Thrush", note: "30 a day, usually 9" },
+					{
+						comName: "Rose-breasted Grosbeak",
+						note: "41 this week, usually 12",
+					},
+					{ comName: "Swainson's Thrush", note: "30 this week, usually 9" },
 				],
-				comparedWith: "the four weeks before",
+				comparedWith: "the past 3 weeks",
 			},
 		],
 	});
 	assert.match(
 		markup.replace(/<[^>]+>/g, ""),
-		/2 species heard far more than the four weeks before: Rose-breasted Grosbeak \(41 a day, usually 12\) and Swainson(&#x27;|')s Thrush \(30 a day, usually 9\)\./,
+		/2 species heard far more than in the past 3 weeks: Rose-breasted Grosbeak \(41 this week, usually 12\) and Swainson(&#x27;|')s Thrush \(30 this week, usually 9\)\./,
 	);
 });

@@ -102,9 +102,8 @@ test("carries the page's highlights after its own lines", () => {
 					kind: "activity",
 					direction: "up",
 					percent: 42,
-					baselineLabel: "the four weeks before",
-					detections: 100,
-					perDay: false,
+					baselineLabel: "last week",
+					detectionsDelta: 30,
 					speciesDelta: 2,
 				},
 				{ kind: "busiest-hour", hour: 6 },
@@ -123,7 +122,7 @@ test("carries the page's highlights after its own lines", () => {
 
 	assert.deepEqual(lines.slice(-3), [
 		"🌅 Peak hour: 6 AM · 40 detections",
-		"📈 Up 42% on the four weeks before · 100 detections, 2 more species",
+		"📈 Up 42% from last week · 30 more detections, 2 more species",
 		"🐣 First ever: Indigo Bunting, Wood Thrush, Veery",
 	]);
 });

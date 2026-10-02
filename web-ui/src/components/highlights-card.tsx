@@ -1,9 +1,11 @@
 import { Link } from "@tanstack/react-router";
 import {
 	AudioLines,
+	CalendarCheck,
 	Clock,
 	Gem,
 	type LucideIcon,
+	MoveRight,
 	Sparkles,
 	TrendingDown,
 	TrendingUp,
@@ -13,6 +15,11 @@ import {
 import { Fragment, type ReactNode } from "react";
 
 import { EmptyNote } from "~/components/empty-state.tsx";
+import { InfoTip } from "~/components/ui/info-tip.tsx";
+import {
+	type HighlightPeriod,
+	highlightGuide,
+} from "~/lib/highlight-thresholds.ts";
 import type {
 	Highlight,
 	HighlightBird,
@@ -28,15 +35,17 @@ import { hourLabel } from "~/lib/time-ago.ts";
  * sentence. The same card on the Live page (the last 24 hours) and the
  * timeline (the selected window) -- the lines arrive already judged by the
  * shared rules in lib/highlights-data.ts, so this only decides how they read.
- * The New, Returned, Rare and Vocal notes take the same glyphs as those
- * flags' pills on the species rows.
+ * The New, Rare, Consistent, Returned and Vocal notes take the same glyphs as
+ * those flags' pills on the species rows.
  *
- * Every note but the busiest hour is only written when it has something to
- * say, so a quiet window gets a visibly shorter card.
+ * Every bird note is only written when it has something to say, so a quiet
+ * window gets a visibly shorter card. The info tip in the corner says what
+ * each line means for the period on screen.
  */
 export function HighlightsCard({
 	highlights,
 	emptyMessage,
+	period,
 	className = "",
 }: {
 	/** Empty for a window with no detections, which gets the empty note. */
@@ -44,6 +53,9 @@ export function HighlightsCard({
 	/** What a quiet window's card says -- the same line the page's other cards
 	    show, so they all report an empty window alike. */
 	emptyMessage: string;
+	/** The window the lines were judged for, so the info tip can explain them
+	    in its terms. Without it the card has no info tip. */
+	period?: HighlightPeriod;
 	className?: string;
 }) {
 	return (
@@ -51,7 +63,10 @@ export function HighlightsCard({
 			aria-label="Highlights"
 			className={`feature-card rounded-md p-4 ${className}`}
 		>
-			<div className="island-kicker">Highlights</div>
+			<div className="flex min-h-6 items-center justify-between gap-2">
+				<div className="island-kicker">Highlights</div>
+				{period ? <HighlightsInfo period={period} /> : null}
+			</div>
 
 			{highlights.length === 0 ? (
 				<EmptyNote>{emptyMessage}</EmptyNote>
@@ -66,33 +81,56 @@ export function HighlightsCard({
 	);
 }
 
+/** What each line on the card means for this period -- the basics, from the
+    same thresholds the rules use. */
+function HighlightsInfo({ period }: { period: HighlightPeriod }) {
+	return (
+		<InfoTip label="Highlights">
+			<ul className="space-y-1">
+				{highlightGuide(period).map((entry) => (
+					<li key={entry.name}>
+						<strong>{entry.name}:</strong> {entry.meaning}
+					</li>
+				))}
+			</ul>
+			<p>
+				A line only shows when a bird earns it, and a bird can earn several.
+			</p>
+		</InfoTip>
+	);
+}
+
+type SpeciesLine = Extract<Highlight, { kind: SpeciesHighlightKind }>;
+
 const SPECIES_NOTES: Record<
 	SpeciesHighlightKind,
-	{
-		icon: LucideIcon;
-		lead: (total: number, comparedWith: string | undefined) => string;
-	}
+	{ icon: LucideIcon; lead: (line: SpeciesLine) => string }
 > = {
 	new: {
 		icon: Sparkles,
-		lead: (total) => `first-ever ${total === 1 ? "visitor" : "visitors"}`,
+		lead: ({ total }) => `first-ever ${total === 1 ? "visitor" : "visitors"}`,
+	},
+	rare: {
+		icon: Gem,
+		lead: ({ total }) => `rare ${total === 1 ? "visitor" : "visitors"}`,
+	},
+	// Says what "every day" covers, since each period has its own stretch.
+	consistent: {
+		icon: CalendarCheck,
+		lead: ({ scope }) => `species heard ${scope ?? "every day"}`,
+	},
+	routine: {
+		icon: VolumeX,
+		lead: ({ total }) => `${total === 1 ? "regular" : "regulars"} gone quiet`,
 	},
 	// "species" carries the count where the lead has no noun of its own, so
 	// the line never opens on a bare "1 heard ...".
 	returned: { icon: Undo2, lead: () => "species back after time away" },
-	rare: {
-		icon: Gem,
-		lead: (total) => `rare ${total === 1 ? "visitor" : "visitors"}`,
-	},
 	// Says what "usual" is, since each period compares with its own stretch.
 	vocal: {
 		icon: AudioLines,
-		lead: (_, comparedWith) =>
+		lead: ({ comparedWith }) =>
 			`species heard far more ${thanPhrase(comparedWith)}`,
-	},
-	routine: {
-		icon: VolumeX,
-		lead: (total) => `${total === 1 ? "regular" : "regulars"} gone quiet`,
 	},
 };
 
@@ -110,8 +148,7 @@ function HighlightNote({ highlight }: { highlight: Highlight }) {
 			const { icon, lead } = SPECIES_NOTES[highlight.kind];
 			return (
 				<Note icon={icon}>
-					<Figure>{highlight.total}</Figure>{" "}
-					{lead(highlight.total, highlight.comparedWith)}:{" "}
+					<Figure>{highlight.total}</Figure> {lead(highlight)}:{" "}
 					<BirdNames birds={highlight.birds} total={highlight.total} />.
 				</Note>
 			);
@@ -120,39 +157,54 @@ function HighlightNote({ highlight }: { highlight: Highlight }) {
 }
 
 /**
- * "Up 42% on the four weeks before: 812 detections, 4 more species." The
- * percentage is the pace's change; the species clause says the difference
- * outright, since a species count is too small for a percentage to mean much.
- * A window still running gives its pace so far instead, and no species clause.
+ * "Up 42% from last week: 240 more detections, 4 more species." Always written
+ * when the period before recorded anything, whatever the size of the change.
+ * The percentage is the detections' change; the species clause says the
+ * difference outright, since a species count is too small for a percentage to
+ * mean much.
  */
 function ActivityNote({
 	highlight,
 }: {
 	highlight: Extract<Highlight, { kind: "activity" }>;
 }) {
-	const { direction, percent, baselineLabel, detections, perDay } = highlight;
-	const delta = highlight.speciesDelta;
+	const { direction, percent, baselineLabel, detectionsDelta, speciesDelta } =
+		highlight;
 
 	return (
-		<Note icon={direction === "up" ? TrendingUp : TrendingDown}>
-			{direction === "up" ? "Up" : "Down"} <Figure>{percent}%</Figure> on{" "}
-			{baselineLabel}
-			{perDay ? (
-				<>
-					, at <Figure>{detections.toLocaleString()}</Figure> detections a day
-					so far
-				</>
+		<Note
+			icon={
+				direction === "up"
+					? TrendingUp
+					: direction === "down"
+						? TrendingDown
+						: MoveRight
+			}
+		>
+			{direction === "level" ? (
+				<>The same as {baselineLabel}</>
 			) : (
 				<>
-					: <Figure>{detections.toLocaleString()}</Figure> detections
-					{delta == null ? null : delta === 0 ? (
-						", the usual number of species"
-					) : (
-						<>
-							, <Figure>{Math.abs(delta)}</Figure>{" "}
-							{delta > 0 ? "more" : "fewer"} species
-						</>
-					)}
+					{direction === "up" ? "Up" : "Down"} <Figure>{percent}%</Figure> from{" "}
+					{baselineLabel}
+				</>
+			)}
+			:{" "}
+			{detectionsDelta === 0 ? (
+				"the same number of detections"
+			) : (
+				<>
+					<Figure>{Math.abs(detectionsDelta).toLocaleString()}</Figure>{" "}
+					{detectionsDelta > 0 ? "more" : "fewer"}{" "}
+					{Math.abs(detectionsDelta) === 1 ? "detection" : "detections"}
+				</>
+			)}
+			{speciesDelta === 0 ? (
+				", the same number of species"
+			) : (
+				<>
+					, <Figure>{Math.abs(speciesDelta)}</Figure>{" "}
+					{speciesDelta > 0 ? "more" : "fewer"} species
 				</>
 			)}
 			.

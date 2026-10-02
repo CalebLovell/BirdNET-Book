@@ -114,6 +114,7 @@ function Live() {
 					{highlights.hasAnyDetections ? (
 						<HighlightsCard
 							highlights={highlights.highlights}
+							period="live"
 							emptyMessage="No detections recorded in the last 24 hours."
 						/>
 					) : null}

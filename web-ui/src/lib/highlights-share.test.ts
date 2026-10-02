@@ -8,58 +8,38 @@ function hours(counts: Record<number, number>): number[] {
 	return Array.from({ length: 24 }, (_, hour) => counts[hour] ?? 0);
 }
 
-test("says how the window compared with its baseline", () => {
+test("says how the window compared with the period before", () => {
 	const lines = formatHighlightLines([
 		{
 			kind: "activity",
 			direction: "up",
 			percent: 42,
-			baselineLabel: "the four weeks before",
-			detections: 812,
-			perDay: false,
+			baselineLabel: "last week",
+			detectionsDelta: 240,
 			speciesDelta: 4,
 		},
 	]);
 
 	assert.deepEqual(lines, [
-		"📈 Up 42% on the four weeks before · 812 detections, 4 more species",
+		"📈 Up 42% from last week · 240 more detections, 4 more species",
 	]);
 });
 
-test("gives a running window's pace rather than its total", () => {
-	const lines = formatHighlightLines([
-		{
-			kind: "activity",
-			direction: "down",
-			percent: 35,
-			baselineLabel: "the two weeks before",
-			detections: 120,
-			perDay: true,
-			speciesDelta: null,
-		},
-	]);
-
-	assert.deepEqual(lines, [
-		"📉 Down 35% on the two weeks before · 120 detections a day so far",
-	]);
-});
-
-test("names the usual species count rather than a zero difference", () => {
+test("an unchanged window reads as level", () => {
 	const [line] = formatHighlightLines([
 		{
 			kind: "activity",
-			direction: "up",
-			percent: 50,
-			baselineLabel: "the year before",
-			detections: 1,
-			perDay: false,
+			direction: "level",
+			percent: 0,
+			baselineLabel: "last year",
+			detectionsDelta: 0,
 			speciesDelta: 0,
 		},
 	]);
 
 	assert.equal(
 		line,
-		"📈 Up 50% on the year before · 1 detection, the usual number of species",
+		"➡️ The same as last year · the same number of detections, the same number of species",
 	);
 });
 
@@ -93,8 +73,8 @@ test("writes each species highlight with its notes", () => {
 		{
 			kind: "vocal",
 			total: 1,
-			birds: [{ comName: "Blue Jay", note: "30 a day, usually 9" }],
-			comparedWith: "August 2026",
+			birds: [{ comName: "Blue Jay", note: "30 this week, usually 9" }],
+			comparedWith: "the past 3 months",
 		},
 		{
 			kind: "routine",
@@ -107,7 +87,7 @@ test("writes each species highlight with its notes", () => {
 		"🐣 First ever: Indigo Bunting",
 		"🔁 Back: Wood Thrush (23 days), Veery (16 days)",
 		"💎 Rare: Hooded Warbler (3 records ever)",
-		"📣 Heard far more than in August 2026: Blue Jay (30 a day, usually 9)",
+		"📣 Heard far more than in the past 3 months: Blue Jay (30 this week, usually 9)",
 		"🤐 Gone quiet: Carolina Wren (silent 3 days)",
 	]);
 });
