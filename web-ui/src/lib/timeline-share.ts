@@ -7,15 +7,14 @@
 // Pure by design: every figure comes from the rows the page already has, so
 // sharing costs no extra round trip.
 
+import type { Highlight } from "~/lib/highlights-data.ts";
+import { formatHighlightLines, nightShare } from "~/lib/highlights-share.ts";
 import { plural } from "~/lib/number-format.ts";
 import { axisHour, sparkline } from "~/lib/share-card.ts";
 import { hourLabel } from "~/lib/time-ago.ts";
 import type { TimelinePeriod } from "~/lib/timeline-periods.ts";
 
 const HOURS = 24;
-
-/** Hours that count as after dark for the nightlife line, 9pm through 4am. */
-export const NIGHT_HOURS = new Set([21, 22, 23, 0, 1, 2, 3, 4]);
 
 const PERIOD_EMOJI: Record<TimelinePeriod, string> = {
 	day: "🕐",
@@ -39,8 +38,6 @@ export type TimelineShareRow = {
 	/** 24 counts, midnight first. */
 	hourCounts: number[];
 	totalDetections: number;
-	/** The station had never recorded this species before the window opened. */
-	isNew: boolean;
 };
 
 export type TimelineShareCard = {
@@ -48,6 +45,8 @@ export type TimelineShareCard = {
 	/** The window's own label, e.g. "July 2026". Null on all time. */
 	windowLabel: string | null;
 	rows: TimelineShareRow[];
+	/** The page's own Highlights for the window -- see lib/highlights-data.ts. */
+	highlights: Highlight[];
 };
 
 const MEDALS = ["🥇", "🥈", "🥉"] as const;
@@ -122,26 +121,15 @@ export function formatTimelineShareCard(card: TimelineShareCard): string {
 		);
 	}
 
-	// "All time" has no before to be new against, so the loader never marks a row
-	// there -- the line simply doesn't appear.
-	const [newcomer, ...otherNewcomers] = rows
-		.filter((row) => row.isNew)
-		.map((row) => row.comName);
-	if (newcomer) {
-		const more =
-			otherNewcomers.length > 0 ? ` +${otherNewcomers.length} more` : "";
-		highlights.push(`🐣 New: ${newcomer}${more}`);
+	const night = nightShare(byHour);
+	// Rounding to zero means the night was silent enough that saying so is noise.
+	if (night > 0) {
+		highlights.push(`🌙 ${night}% heard after dark`);
 	}
 
-	const afterDark = byHour.reduce(
-		(sum, count, hour) => (NIGHT_HOURS.has(hour) ? sum + count : sum),
-		0,
-	);
-	const nightShare = Math.round((afterDark / detections) * 100);
-	// Rounding to zero means the night was silent enough that saying so is noise.
-	if (nightShare > 0) {
-		highlights.push(`🌙 ${nightShare}% heard after dark`);
-	}
+	// What the page's Highlights card found worth saying: the pace against the
+	// stretch before, and the arrivals, returns, rarities and absences.
+	highlights.push(...formatHighlightLines(card.highlights));
 
 	return [
 		header,

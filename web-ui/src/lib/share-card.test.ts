@@ -215,3 +215,52 @@ test("says a whole day was silent rather than the last 24 hours", () => {
 test("leaves no trailing blank line to paste", () => {
 	assert.doesNotMatch(formatShareCard(cardWith()), /\n$/);
 });
+
+test("adds the page's highlights in place of its own first-ever line", () => {
+	const text = formatShareCard(
+		cardWith({
+			window: "day",
+			startHour: 0,
+			firstEver: ["Indigo Bunting"],
+			rarest: { comName: "Hooded Warbler", allTimeCount: 3 },
+			highlights: [
+				{
+					kind: "new",
+					total: 1,
+					birds: [{ comName: "Indigo Bunting", note: null }],
+				},
+				{
+					kind: "rare",
+					total: 1,
+					birds: [{ comName: "Hooded Warbler", note: "3 records ever" }],
+				},
+				{
+					kind: "returned",
+					total: 1,
+					birds: [{ comName: "Wood Thrush", note: "23 days" }],
+				},
+			],
+		}),
+	);
+
+	assert.equal(text.match(/Indigo Bunting/g)?.length, 1);
+	assert.equal(text.match(/Hooded Warbler/g)?.length, 1);
+	assert.match(text, /^🐣 First ever: Indigo Bunting$/m);
+	assert.match(text, /^💎 Rare: Hooded Warbler \(3 records ever\)$/m);
+	assert.match(text, /^🔁 Back: Wood Thrush \(23 days\)$/m);
+});
+
+test("reports a calendar day's share heard after dark", () => {
+	const hourlyCounts = Array.from({ length: 24 }, (_, hour) =>
+		hour === 2 ? 25 : hour === 12 ? 75 : 0,
+	);
+	const text = formatShareCard(
+		cardWith({ window: "day", startHour: 0, hourlyCounts }),
+	);
+
+	assert.match(text, /^🌙 25% heard after dark$/m);
+});
+
+test("does not read night hours off a rolling window", () => {
+	assert.doesNotMatch(formatShareCard(cardWith({ startHour: 21 })), /🌙/);
+});

@@ -4,6 +4,8 @@
 // Pure by design -- the caller supplies the numbers, the clock and the window.
 // Every formatting rule lives here so it can be read and tested in one place.
 
+import type { Highlight } from "~/lib/highlights-data.ts";
+import { formatHighlightLines, nightShare } from "~/lib/highlights-share.ts";
 import { ordinal, plural } from "~/lib/number-format.ts";
 import { hourLabel } from "~/lib/time-ago.ts";
 
@@ -37,6 +39,12 @@ export type ShareCard = {
 	firstEver: string[];
 	/** The species heard in the window with the fewest all-time detections. */
 	rarest: { comName: string; allTimeCount: number } | null;
+	/**
+	 * The page's own Highlights for the same window (lib/highlights-data.ts),
+	 * when it has them. They name a first-ever bird themselves, so the card's
+	 * own first-ever line steps aside for theirs.
+	 */
+	highlights?: Highlight[];
 };
 
 /**
@@ -126,25 +134,43 @@ export function formatShareCard(card: ShareCard): string {
 		);
 	}
 
+	// Only a calendar day's counts run midnight first, which is what lets the
+	// night hours be read off by position.
+	const night = window === "day" ? nightShare(card.hourlyCounts) : 0;
+	if (night > 0) highlights.push(`🌙 ${night}% heard after dark`);
+
+	const pageHighlights = card.highlights ?? [];
+	const namedByHighlights = new Set(
+		pageHighlights.flatMap((highlight) =>
+			"birds" in highlight ? highlight.birds.map((bird) => bird.comName) : [],
+		),
+	);
+	const highlightsNameNewcomers = pageHighlights.some(
+		(highlight) => highlight.kind === "new",
+	);
+
 	const [newcomer, ...otherNewcomers] = card.firstEver;
-	if (newcomer) {
+	if (newcomer && !highlightsNameNewcomers) {
 		const more =
 			otherNewcomers.length > 0 ? ` +${otherNewcomers.length} more` : "";
 		highlights.push(`🐣 First ever: ${newcomer}${more}`);
 	}
 
 	// A first-ever bird is by definition the rarest one, and saying so twice
-	// wastes the line.
+	// wastes the line -- as does naming a bird the highlights already call out.
 	const rarest = card.rarest;
 	if (
 		rarest &&
 		rarest.allTimeCount <= RARITY_THRESHOLD &&
-		!card.firstEver.includes(rarest.comName)
+		!card.firstEver.includes(rarest.comName) &&
+		!namedByHighlights.has(rarest.comName)
 	) {
 		highlights.push(
 			`💎 Rarest: ${rarest.comName} (${ordinal(rarest.allTimeCount)} ever)`,
 		);
 	}
+
+	highlights.push(...formatHighlightLines(pageHighlights));
 
 	return [
 		header,

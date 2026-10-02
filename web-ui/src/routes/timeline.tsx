@@ -237,16 +237,23 @@ function TimelineHeader({
 	onChange: (next: { period?: TimelinePeriod; date?: string }) => void;
 }) {
 	const rows = data.body.kind === "rows" ? data.body.rows : [];
+	const highlights = data.body.kind === "rows" ? data.body.highlights : [];
 
+	// Both cards carry the window's Highlights, which the page has already
+	// loaded for its own Highlights card, so the share says what the page says.
 	const share = useShareCard({
 		subject: `${period}:${anchor}`,
 		load: async () =>
 			period === "day"
-				? formatShareCard(await getDayShareCard({ data: anchor }))
+				? formatShareCard({
+						...(await getDayShareCard({ data: anchor })),
+						highlights,
+					})
 				: formatTimelineShareCard({
 						period,
 						windowLabel: data.window?.label ?? null,
 						rows,
+						highlights,
 					}),
 	});
 

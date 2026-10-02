@@ -18,7 +18,6 @@ function rowWith(overrides: Partial<TimelineShareRow> = {}): TimelineShareRow {
 		comName: "American Robin",
 		hourCounts,
 		totalDetections: hourCounts.reduce((a, b) => a + b, 0),
-		isNew: false,
 		...overrides,
 	};
 }
@@ -37,6 +36,7 @@ function cardWith(
 			rowWith({ comName: "House Finch", hourCounts: hours({ 8: 30 }) }),
 			rowWith({ comName: "Song Sparrow", hourCounts: hours({ 9: 10 }) }),
 		],
+		highlights: [],
 		...overrides,
 	};
 }
@@ -94,22 +94,38 @@ test("counts a lone detection in the singular", () => {
 	assert.match(text, /^🌅 Peak hour: 6 AM · 1 detection$/m);
 });
 
-test("names the arrivals the window introduced", () => {
-	const text = formatTimelineShareCard(
+test("carries the page's highlights after its own lines", () => {
+	const lines = formatTimelineShareCard(
 		cardWith({
-			rows: [
-				rowWith({ comName: "Indigo Bunting", isNew: true }),
-				rowWith({ comName: "Wood Thrush", isNew: true }),
-				rowWith({ comName: "Veery", isNew: true }),
+			highlights: [
+				{
+					kind: "activity",
+					direction: "up",
+					percent: 42,
+					baselineLabel: "the four weeks before",
+					detections: 100,
+					perDay: false,
+					speciesDelta: 2,
+				},
+				{ kind: "busiest-hour", hour: 6 },
+				{
+					kind: "new",
+					total: 3,
+					birds: [
+						{ comName: "Indigo Bunting", note: null },
+						{ comName: "Wood Thrush", note: null },
+						{ comName: "Veery", note: null },
+					],
+				},
 			],
 		}),
-	);
+	).split("\n");
 
-	assert.match(text, /^🐣 New: Indigo Bunting \+2 more$/m);
-});
-
-test("leaves out the arrivals line when nothing is new", () => {
-	assert.doesNotMatch(formatTimelineShareCard(cardWith()), /🐣/);
+	assert.deepEqual(lines.slice(-3), [
+		"🌅 Peak hour: 6 AM · 40 detections",
+		"📈 Up 42% on the four weeks before · 100 detections, 2 more species",
+		"🐣 First ever: Indigo Bunting, Wood Thrush, Veery",
+	]);
 });
 
 test("reports the share of detections heard after dark", () => {
