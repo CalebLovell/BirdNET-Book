@@ -62,7 +62,8 @@ export type TimelineRow = {
 	 * below RARE_LIFETIME_MAX, regardless of the selected window, and it is not a
 	 * first-ever arrival (see isNew) -- the two flags divide the species between
 	 * them rather than both landing on a newcomer. Matches the threshold the Live
-	 * page's Highlights use.
+	 * page's Highlights use. Always false on "all time", whose list is every
+	 * species' lifetime count already -- the rare ones are plainly at the bottom.
 	 */
 	isRare: boolean;
 	/**
@@ -357,7 +358,9 @@ export async function loadTimelineData({
 			const lastBefore = lastBeforeByName.get(entry.comName);
 			const isNew = window !== null && lastBefore == null;
 			const isRare =
-				!isNew && (lifetimeByName.get(entry.comName) ?? 0) <= RARE_LIFETIME_MAX;
+				window !== null &&
+				!isNew &&
+				(lifetimeByName.get(entry.comName) ?? 0) <= RARE_LIFETIME_MAX;
 			const firstDay = firstDayByName.get(entry.comName);
 			const away =
 				lastBefore != null && firstDay != null
