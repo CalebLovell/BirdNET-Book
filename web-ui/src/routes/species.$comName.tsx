@@ -523,12 +523,12 @@ function SummaryCard({
 			className="feature-card mt-(--page-gap) grid overflow-hidden rounded-md sm:grid-cols-[12rem_minmax(0,1fr)]"
 		>
 			{/* The portrait's own column -- above the text on a phone, where the
-			    column becomes a band and the bird is centred in it. Beside the
-			    text it's held to the left, so any slack pools between the bird
-			    and the name rather than crowding the two together. A fixed
+			    column becomes a band, and beside it from sm up. Either way the
+			    bird is centred in its column, so a narrow painting doesn't sit
+			    hard left with a gap pooled between it and the name. A fixed
 			    height, as on the Today hero, so the illustration's own size never
 			    sets the card's. */}
-			<div className="flex h-36 items-center justify-center overflow-hidden p-4 pb-0 sm:h-44 sm:justify-start sm:pr-2 sm:pb-4">
+			<div className="flex h-36 items-center justify-center overflow-hidden p-4 pb-0 sm:h-44 sm:pb-4">
 				<SpeciesImage
 					imageUrl={detail.imageUrl}
 					alt={detail.comName}
