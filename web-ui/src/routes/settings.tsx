@@ -1,16 +1,11 @@
 import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { Settings } from "lucide-react";
-import { LockedPage } from "~/components/auth/locked-page.tsx";
 import { PageStatus } from "~/components/page-status.tsx";
-import {
-	SETTINGS_PAGE_DESCRIPTION,
-	SETTINGS_PAGE_TITLE,
-	SettingsPage,
-} from "~/components/settings/settings-page.tsx";
+import { SettingsPage } from "~/components/settings/settings-page.tsx";
 import { Button } from "~/components/ui/button.tsx";
 import { getStationHealth } from "~/lib/health.ts";
 import { pageTitle } from "~/lib/page-title.ts";
+import { requireUnlocked } from "~/lib/require-unlocked.ts";
 import {
 	getSettingsPage,
 	resetSettingsFn,
@@ -36,32 +31,18 @@ export const Route = createFileRoute("/settings")({
 	// Settled together so the masthead paints with the cards rather than
 	// snapping in a moment later. `getStationHealth` does not throw, so it
 	// cannot be what sends this route to its error component.
-	loader: async ({ context }) => {
-		if (!context.auth.unlocked) return null;
-		return { data: await getSettingsPage(), health: await getStationHealth() };
-	},
+	beforeLoad: ({ context, location }) =>
+		requireUnlocked(context.auth, location),
+	loader: async () => ({
+		data: await getSettingsPage(),
+		health: await getStationHealth(),
+	}),
 	component: SettingsRoute,
 	errorComponent: SettingsUnavailable,
 });
 
 function SettingsRoute() {
 	const loaded = Route.useLoaderData();
-	if (!loaded)
-		return (
-			<LockedPage
-				icon={Settings}
-				title={SETTINGS_PAGE_TITLE}
-				description={SETTINGS_PAGE_DESCRIPTION}
-			/>
-		);
-	return <SettingsContent loaded={loaded} />;
-}
-
-function SettingsContent({
-	loaded,
-}: {
-	loaded: NonNullable<ReturnType<typeof Route.useLoaderData>>;
-}) {
 	const data = loaded.data;
 	const { data: health } = usePolledData(
 		getStationHealth,

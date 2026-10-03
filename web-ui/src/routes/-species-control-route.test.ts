@@ -8,10 +8,10 @@ test("species control route loads data, adapts mutations, and invalidates commit
 		"utf8",
 	);
 	assert.match(source, /createFileRoute\("\/species-control"\)/);
-	assert.match(
-		source,
-		/loader:\s*async\s*\(\{\s*context\s*\}\)\s*=>\s*\n?\s*context\.auth\.unlocked\s*\?\s*await getSpeciesControlPage\(\)\s*:\s*null/,
-	);
+	// A locked visitor is sent to /account before the loader runs, so the
+	// loader only ever loads.
+	assert.match(source, /requireUnlocked\(context\.auth, location\)/);
+	assert.match(source, /loader:\s*\(\)\s*=>\s*getSpeciesControlPage\(\)/);
 	assert.match(
 		source,
 		/validateSearch:\s*normalizeSpeciesControlWorkspaceSearch/,
@@ -50,5 +50,7 @@ test("navigation groups Control with the other locked pages", async () => {
 		review > manage && control > review && settings > control,
 		"the locked pages run Review, Control, Settings",
 	);
-	assert.match(source.slice(control, settings), />\s*Control\s*\{lock\}\s*</);
+	// A visitor never sees the gated group: it renders only once unlocked.
+	assert.match(source.slice(explore, manage), /auth\.unlocked \?/);
+	assert.doesNotMatch(source, /\{lock\}/);
 });

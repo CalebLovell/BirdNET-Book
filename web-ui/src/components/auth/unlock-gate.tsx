@@ -15,22 +15,20 @@ const MESSAGES = {
 } as const;
 
 /**
- * The one locked card, used by every gated page. Rendered in place of a page's
- * content rather than as a redirect or a modal: the URL stays put, so unlocking
- * turns the page into itself and a bookmark to /settings still lands there.
- *
- * It carries no page name of its own -- `LockedPage` puts the page's real
- * masthead above it, so this card only ever has to explain the lock. That also
- * means adding a gate to a new page needs nothing from this file.
+ * The station's sign-in card, on /account. Gated pages redirect there rather
+ * than locking in place, and `onUnlock` is how the page sends you on to the
+ * one you were headed for.
  */
 export function UnlockGate({
-	title = "This page is locked",
-	description = "This part of the station is only for whoever runs it. Detections, species and stats stay open to everyone.",
+	title,
+	description,
+	onUnlock,
 }: {
-	/** Overridden on the Account page, which isn't itself a locked page. */
-	title?: string;
-	description?: string;
-} = {}) {
+	title: string;
+	description: string;
+	/** Runs once the session is live and the router has picked it up. */
+	onUnlock?: () => void;
+}) {
 	const unlock = useServerFn(unlockFn);
 	const router = useRouter();
 	const [password, setPassword] = useState("");
@@ -55,6 +53,7 @@ export function UnlockGate({
 			if (result.ok) {
 				setPassword("");
 				await router.invalidate();
+				onUnlock?.();
 				return;
 			}
 			setError(MESSAGES[result.reason]);

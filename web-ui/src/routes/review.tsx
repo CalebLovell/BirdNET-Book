@@ -2,7 +2,6 @@ import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { CheckCheck, CircleAlert } from "lucide-react";
 import { useState } from "react";
-import { LockedPage } from "~/components/auth/locked-page.tsx";
 import { PageHeaderCard } from "~/components/page-header-card.tsx";
 import { PageStatus } from "~/components/page-status.tsx";
 import { ReviewQueueSettings } from "~/components/review/review-queue-settings.tsx";
@@ -10,6 +9,7 @@ import { ReviewWorkflow } from "~/components/review/review-workflow.tsx";
 import { Button } from "~/components/ui/button.tsx";
 import { CONFIDENT_MIN, formatConfidence } from "~/lib/confidence.ts";
 import { pageTitle } from "~/lib/page-title.ts";
+import { requireUnlocked } from "~/lib/require-unlocked.ts";
 import {
 	confirmReviewDetection,
 	deleteReviewDetection,
@@ -25,23 +25,16 @@ import { saveReviewSettingsFn } from "~/lib/settings.ts";
 
 const REVIEW_PAGE_TITLE = "Review detections";
 
-/** The unlocked masthead counts the queue against the station's own rarity
- *  threshold, and both of those come from a gated server function. This says
- *  the same thing without the numbers, for someone who cannot fetch them. */
-const REVIEW_PAGE_LOCKED_DESCRIPTION =
-	"Recordings BirdNET was unsure about, for species this station has rarely heard.";
-
 export const Route = createFileRoute("/review")({
 	head: () => ({ meta: [{ title: pageTitle("Review") }] }),
 	validateSearch: normalizeReviewSearch,
+	beforeLoad: ({ context, location }) =>
+		requireUnlocked(context.auth, location),
 	loaderDeps: ({ search }) => search,
-	loader: async ({ context, deps }) => {
-		if (!context.auth.unlocked) return null;
-		return {
-			page: await getReviewPage({ data: deps }),
-			species: await getReviewSpecies(),
-		};
-	},
+	loader: async ({ deps }) => ({
+		page: await getReviewPage({ data: deps }),
+		species: await getReviewSpecies(),
+	}),
 	component: Review,
 	// Gating this route gave its loader a second way to fail: the unlock status
 	// resolved in the root's `beforeLoad` can go stale -- another device rotating
@@ -53,22 +46,6 @@ export const Route = createFileRoute("/review")({
 
 function Review() {
 	const loaded = Route.useLoaderData();
-	if (!loaded)
-		return (
-			<LockedPage
-				icon={CheckCheck}
-				title={REVIEW_PAGE_TITLE}
-				description={REVIEW_PAGE_LOCKED_DESCRIPTION}
-			/>
-		);
-	return <ReviewContent loaded={loaded} />;
-}
-
-function ReviewContent({
-	loaded,
-}: {
-	loaded: NonNullable<ReturnType<typeof Route.useLoaderData>>;
-}) {
 	const { page, species } = loaded;
 	const search = Route.useSearch();
 	const navigate = Route.useNavigate();

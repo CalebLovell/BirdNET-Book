@@ -6,7 +6,6 @@ import {
 	Feather,
 	Lightbulb,
 	ListTree,
-	Lock,
 	Settings,
 	SlidersHorizontal,
 } from "lucide-react";
@@ -25,22 +24,13 @@ export function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
 	};
 
 	const { auth } = useRouteContext({ from: "__root__" });
-	// Gated pages stay listed rather than disappearing: a visitor should be able
-	// to see the station has settings without being able to open them, and the
-	// nav must not change shape when you unlock.
-	const lock = auth.unlocked ? null : (
-		<Lock
-			className="ml-auto size-3 text-muted-foreground"
-			aria-label="Locked"
-			role="img"
-		/>
-	);
 
 	return (
 		<div className="flex flex-col gap-2 px-2">
 			{/* Two navs rather than one list: everything anyone can open sits up top,
-			    and the three gated pages sit together below the divider, so the lock
-			    icons read as one section rather than as scattered exceptions. */}
+			    and the three gated pages sit together below the divider. A visitor
+			    never sees that second group at all -- the sidebar's account row is
+			    their way in, and signing in is what makes the group appear. */}
 			<nav className="flex flex-col gap-0.5" aria-label="Explore">
 				<Link to="/live" {...linkProps}>
 					<Activity className="sidebar-icon" aria-hidden="true" />
@@ -84,35 +74,36 @@ export function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
 				</Link>
 			</nav>
 
-			<hr className="mx-2.5 border-0 border-[var(--line)] border-t" />
+			{auth.unlocked ? (
+				<>
+					<hr className="mx-2.5 border-0 border-[var(--line)] border-t" />
 
-			<nav className="flex flex-col gap-0.5" aria-label="Manage">
-				<Link
-					to="/review"
-					search={{ page: 1 }}
-					activeOptions={{ includeSearch: false }}
-					{...linkProps}
-				>
-					<CheckCheck className="sidebar-icon" aria-hidden="true" />
-					Review
-					{lock}
-				</Link>
-				<Link
-					to="/species-control"
-					search={{ page: 1, sort: "species", direction: "asc" }}
-					activeOptions={{ includeSearch: false }}
-					{...linkProps}
-				>
-					<SlidersHorizontal className="sidebar-icon" aria-hidden="true" />
-					Control
-					{lock}
-				</Link>
-				<Link to="/settings" {...linkProps}>
-					<Settings className="sidebar-icon" aria-hidden="true" />
-					Settings
-					{lock}
-				</Link>
-			</nav>
+					<nav className="flex flex-col gap-0.5" aria-label="Manage">
+						<Link
+							to="/review"
+							search={{ page: 1 }}
+							activeOptions={{ includeSearch: false }}
+							{...linkProps}
+						>
+							<CheckCheck className="sidebar-icon" aria-hidden="true" />
+							Review
+						</Link>
+						<Link
+							to="/species-control"
+							search={{ page: 1, sort: "species", direction: "asc" }}
+							activeOptions={{ includeSearch: false }}
+							{...linkProps}
+						>
+							<SlidersHorizontal className="sidebar-icon" aria-hidden="true" />
+							Control
+						</Link>
+						<Link to="/settings" {...linkProps}>
+							<Settings className="sidebar-icon" aria-hidden="true" />
+							Settings
+						</Link>
+					</nav>
+				</>
+			) : null}
 		</div>
 	);
 }

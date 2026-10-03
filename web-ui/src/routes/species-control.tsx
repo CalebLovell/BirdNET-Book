@@ -1,15 +1,10 @@
 import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { SlidersHorizontal } from "lucide-react";
-import { LockedPage } from "~/components/auth/locked-page.tsx";
 import { PageStatus } from "~/components/page-status.tsx";
-import {
-	SPECIES_CONTROL_PAGE_DESCRIPTION,
-	SPECIES_CONTROL_PAGE_TITLE,
-	SpeciesControlPage,
-} from "~/components/species-control/species-control-page.tsx";
+import { SpeciesControlPage } from "~/components/species-control/species-control-page.tsx";
 import { Button } from "~/components/ui/button.tsx";
 import { pageTitle } from "~/lib/page-title.ts";
+import { requireUnlocked } from "~/lib/require-unlocked.ts";
 import {
 	getSpeciesControlPage,
 	saveSpeciesControl,
@@ -19,30 +14,15 @@ import { normalizeSpeciesControlWorkspaceSearch } from "~/lib/species-control-wo
 export const Route = createFileRoute("/species-control")({
 	head: () => ({ meta: [{ title: pageTitle("Species control") }] }),
 	validateSearch: normalizeSpeciesControlWorkspaceSearch,
-	loader: async ({ context }) =>
-		context.auth.unlocked ? await getSpeciesControlPage() : null,
+	beforeLoad: ({ context, location }) =>
+		requireUnlocked(context.auth, location),
+	loader: () => getSpeciesControlPage(),
 	component: SpeciesControlRoute,
 	errorComponent: SpeciesControlUnavailable,
 });
 
 function SpeciesControlRoute() {
 	const initialData = Route.useLoaderData();
-	if (!initialData)
-		return (
-			<LockedPage
-				icon={SlidersHorizontal}
-				title={SPECIES_CONTROL_PAGE_TITLE}
-				description={SPECIES_CONTROL_PAGE_DESCRIPTION}
-			/>
-		);
-	return <SpeciesControlContent initialData={initialData} />;
-}
-
-function SpeciesControlContent({
-	initialData,
-}: {
-	initialData: NonNullable<ReturnType<typeof Route.useLoaderData>>;
-}) {
 	const search = Route.useSearch();
 	const navigate = Route.useNavigate();
 	const save = useServerFn(saveSpeciesControl);
