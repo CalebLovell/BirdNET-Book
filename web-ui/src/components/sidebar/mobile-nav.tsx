@@ -42,14 +42,14 @@ export function MobileNav() {
 			{/* `shrink-0`, not `sticky`: the bar sits outside the scrolling pane in
 			    the shell, so it holds its place without any stickiness. Its side
 			    padding tracks the page gutter (.page-wrap), halving under 400px, so
-			    the menu icon stays in line with the cards' left edge. */}
+			    the round menu button stays in line with the cards' left edge. */}
 			<div className="z-30 flex h-14 shrink-0 items-center gap-3 border-[var(--line)] border-b bg-[var(--paper-raised)] px-4 max-[400px]:px-2 xl:hidden">
 				<button
 					type="button"
 					onClick={() => setIsOpen(true)}
 					aria-label="Open navigation"
 					aria-expanded={isOpen}
-					className="-ml-1 rounded p-1 text-[var(--moss)]"
+					className="flex size-9 items-center justify-center rounded-full bg-[color-mix(in_oklab,var(--moss)_10%,var(--meadow))] text-[var(--moss)] transition-colors duration-[180ms] hover:bg-[color-mix(in_oklab,var(--moss)_18%,var(--meadow))]"
 				>
 					<Menu className="size-5" aria-hidden="true" />
 				</button>
@@ -75,7 +75,7 @@ export function MobileNav() {
 							type="button"
 							onClick={() => setIsOpen(false)}
 							aria-label="Close navigation"
-							className="absolute top-4 right-3 rounded p-1 text-muted-foreground"
+							className="absolute top-3 right-2 flex size-9 items-center justify-center rounded-full bg-[color-mix(in_oklab,var(--moss)_10%,var(--meadow))] text-muted-foreground transition-colors duration-[180ms] hover:bg-[color-mix(in_oklab,var(--moss)_18%,var(--meadow))] hover:text-[var(--ink)]"
 						>
 							<X className="size-5" aria-hidden="true" />
 						</button>
