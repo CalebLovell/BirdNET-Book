@@ -3,6 +3,7 @@ import test from "node:test";
 import { renderToStaticMarkup } from "react-dom/server";
 
 import type { SettingsPageData } from "~/lib/settings-data.ts";
+import { SETTINGS_INDEX, settingsCardId } from "./settings-index.ts";
 import { SettingsPage } from "./settings-page.tsx";
 
 const data: SettingsPageData = {
@@ -133,4 +134,17 @@ test("explains consequential storage settings beside their controls", () => {
 	]) {
 		assert.match(markup, new RegExp(`>${label}<`));
 	}
+});
+
+test("every card the sidebar search knows is on the page at its anchor", () => {
+	const markup = renderToStaticMarkup(<SettingsPage data={data} />);
+	for (const entry of SETTINGS_INDEX) {
+		const id = settingsCardId(entry.title);
+		assert.match(markup, new RegExp(`<section id="${id}"`));
+		assert.match(markup, new RegExp(`>${entry.title}<`));
+	}
+	assert.equal(
+		(markup.match(/<section id=/g) ?? []).length,
+		SETTINGS_INDEX.length,
+	);
 });

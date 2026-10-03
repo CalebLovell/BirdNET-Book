@@ -1,4 +1,4 @@
-import { X } from "lucide-react";
+import { Search, X } from "lucide-react";
 import type * as React from "react";
 
 import { Input } from "~/components/ui/input.tsx";
@@ -11,7 +11,8 @@ type SearchInputProps = Omit<React.ComponentProps<"input">, "value"> & {
 
 // Shared search field so every list page gets the same behaviour: it fills the
 // row up to its sibling filters, and the X only appears once there is
-// something to clear.
+// something to clear. The sidebar's site search and the review dialog draw the
+// same magnifier at the same inset, so every search box in the app reads alike.
 function SearchInput({
 	className,
 	value,
@@ -20,7 +21,11 @@ function SearchInput({
 }: SearchInputProps) {
 	return (
 		<div className={cn("relative w-full min-w-0 flex-1", className)}>
-			<Input type="text" value={value} className="pr-9" {...props} />
+			<Search
+				aria-hidden="true"
+				className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground"
+			/>
+			<Input type="text" value={value} className="pr-9 pl-9" {...props} />
 			{value ? (
 				<button
 					type="button"

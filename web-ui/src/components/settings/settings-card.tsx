@@ -4,6 +4,7 @@ import { type ReactNode, useState } from "react";
 
 import { Button } from "~/components/ui/button.tsx";
 import { ConfirmDialog } from "~/components/ui/confirm-dialog.tsx";
+import { settingsCardId } from "./settings-index.ts";
 
 export type CardSaveState = "idle" | "saving" | "saved" | "warning" | "error";
 
@@ -58,15 +59,18 @@ export function SettingsCard({
 	children: ReactNode;
 }) {
 	const [confirming, setConfirming] = useState(false);
-	const headingId = `settings-${title.toLowerCase().replaceAll(" ", "-")}`;
+	const cardId = settingsCardId(title);
+	const headingId = `settings-${cardId}`;
 
 	return (
 		<section
+			// The anchor the sidebar search lands on, e.g. `/settings#storage`.
+			id={cardId}
 			aria-labelledby={headingId}
 			// A plain card. The save state is already spoken by the message beside
 			// the Save button; a coloured stripe down the edge said the same thing
 			// again, in a shape no other card on the site has.
-			className="feature-card overflow-hidden rounded-md"
+			className="feature-card scroll-mt-4 overflow-hidden rounded-md"
 		>
 			<form
 				className="flex h-full flex-col"

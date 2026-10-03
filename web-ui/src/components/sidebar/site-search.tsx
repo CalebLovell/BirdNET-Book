@@ -1,4 +1,4 @@
-import { useNavigate } from "@tanstack/react-router";
+import { useNavigate, useRouteContext } from "@tanstack/react-router";
 import {
 	Activity,
 	CalendarRange,
@@ -15,6 +15,11 @@ import {
 import { Popover } from "radix-ui";
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 
+import {
+	SETTINGS_INDEX,
+	type SettingsIndexEntry,
+	settingsCardId,
+} from "~/components/settings/settings-index.ts";
 import { SpeciesThumbnail } from "~/components/species-row.tsx";
 import { Input } from "~/components/ui/input.tsx";
 import { illustrationUrlFor } from "~/lib/illustrations.ts";
@@ -27,7 +32,9 @@ import {
 import { comNameToSlug } from "~/lib/species-slug.ts";
 import { cn } from "~/lib/utils.ts";
 
-type PageEntry = SearchPage & { icon: LucideIcon };
+/** `gated` pages, like the Settings cards, are left out for a visitor -- the
+ *  sidebar does not list them either. */
+type PageEntry = SearchPage & { icon: LucideIcon; gated?: boolean };
 
 /** Labels and icons match the sidebar's own, so a page is found by the name
  * and glyph you already know it by. */
@@ -37,16 +44,21 @@ const PAGES: PageEntry[] = [
 	{ label: "Species", to: "/species", icon: Feather },
 	{ label: "Detections", to: "/detections", icon: ListTree },
 	{ label: "Learn", to: "/learn", icon: Lightbulb },
-	{ label: "Review", to: "/review", icon: CheckCheck },
-	{ label: "Control", to: "/species-control", icon: SlidersHorizontal },
-	{ label: "Settings", to: "/settings", icon: Settings },
+	{ label: "Review", to: "/review", icon: CheckCheck, gated: true },
+	{
+		label: "Control",
+		to: "/species-control",
+		icon: SlidersHorizontal,
+		gated: true,
+	},
+	{ label: "Settings", to: "/settings", icon: Settings, gated: true },
 	{ label: "Account", to: "/account", icon: UserRound },
 ];
 
 type Result =
 	| { kind: "species"; species: SearchSpecies }
 	| { kind: "page"; page: PageEntry }
-	| { kind: "detections"; query: string };
+	| { kind: "setting"; setting: SettingsIndexEntry; field?: string };
 
 /**
  * Loaded on first focus rather than on mount: the sidebar is on every page, and
@@ -97,7 +109,7 @@ function useSlashShortcut(input: React.RefObject<HTMLInputElement | null>) {
 
 /**
  * The sidebar's site-wide search: species the station has heard, the site's
- * pages, and a way into the detections table filtered by the same words.
+ * pages, and the cards on Settings -- by title or by any field inside them.
  *
  * A combobox rather than a search page: every result is a place to go, so the
  * list only has to get you there. The popover is portalled so it can overhang
@@ -111,21 +123,30 @@ export function SiteSearch({ onNavigate }: { onNavigate?: () => void }) {
 	const [focused, setFocused] = useState(false);
 	const [active, setActive] = useState(0);
 	const { species, load } = useSearchSpecies();
+	const { auth } = useRouteContext({ from: "__root__" });
 	useSlashShortcut(input);
 
 	const results = useMemo<Result[]>(() => {
 		const trimmed = query.trim();
 		if (trimmed === "") return [];
-		const found = searchSite(trimmed, species, PAGES);
+		const found = searchSite(
+			trimmed,
+			species,
+			auth.unlocked ? PAGES : PAGES.filter((page) => !page.gated),
+			auth.unlocked ? SETTINGS_INDEX : [],
+		);
 		return [
 			...found.species.map((item) => ({
 				kind: "species" as const,
 				species: item,
 			})),
 			...found.pages.map((page) => ({ kind: "page" as const, page })),
-			{ kind: "detections" as const, query: trimmed },
+			...found.settings.map((match) => ({
+				kind: "setting" as const,
+				...match,
+			})),
 		];
-	}, [query, species]);
+	}, [query, species, auth.unlocked]);
 
 	// A fresh query starts the highlight back at its best match.
 	// biome-ignore lint/correctness/useExhaustiveDependencies: reset on query change
@@ -147,16 +168,7 @@ export function SiteSearch({ onNavigate }: { onNavigate?: () => void }) {
 		} else if (result.kind === "page") {
 			navigate({ to: result.page.to });
 		} else {
-			navigate({
-				to: "/detections",
-				search: {
-					page: 1,
-					pageSize: 100,
-					sort: "recorded",
-					direction: "desc",
-					species: result.query,
-				},
-			});
+			navigate({ to: "/settings", hash: settingsCardId(result.setting.title) });
 		}
 		close();
 		onNavigate?.();
@@ -182,7 +194,7 @@ export function SiteSearch({ onNavigate }: { onNavigate?: () => void }) {
 
 	const optionId = (index: number) => `${listId}-${index}`;
 	const firstPage = results.findIndex((result) => result.kind === "page");
-	const detectionsIndex = results.length - 1;
+	const firstSetting = results.findIndex((result) => result.kind === "setting");
 
 	return (
 		<Popover.Root open={open}>
@@ -190,7 +202,7 @@ export function SiteSearch({ onNavigate }: { onNavigate?: () => void }) {
 				<div className="relative px-2 pb-3">
 					<Search
 						aria-hidden="true"
-						className="pointer-events-none absolute top-1/2 left-4.5 size-3.5 -translate-y-[calc(50%+0.375rem)] text-muted-foreground"
+						className="pointer-events-none absolute top-1/2 left-5 size-4 -translate-y-[calc(50%+0.375rem)] text-muted-foreground"
 					/>
 					<Input
 						ref={input}
@@ -212,12 +224,8 @@ export function SiteSearch({ onNavigate }: { onNavigate?: () => void }) {
 						}}
 						onBlur={() => setFocused(false)}
 						onKeyDown={onKeyDown}
-						className="h-8 bg-[var(--meadow)] pr-9 pl-8 [&::-webkit-search-cancel-button]:hidden"
+						className="pl-9 [&::-webkit-search-cancel-button]:hidden"
 					/>
-					{/* Says how to get in while idle, and how to get out once in. */}
-					<kbd className="pointer-events-none absolute top-1/2 right-4 -translate-y-[calc(50%+0.375rem)] rounded-sm border border-[var(--line)] px-1 font-sans text-[10px] text-muted-foreground leading-4">
-						{focused ? "esc" : "/"}
-					</kbd>
 				</div>
 			</Popover.Anchor>
 
@@ -241,10 +249,10 @@ export function SiteSearch({ onNavigate }: { onNavigate?: () => void }) {
 									<GroupLabel>Species</GroupLabel>
 								) : null}
 								{index === firstPage ? (
-									<GroupLabel divided>Pages</GroupLabel>
+									<GroupLabel divided={index > 0}>Pages</GroupLabel>
 								) : null}
-								{index === detectionsIndex ? (
-									<hr className="my-1 border-0 border-[var(--line)] border-t" />
+								{index === firstSetting ? (
+									<GroupLabel divided={index > 0}>Settings</GroupLabel>
 								) : null}
 								<div
 									id={optionId(index)}
@@ -277,7 +285,7 @@ export function SiteSearch({ onNavigate }: { onNavigate?: () => void }) {
 function resultKey(result: Result): string {
 	if (result.kind === "species") return `s:${result.species.comName}`;
 	if (result.kind === "page") return `p:${result.page.to}`;
-	return "detections";
+	return `c:${result.setting.title}`;
 }
 
 function GroupLabel({
@@ -332,15 +340,18 @@ function ResultBody({ result }: { result: Result }) {
 		);
 	}
 
+	// The matched field beside the card's name, so "latitude" lands on a row
+	// that says why Station came up.
+	const Icon = result.setting.icon;
 	return (
 		<>
-			<ListTree
-				aria-hidden="true"
-				className="size-4 shrink-0 text-[var(--moss)]"
-			/>
-			<span className="min-w-0 truncate py-1">
-				Detections matching “{result.query}”
-			</span>
+			<Icon aria-hidden="true" className="size-4 shrink-0 text-[var(--moss)]" />
+			<span className="py-1">{result.setting.title}</span>
+			{result.field ? (
+				<span className="min-w-0 truncate text-muted-foreground text-xs">
+					{result.field}
+				</span>
+			) : null}
 		</>
 	);
 }
