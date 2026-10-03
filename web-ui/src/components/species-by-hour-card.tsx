@@ -117,10 +117,10 @@ export function SpeciesByHourCard({
 		<TooltipProvider>
 			<section
 				aria-label="Species by hour"
-				className={`feature-card @container/card rounded-md p-4 ${className}`}
+				className={`feature-card @container/card rounded-md p-4 ${isEmpty ? "" : "pb-1!"} ${className}`}
 			>
 				<div
-					className={`${CARD_HEADER_CLASS} gap-3 py-2 max-[400px]:flex-wrap max-[400px]:gap-y-2 ${isEmpty && !action ? "" : "mb-(--page-gap)"}`}
+					className={`${CARD_HEADER_CLASS} gap-3 py-2 max-[400px]:flex-wrap max-[400px]:gap-y-2 ${isEmpty ? (action ? "mb-(--page-gap)" : "") : ""}`}
 				>
 					{/* "Activity" -- identical to the grid view's kicker -- so the summary
 					    beside it sits at the same x in both bodies and doesn't jump when
@@ -149,11 +149,14 @@ export function SpeciesByHourCard({
 						{emptyAction ? <div className="mt-3">{emptyAction}</div> : null}
 					</>
 				) : (
-					// p-1/-m-1 give the row links' focus ring room against the edge.
-					<div className="-m-1 p-1">
+					// px-1/-mx-1 give the row links' focus ring room at the sides.
+					<div className="-mx-1 px-1">
 						{/* The header: the count column's label, set exactly like the hour
-						    numbers, beside the hour ticks. */}
-						<div className={`${ROW_LAYOUT} mb-2`}>
+						    numbers, beside the hour ticks. It sits straight under the card's
+						    header band, its labels centred in a strip as tall as a bird row
+						    (py-2 around the 16px ticks, 32px), so it reads as the table's
+						    header row between two hairlines. */}
+						<div className={`${ROW_LAYOUT} py-2`}>
 							<div className={`h-4 ${LABEL_LAYOUT}`}>
 								<span />
 								<span className="text-right font-semibold text-[10px] text-foreground leading-none">
@@ -172,9 +175,18 @@ export function SpeciesByHourCard({
 							</div>
 						</div>
 
-						{/* Hairlines run between rows only, name to the card's far edge:
-						    the first bird sits right under the header with no rule. */}
-						<div className="[&>*:first-child]:border-t-0">
+						{/* Hairlines run wall to wall across the card, one above every
+						    bird -- the first included, so the header is ruled off from the
+						    list. The list reaches out through the card's padding (the
+						    wrapper's px-1 and -mx-1 cancel) and each row pads its content
+						    back in, so only the rule spans the full width. Both use
+						    --page-gap, not a fixed 16px: that is what the card's p-4
+						    resolves to at every width, including the phone override in
+						    styles.css. The card trims its bottom padding to a sliver (pb-1!,
+						    important so that same override can't restore the full gap), so
+						    the card's own border closes the list like one more rule, just
+						    off the last bird. */}
+						<div className="-mx-(--page-gap) [&>*]:px-(--page-gap)">
 							{rows.map((row) => (
 								<SpeciesHourRowView
 									key={row.comName}

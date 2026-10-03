@@ -91,7 +91,6 @@ function Live() {
 				hasAnyDetections={snapshot.hasAnyDetections}
 				offsetMs={offsetMs}
 				flash={heroIsNew}
-				generatedAt={snapshot.generatedAt}
 			/>
 
 			{/* `grid-cols-1` rather than a bare `grid`: the implicit track it would

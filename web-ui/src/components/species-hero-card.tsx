@@ -73,7 +73,11 @@ export function HeroPortrait({
 		// splits it. Sizing the column to the bird instead would move the text's
 		// left edge per species, which the Today hero would jump through on every
 		// poll.
-		<div className="flex h-32 w-full shrink-0 items-center justify-center overflow-hidden sm:h-36">
+		// h-28 sits just under the text column's own height (title, scientific
+		// name, age, heard-at row), so the text sets the card's height and runs
+		// edge to edge -- name at the top, heard-at row at the bottom -- rather
+		// than floating mid-card with dead space above and below it.
+		<div className="flex h-28 w-full shrink-0 items-center justify-center overflow-hidden">
 			<SpeciesImage
 				imageUrl={imageUrl}
 				alt={comName}

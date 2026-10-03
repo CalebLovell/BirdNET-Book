@@ -39,17 +39,6 @@ export function formatClockTime(timestamp: string): string {
 	});
 }
 
-/**
- * Same, to the second -- for the poll timestamp, where minute resolution would
- * leave a "live" indicator looking frozen between updates.
- */
-export function formatClockTimeWithSeconds(timestamp: string): string {
-	const time = timestamp.slice(11);
-	return new Date(`1970-01-01T${time}`).toLocaleTimeString([], {
-		timeStyle: "medium",
-	});
-}
-
 /** An hour of the day on a 12-hour clock, e.g. "5 PM". */
 export function hourLabel(hour: number): string {
 	if (hour === 0) return "12 AM";

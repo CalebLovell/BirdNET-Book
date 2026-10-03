@@ -21,16 +21,13 @@ export function CurrentBirdCard({
 	hasAnyDetections,
 	offsetMs,
 	flash,
-	generatedAt,
 }: {
 	current: CurrentBird | null;
 	hasAnyDetections: boolean;
 	offsetMs: number;
 	flash: boolean;
-	/** The poll's reading time, shown beside the Live pill. */
-	generatedAt: string;
 }) {
-	const live = <LivePill generatedAt={generatedAt} />;
+	const live = <LivePill />;
 
 	if (!current && hasAnyDetections) {
 		return (
@@ -101,7 +98,7 @@ function NestPortrait() {
 	return (
 		// Aligned like HeroPortrait, so the empty state sits in the same slot as
 		// the bird it stands in for.
-		<div className="flex h-32 w-full items-center justify-center overflow-hidden sm:h-36">
+		<div className="flex h-28 w-full items-center justify-center overflow-hidden">
 			<img
 				src="/illustrations/nest.webp"
 				alt="An empty nest"

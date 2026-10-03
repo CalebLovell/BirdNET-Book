@@ -531,12 +531,15 @@ const VIEW_META: Record<
 
 /**
  * Picks which body the window draws -- set against the card's title, top-right.
- * One bordered pill split into two tabs, each only as wide as its icon and
- * word, with a hairline between them. The pill's rounding is clipped from outside, so
- * only its two ends round: where the tabs meet they sit flush, square against
- * the divider. The active tab takes the moss fill with paper text -- the same
- * on state as the period toggle above the card -- so every "which view"
- * control on the page marks its choice the same way.
+ * One bordered box split into two tabs, each only as wide as its icon and
+ * word, with a hairline between them. Its corners match the period toolbar's
+ * controls (rounded-md). Each tab carries its own see-through hairline, the
+ * way the period toggle's items do, so the active tab's fill shows through
+ * its border and runs right to the edge instead of sitting inside a pale
+ * ring. Only the outer corners round; where the tabs meet they sit flush.
+ * The active tab takes the moss fill with paper text -- the same on state as
+ * the period toggle above the card -- so every "which view" control on the
+ * page marks its choice the same way.
  *
  * Below 520px the words go (kept for screen readers) and each tab is just its
  * icon, so the pill shrinks to leave the kicker's figures room. Not sooner:
@@ -551,7 +554,7 @@ function ViewToggle({
 	onViewChange: (next: TimelineView) => void;
 }) {
 	return (
-		<div className="flex shrink-0 overflow-hidden rounded-full border border-[var(--line)] bg-card">
+		<div className="flex shrink-0 rounded-md bg-card">
 			{TIMELINE_VIEWS.map((value) => {
 				const { label, icon: Icon } = VIEW_META[value];
 				const active = value === view;
@@ -562,7 +565,7 @@ function ViewToggle({
 						aria-pressed={active}
 						onClick={() => !active && onViewChange(value)}
 						className={cn(
-							"flex h-6 items-center justify-center gap-1.5 whitespace-nowrap px-3 font-medium text-xs transition-colors max-[520px]:px-2.5 [&+&]:border-[var(--line)] [&+&]:border-l",
+							"flex h-6 items-center justify-center gap-1.5 whitespace-nowrap border border-[var(--line)] px-3 font-medium text-xs transition-colors first:rounded-l-md last:rounded-r-md max-[520px]:px-2.5 [&+&]:border-l-0",
 							active
 								? "bg-primary text-primary-foreground"
 								: "text-muted-foreground hover:bg-[var(--meadow)] hover:text-foreground",
