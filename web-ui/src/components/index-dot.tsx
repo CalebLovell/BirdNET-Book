@@ -1,6 +1,14 @@
 import type { CSSProperties } from "react";
 
 /**
+ * The narrowest `widest` the detections and species control tables size their
+ * row numbers to: three digits, the width a first page of 100 detections
+ * needs. Both tables' number columns then match, and neither widens as it
+ * pages past 99.
+ */
+export const TABLE_INDEX_FLOOR = 100;
+
+/**
  * A row's number in a list that counts on across pages -- the detections table
  * and the species visit log. A dot that stretches to a capsule for longer
  * numbers, every one on the page as wide as `widest` (the largest number the

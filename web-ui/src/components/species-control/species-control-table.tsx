@@ -1,7 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import type { CSSProperties, ReactNode } from "react";
 import { EmptyNote } from "~/components/empty-state.tsx";
-import { IndexDot } from "~/components/index-dot.tsx";
+import { IndexDot, TABLE_INDEX_FLOOR } from "~/components/index-dot.tsx";
 import { Badge } from "~/components/ui/badge.tsx";
 import { PageStepper } from "~/components/ui/page-stepper.tsx";
 import {
@@ -316,7 +316,10 @@ export function SpeciesControlTable({
 									/>
 								</TableCell>
 								<TableCell role="cell" className={cn(CELL_GAP, "text-center")}>
-									<IndexDot index={firstIndex + index} widest={lastIndex} />
+									<IndexDot
+										index={firstIndex + index}
+										widest={Math.max(lastIndex, TABLE_INDEX_FLOOR)}
+									/>
 								</TableCell>
 								<TableCell
 									role="cell"

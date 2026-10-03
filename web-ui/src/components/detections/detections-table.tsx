@@ -11,7 +11,7 @@ import { ArrowRight, Calendar, Trash2, X } from "lucide-react";
 import { type CSSProperties, useEffect, useState } from "react";
 import { useDebouncedCallback } from "use-debounce";
 import { ConfidencePill } from "~/components/confidence-pill.tsx";
-import { IndexDot } from "~/components/index-dot.tsx";
+import { IndexDot, TABLE_INDEX_FLOOR } from "~/components/index-dot.tsx";
 import { RecordingButton } from "~/components/recording-button.tsx";
 import { PageStepper } from "~/components/ui/page-stepper.tsx";
 import { SearchInput } from "~/components/ui/search-input.tsx";
@@ -452,7 +452,10 @@ export function DetectionsTable({
 			</>
 		),
 		cell: ({ row }) => (
-			<IndexDot index={firstIndex + row.index} widest={lastIndex} />
+			<IndexDot
+				index={firstIndex + row.index}
+				widest={Math.max(lastIndex, TABLE_INDEX_FLOOR)}
+			/>
 		),
 		enableHiding: false,
 	};
