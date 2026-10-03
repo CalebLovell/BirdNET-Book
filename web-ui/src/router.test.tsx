@@ -40,7 +40,7 @@ test("schemas that take free text tolerate a numeric value", async () => {
 	const timeline = await read("./routes/timeline.tsx");
 	assert.match(timeline, /date: z\.coerce\.string\(\)/);
 
-	const species = await read("./routes/species.index.tsx");
+	const species = await read("./routes/birds.index.tsx");
 	assert.match(species, /q: z\.coerce\.string\(\)/);
 
 	// These two hand-roll the same tolerance rather than using zod.

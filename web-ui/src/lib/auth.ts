@@ -7,6 +7,7 @@ import {
 	readUnlockStatus,
 	rotateSessionNonce,
 } from "./auth.server.ts";
+import { readSiteName } from "./settings-config.server.ts";
 
 export class UnauthorizedError extends Error {
 	override name = "UnauthorizedError";
@@ -39,11 +40,17 @@ export const requireUnlocked = createMiddleware({ type: "function" }).server(
 export const getUnlockStatusFn = createServerFn({ method: "GET" }).handler(
 	async () => {
 		try {
-			return await readUnlockStatus();
+			const status = await readUnlockStatus();
+			// The station's name rides along only once unlocked: it's the
+			// account row's title, and a visitor has no business reading it.
+			return {
+				...status,
+				siteName: status.unlocked ? await readSiteName() : "",
+			};
 		} catch {
 			// A missing or corrupt auth file must read as locked. Failing open here
 			// would hand out Settings to anyone who could corrupt the file.
-			return { unlocked: false, isDefaultPassword: false };
+			return { unlocked: false, isDefaultPassword: false, siteName: "" };
 		}
 	},
 );

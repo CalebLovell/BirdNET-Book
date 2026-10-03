@@ -94,7 +94,7 @@ test("renders Installed species as the detections table's grid", async () => {
 	assert.match(table, /<span class="min-w-0 truncate">4<\/span>/);
 	assert.match(
 		table,
-		/<a href="\/species\/coyote" class="font-medium no-underline hover:underline">Coyote<\/a>/,
+		/<a href="\/birds\/coyote" class="font-medium no-underline hover:underline">Coyote<\/a>/,
 	);
 	for (const status of [
 		"Automatic",

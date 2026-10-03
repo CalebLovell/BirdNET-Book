@@ -34,7 +34,7 @@ import {
 } from "./species-control-table.tsx";
 import { SpeciesControlTools } from "./species-control-tools.tsx";
 
-const SPECIES_CONTROL_PAGE_TITLE = "Species control";
+const SPECIES_CONTROL_PAGE_TITLE = "Species Control";
 const SPECIES_CONTROL_PAGE_DESCRIPTION =
 	"Decide which installed species BirdNET may detect. Every change is confirmed before it takes effect.";
 

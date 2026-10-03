@@ -76,7 +76,7 @@ test("each highlight reads as one sentence", async () => {
 	assert.match(text, /7 gone quiet: Carolina Wren and 6 more\./);
 	assert.match(
 		markup,
-		/<a[^>]*href="\/species\/wood-thrush"[^>]*>Wood Thrush<\/a>/,
+		/<a[^>]*href="\/birds\/wood-thrush"[^>]*>Wood Thrush<\/a>/,
 	);
 });
 

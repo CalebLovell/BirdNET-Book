@@ -49,7 +49,7 @@ export function MobileNav() {
 					onClick={() => setIsOpen(true)}
 					aria-label="Open navigation"
 					aria-expanded={isOpen}
-					className="flex size-9 items-center justify-center rounded-full bg-[color-mix(in_oklab,var(--moss)_10%,var(--meadow))] text-[var(--moss)] transition-colors duration-[180ms] hover:bg-[color-mix(in_oklab,var(--moss)_18%,var(--meadow))]"
+					className="flex size-9 items-center justify-center rounded-full bg-[var(--paper-raised)] text-[var(--moss)] transition-colors duration-[180ms] hover:bg-[color-mix(in_oklab,var(--moss)_8%,var(--paper-raised))]"
 				>
 					<Menu className="size-5" aria-hidden="true" />
 				</button>
@@ -75,7 +75,7 @@ export function MobileNav() {
 							type="button"
 							onClick={() => setIsOpen(false)}
 							aria-label="Close navigation"
-							className="absolute top-3 right-2 flex size-9 items-center justify-center rounded-full bg-[color-mix(in_oklab,var(--moss)_10%,var(--meadow))] text-muted-foreground transition-colors duration-[180ms] hover:bg-[color-mix(in_oklab,var(--moss)_18%,var(--meadow))] hover:text-[var(--ink)]"
+							className="absolute top-3 right-2 flex size-9 items-center justify-center rounded-full bg-[var(--paper-raised)] text-muted-foreground transition-colors duration-[180ms] hover:bg-[color-mix(in_oklab,var(--moss)_8%,var(--paper-raised))] hover:text-[var(--ink)]"
 						>
 							<X className="size-5" aria-hidden="true" />
 						</button>

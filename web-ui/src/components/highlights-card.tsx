@@ -13,7 +13,7 @@ import {
 	VolumeX,
 } from "lucide-react";
 import { type CSSProperties, Fragment, type ReactNode } from "react";
-
+import { CardHeader } from "~/components/card-header.tsx";
 import { EmptyNote } from "~/components/empty-state.tsx";
 import { BADGE_STYLES } from "~/components/species-flag-pills.tsx";
 import { InfoTip } from "~/components/ui/info-tip.tsx";
@@ -63,10 +63,9 @@ export function HighlightsCard({
 			aria-label="Highlights"
 			className={`feature-card rounded-md p-4 ${className}`}
 		>
-			<div className="flex items-center justify-between gap-2">
-				<div className="island-kicker">Highlights</div>
+			<CardHeader title="Highlights">
 				{period ? <HighlightsInfo period={period} /> : null}
-			</div>
+			</CardHeader>
 
 			{highlights.length === 0 ? (
 				<EmptyNote>{emptyMessage}</EmptyNote>
@@ -274,7 +273,7 @@ function BirdNames({
 function BirdName({ bird }: { bird: HighlightBird }) {
 	return (
 		<Link
-			to="/species/$comName"
+			to="/birds/$comName"
 			params={{ comName: comNameToSlug(bird.comName) }}
 			className="text-[inherit]! no-underline hover:underline"
 		>

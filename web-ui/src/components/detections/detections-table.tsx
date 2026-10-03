@@ -479,7 +479,7 @@ export function DetectionsTable({
 			// hover underline included, so a species link reads the same everywhere.
 			cell: ({ row }) => (
 				<Link
-					to="/species/$comName"
+					to="/birds/$comName"
 					params={{ comName: comNameToSlug(row.original.Com_Name) }}
 					className="font-medium no-underline hover:underline"
 				>

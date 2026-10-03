@@ -5,7 +5,7 @@ import {
 } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import type { RowSelectionState } from "@tanstack/react-table";
-import { Bird, CircleAlert, ListTree } from "lucide-react";
+import { AudioWaveform, Bird, CircleAlert } from "lucide-react";
 import { useState } from "react";
 import { DeleteDetectionsDialog } from "~/components/detections/delete-detections-dialog.tsx";
 import {
@@ -102,7 +102,7 @@ function Detections() {
 		<div className="page-wrap flex h-full min-h-0 flex-col gap-(--page-gap) py-4">
 			<div className="shrink-0 space-y-(--page-gap)">
 				<PageHeaderCard
-					icon={ListTree}
+					icon={AudioWaveform}
 					title="Detections"
 					description="Browse, filter, and manage every individual detection."
 				/>

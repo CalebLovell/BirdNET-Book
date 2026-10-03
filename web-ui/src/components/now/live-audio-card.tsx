@@ -1,6 +1,5 @@
 import {
 	AudioWaveform,
-	LockKeyhole,
 	Pause,
 	Play,
 	RotateCcw,
@@ -8,7 +7,7 @@ import {
 } from "lucide-react";
 import { Popover } from "radix-ui";
 import { useEffect, useRef } from "react";
-
+import { CardHeader } from "~/components/card-header.tsx";
 import { Button } from "~/components/ui/button.tsx";
 import { Toggle } from "~/components/ui/toggle.tsx";
 import { type Rgb, rampColor } from "~/lib/spectrogram.ts";
@@ -17,15 +16,15 @@ import { useLiveAudio } from "~/lib/use-live-audio.ts";
 const STREAM_URL = "/api/live-stream";
 
 /**
- * Live listening for the station's feed. Gated: a locked station sees the
- * prompt below and never opens the (also-gated) stream. Unlocked, it plays the
+ * Live listening for the station's feed. Gated: a locked station doesn't see
+ * the card at all, and never opens the (also-gated) stream. Unlocked, it plays the
  * proxied Icecast MP3 through a WebAudio graph and paints a scrolling
  * spectrogram in the site palette. It sits in the Live page's side rail, so
  * it keeps to a short waterfall and one button, with gain and compression
  * tucked behind the settings glyph.
  */
 export function LiveAudioCard({ unlocked }: { unlocked: boolean }) {
-	if (!unlocked) return <LockedPanel />;
+	if (!unlocked) return null;
 	return <PlayerPanel />;
 }
 
@@ -40,32 +39,13 @@ function CardShell({
 }) {
 	return (
 		<section aria-label="Live audio" className="feature-card rounded-md p-4">
-			<div className="flex items-center justify-between gap-3">
-				<div className="island-kicker shrink-0">Listen</div>
+			<CardHeader title="Listen" className="gap-3">
 				<output className="min-w-0 truncate text-destructive text-xs leading-4">
 					{status}
 				</output>
-			</div>
+			</CardHeader>
 			<div className="mt-3 max-[400px]:mt-2">{children}</div>
 		</section>
-	);
-}
-
-function LockedPanel() {
-	return (
-		<CardShell>
-			<div className="flex items-center gap-3">
-				<div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-[var(--icon-well)]">
-					<LockKeyhole
-						aria-hidden="true"
-						className="size-4 text-[var(--moss)]"
-					/>
-				</div>
-				<p className="text-muted-foreground text-sm">
-					Unlock the station to listen to the live feed.
-				</p>
-			</div>
-		</CardShell>
 	);
 }
 

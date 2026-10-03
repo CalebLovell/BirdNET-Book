@@ -8,7 +8,7 @@ import {
 	XAxis,
 	YAxis,
 } from "recharts";
-
+import { CardHeader } from "~/components/card-header.tsx";
 import { ChartDataTable } from "~/components/chart-data-table.tsx";
 import { ChartValueTooltip } from "~/components/chart-tooltip.tsx";
 import { EmptyNote } from "~/components/empty-state.tsx";
@@ -50,7 +50,7 @@ export function DetectionsByMonthCard({
 			// in the card it would just be empty space.
 			className={`feature-card flex flex-col rounded-md p-4 ${isEmpty ? "" : "min-h-72"} ${className}`}
 		>
-			<div className="island-kicker">Detections by month</div>
+			<CardHeader title="Detections by month" />
 
 			{isEmpty ? (
 				<EmptyNote>No detections recorded yet.</EmptyNote>

@@ -1,6 +1,5 @@
 import { Link } from "@tanstack/react-router";
 
-import { AccountRow } from "~/components/sidebar/account-row.tsx";
 import { SidebarNav } from "~/components/sidebar/sidebar-nav.tsx";
 import { SiteSearch } from "~/components/sidebar/site-search.tsx";
 
@@ -10,11 +9,11 @@ import { SiteSearch } from "~/components/sidebar/site-search.tsx";
  */
 export function SidebarBody({ onNavigate }: { onNavigate?: () => void }) {
 	return (
-		<div className="flex min-h-full flex-col py-4">
+		<div className="flex min-h-full flex-col py-3">
 			<Link
 				to="/"
 				onClick={onNavigate}
-				className="display-title px-4 pb-4 font-semibold text-xl no-underline"
+				className="display-title px-3 pb-4 font-semibold text-xl no-underline"
 			>
 				BirdNET-Book
 			</Link>
@@ -22,15 +21,6 @@ export function SidebarBody({ onNavigate }: { onNavigate?: () => void }) {
 			<SiteSearch onNavigate={onNavigate} />
 
 			<SidebarNav onNavigate={onNavigate} />
-
-			{/* Pushed to the bottom on a tall viewport, and simply last in the flow
-			    on a short one -- `mt-auto` does both. */}
-			<div className="mt-auto pt-4">
-				<hr className="mx-4 mb-3 border-0 border-[var(--line)] border-t" />
-				<div className="px-2">
-					<AccountRow onNavigate={onNavigate} />
-				</div>
-			</div>
 		</div>
 	);
 }

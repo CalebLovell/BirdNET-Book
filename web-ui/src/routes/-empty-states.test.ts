@@ -16,7 +16,7 @@ test("a station that has never recorded anything gets the page-level card", asyn
 		"./detections.tsx",
 		"./timeline.tsx",
 		"./learn.tsx",
-		"./species.index.tsx",
+		"./birds.index.tsx",
 	]) {
 		const source = await read(file);
 		assert.match(source, /<EmptyState/, `${file} should use EmptyState`);
@@ -63,7 +63,7 @@ test("section-level empties stay quiet lines", async () => {
 		/<EmptyNote>No detections match these filters\.<\/EmptyNote>/,
 	);
 
-	const species = await read("./species.index.tsx");
+	const species = await read("./birds.index.tsx");
 	assert.match(species, /<EmptyNote>/);
 
 	// The window periods' quiet line lives in the grid card they share.
@@ -76,8 +76,8 @@ test("no route hand-rolls the empty paragraph any more", async () => {
 		"./detections.tsx",
 		"./timeline.tsx",
 		"./learn.tsx",
-		"./species.index.tsx",
-		"./species.$comName.tsx",
+		"./birds.index.tsx",
+		"./birds.$comName.tsx",
 		"../components/detections-by-hour-card.tsx",
 		"../components/detections-by-month-card.tsx",
 		"../components/now/recent-log-card.tsx",

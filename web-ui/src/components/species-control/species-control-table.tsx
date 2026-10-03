@@ -326,7 +326,7 @@ export function SpeciesControlTable({
 									className={cn(CELL_GAP, "min-w-0 truncate")}
 								>
 									<Link
-										to="/species/$comName"
+										to="/birds/$comName"
 										params={{ comName: comNameToSlug(row.comName) }}
 										className="font-medium no-underline hover:underline"
 									>

@@ -19,7 +19,7 @@ const SPECIES = [
 
 const PAGES: SearchPage[] = [
 	{ label: "Live", to: "/live" },
-	{ label: "Species", to: "/species" },
+	{ label: "Species", to: "/birds" },
 	{ label: "Settings", to: "/settings" },
 ];
 

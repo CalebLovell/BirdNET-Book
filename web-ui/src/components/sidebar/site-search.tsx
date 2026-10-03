@@ -1,13 +1,13 @@
 import { useNavigate, useRouteContext } from "@tanstack/react-router";
 import {
 	Activity,
+	AudioWaveform,
 	CalendarRange,
-	CheckCheck,
 	Feather,
 	Lightbulb,
-	ListTree,
 	type LucideIcon,
 	Search,
+	SearchCheck,
 	Settings,
 	SlidersHorizontal,
 	UserRound,
@@ -39,14 +39,14 @@ type PageEntry = SearchPage & { icon: LucideIcon; gated?: boolean };
 /** Labels and icons match the sidebar's own, so a page is found by the name
  * and glyph you already know it by. */
 const PAGES: PageEntry[] = [
-	{ label: "Live", to: "/live", icon: Activity },
+	{ label: "Live Feed", to: "/live", icon: Activity },
 	{ label: "Timeline", to: "/timeline", icon: CalendarRange },
-	{ label: "Species", to: "/species", icon: Feather },
-	{ label: "Detections", to: "/detections", icon: ListTree },
+	{ label: "All Birds", to: "/birds", icon: Feather },
+	{ label: "Detections", to: "/detections", icon: AudioWaveform },
 	{ label: "Learn", to: "/learn", icon: Lightbulb },
-	{ label: "Review", to: "/review", icon: CheckCheck, gated: true },
+	{ label: "Review", to: "/review", icon: SearchCheck, gated: true },
 	{
-		label: "Control",
+		label: "Species Control",
 		to: "/species-control",
 		icon: SlidersHorizontal,
 		gated: true,
@@ -162,7 +162,7 @@ export function SiteSearch({ onNavigate }: { onNavigate?: () => void }) {
 	function go(result: Result) {
 		if (result.kind === "species") {
 			navigate({
-				to: "/species/$comName",
+				to: "/birds/$comName",
 				params: { comName: comNameToSlug(result.species.comName) },
 			});
 		} else if (result.kind === "page") {
@@ -199,10 +199,10 @@ export function SiteSearch({ onNavigate }: { onNavigate?: () => void }) {
 	return (
 		<Popover.Root open={open}>
 			<Popover.Anchor asChild>
-				<div className="relative px-2 pb-3">
+				<div className="relative px-3 pb-3">
 					<Search
 						aria-hidden="true"
-						className="pointer-events-none absolute top-1/2 left-5 size-4 -translate-y-[calc(50%+0.375rem)] text-muted-foreground"
+						className="pointer-events-none absolute top-1/2 left-6 size-4 -translate-y-[calc(50%+0.375rem)] text-muted-foreground"
 					/>
 					<Input
 						ref={input}

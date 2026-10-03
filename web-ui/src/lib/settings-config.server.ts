@@ -280,3 +280,17 @@ export async function readReviewRareSpeciesMax(
 		throw error;
 	}
 }
+
+/**
+ * The station's own name (`SITE_NAME`), trimmed, or "" when unset or the config
+ * can't be read. Only ever handed to a signed-in browser: it names whoever's
+ * station this is, and Settings -- where it's edited -- is gated too.
+ */
+export async function readSiteName(settingsPath = resolveSettingsPath()) {
+	try {
+		const values = parseBirdnetConfig(await readFile(settingsPath, "utf8"));
+		return (values.SITE_NAME ?? "").trim();
+	} catch {
+		return "";
+	}
+}

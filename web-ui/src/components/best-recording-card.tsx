@@ -1,3 +1,4 @@
+import { CardHeader } from "~/components/card-header.tsx";
 import { ConfidencePill } from "~/components/confidence-pill.tsx";
 import { EmptyNote } from "~/components/empty-state.tsx";
 import { RecordingButton } from "~/components/recording-button.tsx";
@@ -23,7 +24,7 @@ export function BestRecordingCard({
 			aria-label="Best recording"
 			className={`feature-card flex flex-col rounded-md p-4 ${className}`}
 		>
-			<div className="island-kicker">Best recording</div>
+			<CardHeader title="Best recording" />
 
 			{!recording || !recording.audioUrl ? (
 				<EmptyNote>No recordings kept for this species yet.</EmptyNote>

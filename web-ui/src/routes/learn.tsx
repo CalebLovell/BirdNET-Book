@@ -6,7 +6,7 @@ import {
 } from "@tanstack/react-router";
 import { Bird, Lightbulb } from "lucide-react";
 import { z } from "zod";
-
+import { CardHeader } from "~/components/card-header.tsx";
 import { EmptyNote, EmptyState } from "~/components/empty-state.tsx";
 import { LearnGame } from "~/components/learn/learn-game.tsx";
 import { LearnPoolSelector } from "~/components/learn/learn-layout.tsx";
@@ -112,7 +112,7 @@ function EmptyPool({
 
 	return (
 		<section className="feature-card rounded-md p-4">
-			<div className="island-kicker">Not enough to go on</div>
+			<CardHeader title="Not enough to go on" />
 			<EmptyNote>
 				A round needs {CHOICES_PER_QUESTION} species with clear recordings still
 				on disk, and this selection has{" "}

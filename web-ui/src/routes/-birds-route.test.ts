@@ -4,7 +4,7 @@ import test from "node:test";
 
 test("an unknown slug throws notFound and the route catches it itself", async () => {
 	const source = await readFile(
-		new URL("./species.$comName.tsx", import.meta.url),
+		new URL("./birds.$comName.tsx", import.meta.url),
 		"utf8",
 	);
 	assert.match(source, /status === "unknown"/);
@@ -15,7 +15,7 @@ test("an unknown slug throws notFound and the route catches it itself", async ()
 
 test("a known but unheard bird gets a profile, not an error", async () => {
 	const source = await readFile(
-		new URL("./species.$comName.tsx", import.meta.url),
+		new URL("./birds.$comName.tsx", import.meta.url),
 		"utf8",
 	);
 	assert.match(source, /status === "undetected"/);
@@ -29,7 +29,7 @@ test("a known but unheard bird gets a profile, not an error", async () => {
 
 test("hooks live in the detail view, not behind a conditional", async () => {
 	const source = await readFile(
-		new URL("./species.$comName.tsx", import.meta.url),
+		new URL("./birds.$comName.tsx", import.meta.url),
 		"utf8",
 	);
 	const view = source.slice(source.indexOf("function SpeciesDetailView"));

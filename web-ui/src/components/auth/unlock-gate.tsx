@@ -1,11 +1,12 @@
 import { useRouter } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { AlertTriangle, KeyRound, LockKeyhole } from "lucide-react";
+import { AlertTriangle, KeyRound } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-
+import { CardHeader } from "~/components/card-header.tsx";
 import { Button } from "~/components/ui/button.tsx";
 import { Input } from "~/components/ui/input.tsx";
 import { unlockFn } from "~/lib/auth.ts";
+import { SITE_NAME } from "~/lib/page-title.ts";
 
 const MESSAGES = {
 	invalid: "That password is not right.",
@@ -15,17 +16,13 @@ const MESSAGES = {
 } as const;
 
 /**
- * The station's sign-in card, on /account. Gated pages redirect there rather
- * than locking in place, and `onUnlock` is how the page sends you on to the
- * one you were headed for.
+ * The station's sign-in form, its own card under the Account masthead.
+ * Gated pages redirect there rather than locking in place, and `onUnlock` is
+ * how the page sends you on to the one you were headed for.
  */
 export function UnlockGate({
-	title,
-	description,
 	onUnlock,
 }: {
-	title: string;
-	description: string;
 	/** Runs once the session is live and the router has picked it up. */
 	onUnlock?: () => void;
 }) {
@@ -66,98 +63,102 @@ export function UnlockGate({
 	}
 
 	return (
-		<section
+		<form
 			aria-labelledby="unlock-title"
-			className="feature-card overflow-hidden rounded-md"
+			className="feature-card flex flex-col gap-4 rounded-md p-(--page-gap)"
+			onSubmit={onSubmit}
 		>
-			<header className="flex items-center gap-3 border-b p-4">
-				<div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-[var(--icon-well)]">
-					<LockKeyhole
-						aria-hidden="true"
-						className="size-4 text-[var(--moss)]"
-					/>
-				</div>
-				<div className="min-w-0">
-					{/* Deliberately not "Settings is locked": the page's own masthead
-					    sits directly above this card and has already said which page
-					    you are on. Naming it again read as a second, competing title. */}
-					<h2
-						id="unlock-title"
-						className="display-title font-semibold text-lg leading-tight"
-					>
-						{title}
-					</h2>
-					<p className="mt-1 text-muted-foreground text-sm leading-relaxed">
-						{description}
-					</p>
-				</div>
-			</header>
-
-			<form className="flex flex-col gap-4 p-4" onSubmit={onSubmit}>
-				{/* The same two-column field grid the settings cards use, so the
+			<CardHeader as="h2" titleId="unlock-title" title="Sign in" />
+			{/* The same two-column field grid the settings cards use, so the
 					    field is the width of a Station or Storage field rather than a
 					    password box stretched across the whole content column. */}
-				<div className="grid gap-4 sm:grid-cols-2">
-					{/* Laid out like the settings cards' `Field`, but with the hint
-						    outside the label and referenced by `aria-describedby`. Nesting
-						    it, as `Field` does, folds the whole hint into the field's
-						    accessible name -- a screen reader would announce "Station
-						    password Set on the Pi with scripts/set_web_ui_password.sh"
-						    as the name of the box. */}
-					<div className="space-y-1.5">
-						<label
-							htmlFor="station-password"
-							className="block font-medium text-sm"
-						>
-							Station password
-						</label>
-						<Input
-							ref={field}
-							id="station-password"
-							aria-describedby="station-password-hint"
-							type="password"
-							autoComplete="current-password"
-							value={password}
-							onChange={(event) => setPassword(event.target.value)}
-						/>
-						<p
-							id="station-password-hint"
-							className="text-muted-foreground text-xs leading-relaxed"
-						>
-							Set on the Pi with{" "}
-							<code className="tabular-data">
-								scripts/set_web_ui_password.sh
-							</code>
-							.
-						</p>
-					</div>
+			<div className="grid gap-4 sm:grid-cols-2">
+				{/* There is no username -- the station has one password -- but a
+				    password manager files a login under one, and a form with only a
+				    password left them unsure what they were saving. A fixed,
+				    read-only name gives them that. It's the public site name, not
+				    the station's own SITE_NAME: that one is only readable once
+				    signed in, and renaming the station would orphan saved logins.
+				    The server never sees it. */}
+				<div className="space-y-1.5 sm:col-start-1">
+					<label
+						htmlFor="station-username"
+						className="block font-medium text-sm"
+					>
+						Username
+					</label>
+					<Input
+						id="station-username"
+						name="username"
+						type="text"
+						autoComplete="username"
+						value={SITE_NAME}
+						readOnly
+						className="bg-[var(--meadow)] text-muted-foreground hover:bg-[var(--meadow)] hover:text-muted-foreground"
+					/>
 				</div>
-
-				<div className="flex flex-wrap items-center justify-between gap-3">
+				{/* Laid out like the settings cards' `Field`, but with the hint
+				    outside the label and referenced by `aria-describedby`. Nesting
+				    it, as `Field` does, folds the whole hint into the field's
+				    accessible name -- a screen reader would announce "Station
+				    password Set on the Pi with scripts/set_web_ui_password.sh"
+				    as the name of the box. */}
+				<div className="space-y-1.5 sm:col-start-1">
+					<label
+						htmlFor="station-password"
+						className="block font-medium text-sm"
+					>
+						Station password
+					</label>
+					<Input
+						ref={field}
+						id="station-password"
+						aria-describedby="station-password-hint"
+						name="password"
+						type="password"
+						autoComplete="current-password"
+						value={password}
+						onChange={(event) => setPassword(event.target.value)}
+					/>
 					<p
-						aria-live="polite"
-						role="alert"
-						className="flex min-w-0 items-start gap-2 text-destructive text-xs"
+						id="station-password-hint"
+						className="text-muted-foreground text-xs leading-relaxed"
 					>
-						{error ? (
-							<>
-								<AlertTriangle
-									aria-hidden="true"
-									className="mt-px size-3.5 shrink-0"
-								/>
-								<span>{error}</span>
-							</>
-						) : null}
+						Set on the Pi with{" "}
+						<code className="tabular-data">scripts/set_web_ui_password.sh</code>
+						.
 					</p>
-					<Button
-						type="submit"
-						icon={KeyRound}
-						disabled={pending || password.length === 0}
-					>
-						{pending ? "Unlocking…" : "Unlock"}
-					</Button>
 				</div>
-			</form>
-		</section>
+			</div>
+
+			{/* Button first, on the left under the fields it submits, with any
+			    failure beside it. `sm`, like the timeline's jump-to-nearest link
+			    button, rather than the site's default `xs`. */}
+			<div className="flex flex-wrap items-center gap-3">
+				<Button
+					type="submit"
+					size="sm"
+					icon={KeyRound}
+					disabled={pending || password.length === 0}
+				>
+					{pending ? "Unlocking…" : "Unlock"}
+				</Button>
+				<p
+					aria-live="polite"
+					role="alert"
+					className="flex min-w-0 items-start gap-2 text-destructive text-xs"
+				>
+					{error ? (
+						<>
+							<AlertTriangle
+								aria-hidden="true"
+								className="mt-px size-3.5 shrink-0"
+							/>
+							<span>{error}</span>
+						</>
+					) : null}
+				</p>
+			</div>
+		</form>
 	);
 }

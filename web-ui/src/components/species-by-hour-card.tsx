@@ -1,5 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import type { ReactNode } from "react";
+import { CARD_HEADER_CLASS } from "~/components/card-header.tsx";
 import { EmptyNote } from "~/components/empty-state.tsx";
 import { SpeciesFlagPills } from "~/components/species-flag-pills.tsx";
 import { SpeciesImage } from "~/components/species-image.tsx";
@@ -119,7 +120,7 @@ export function SpeciesByHourCard({
 				className={`feature-card @container/card rounded-md p-4 ${className}`}
 			>
 				<div
-					className={`flex items-start justify-between gap-3 max-[400px]:flex-wrap max-[400px]:gap-y-2 ${isEmpty && !action ? "" : "mb-(--page-gap)"}`}
+					className={`${CARD_HEADER_CLASS} gap-3 py-2 max-[400px]:flex-wrap max-[400px]:gap-y-2 ${isEmpty && !action ? "" : "mb-(--page-gap)"}`}
 				>
 					{/* "Activity" -- identical to the grid view's kicker -- so the summary
 					    beside it sits at the same x in both bodies and doesn't jump when
@@ -138,9 +139,7 @@ export function SpeciesByHourCard({
 						<div className="island-kicker shrink-0">Activity</div>
 						{summary}
 					</div>
-					{/* The switcher sits inside the content box, flush with its top and
-					    right edges -- never pulled out into the card's padding. It hangs a
-					    little below the kicker's line rather than lift the kicker off it. */}
+					{/* The switcher holds the band's right end. */}
 					{action ? <div className="shrink-0">{action}</div> : null}
 				</div>
 
@@ -223,7 +222,7 @@ function SpeciesHourRowView({
 	return (
 		<div className={`${ROW_LAYOUT} border-[var(--line)] border-t`}>
 			<Link
-				to="/species/$comName"
+				to="/birds/$comName"
 				params={{ comName: comNameToSlug(row.comName) }}
 				className={`group h-8 no-underline ${LABEL_LAYOUT}`}
 			>

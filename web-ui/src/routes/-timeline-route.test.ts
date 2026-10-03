@@ -94,7 +94,7 @@ test("the nav lists one entry per scope, not one per period", async () => {
 test("a date drilled into from a table lands on a window it can zoom out from", async () => {
 	for (const file of [
 		"../components/detections/detections-table.tsx",
-		"./species.$comName.tsx",
+		"./birds.$comName.tsx",
 	]) {
 		const source = await read(file);
 		assert.doesNotMatch(

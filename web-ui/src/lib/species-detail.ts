@@ -172,7 +172,7 @@ export const getSpeciesVisits = createServerFn({ method: "GET" })
 	});
 
 /**
- * What a `/species/$comName` slug turned out to name.
+ * What a `/birds/$comName` slug turned out to name.
  *
  * `undetected` is the interesting one: a bird the installed classifier knows
  * about but this station has never heard. That is a legitimate page -- you can

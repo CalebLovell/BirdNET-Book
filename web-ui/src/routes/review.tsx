@@ -1,6 +1,6 @@
 import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { CheckCheck, CircleAlert } from "lucide-react";
+import { CircleAlert, SearchCheck } from "lucide-react";
 import { useState } from "react";
 import { PageHeaderCard } from "~/components/page-header-card.tsx";
 import { PageStatus } from "~/components/page-status.tsx";
@@ -73,7 +73,7 @@ function Review() {
 	return (
 		<div className="page-wrap space-y-(--page-gap) py-4">
 			<PageHeaderCard
-				icon={CheckCheck}
+				icon={SearchCheck}
 				title={REVIEW_PAGE_TITLE}
 				description={`Species the station has heard fewer than ${page.rareSpeciesMax} times, on recordings BirdNET scored below ${formatConfidence(CONFIDENT_MIN)}.`}
 				action={

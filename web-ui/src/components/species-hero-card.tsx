@@ -135,7 +135,7 @@ export function SpeciesHeroCard({
 					<h1 className="display-title font-bold text-2xl text-[var(--moss)] sm:text-3xl">
 						{speciesSlug ? (
 							<Link
-								to="/species/$comName"
+								to="/birds/$comName"
 								params={{ comName: speciesSlug }}
 								className="no-underline hover:underline"
 							>

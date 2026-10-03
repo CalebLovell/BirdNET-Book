@@ -1,14 +1,14 @@
 import { useRouter } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { AlertTriangle, KeyRound, Lock, LogOut } from "lucide-react";
+import { AlertTriangle, Lock, LogOut } from "lucide-react";
 import { useState } from "react";
-
+import { CardHeader } from "~/components/card-header.tsx";
 import { Button } from "~/components/ui/button.tsx";
 import { ConfirmDialog } from "~/components/ui/confirm-dialog.tsx";
 import { lockFn, signOutAllDevicesFn } from "~/lib/auth.ts";
 
 /**
- * The Account page's card while this browser is signed in.
+ * The Account page's card under the masthead while this browser is signed in.
  *
  * Nothing here is a pending edit waiting on Save; both controls act the moment
  * they are confirmed.
@@ -55,29 +55,12 @@ export function SessionCard({
 	}
 
 	return (
-		<section
-			aria-labelledby="account-session"
-			className="feature-card overflow-hidden rounded-md"
-		>
-			<header className="flex items-center gap-3 border-b p-(--page-gap) max-[400px]:gap-2">
-				<div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-[var(--icon-well)]">
-					<KeyRound aria-hidden="true" className="size-4 text-[var(--moss)]" />
-				</div>
-				<div className="min-w-0">
-					<h2
-						id="account-session"
-						className="display-title font-semibold text-lg leading-tight"
-					>
-						Signed in
-					</h2>
-					<p className="mt-1 text-muted-foreground text-sm leading-relaxed">
-						This browser can open Review, Control and Settings until you lock
-						it.
-					</p>
-				</div>
-			</header>
-
-			<div className="flex flex-1 flex-col gap-(--page-gap) p-(--page-gap)">
+		<>
+			<section
+				aria-labelledby="account-session"
+				className="feature-card flex flex-col gap-(--page-gap) rounded-md p-(--page-gap)"
+			>
+				<CardHeader as="h2" titleId="account-session" title="This browser" />
 				{isDefaultPassword ? (
 					// biome-ignore lint/a11y/useSemanticElements: <output> means the result of a calculation; this is a persistent configuration warning
 					<div
@@ -138,7 +121,7 @@ export function SessionCard({
 						</Button>
 					</div>
 				</div>
-			</div>
+			</section>
 
 			{confirming ? (
 				<ConfirmDialog
@@ -153,6 +136,6 @@ export function SessionCard({
 					}}
 				/>
 			) : null}
-		</section>
+		</>
 	);
 }

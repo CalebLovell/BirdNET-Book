@@ -77,7 +77,7 @@ async function renderPage() {
 
 test("renders the complete species policy workspace", async () => {
 	const markup = await renderPage();
-	assert.match(markup, />Species control</);
+	assert.match(markup, />Species Control</);
 	assert.doesNotMatch(markup, /Detection mode/);
 	assert.match(markup, /aria-label="Search installed species"/);
 	for (const heading of ["Species", "Scientific name", "Count", "Status"]) {

@@ -1,6 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { ArrowRight, Check, RotateCcw, Trophy, X } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
+import { CardHeader } from "~/components/card-header.tsx";
 import { ConfidencePill } from "~/components/confidence-pill.tsx";
 import { ClipPlayer } from "~/components/learn/clip-player.tsx";
 import { RecordingButton } from "~/components/recording-button.tsx";
@@ -196,7 +197,7 @@ export function LearnGame({
 										+{pointsForAttempt(wrongGuesses.length + 1)} pts
 									</span>
 									<Link
-										to="/species/$comName"
+										to="/birds/$comName"
 										params={{ comName: answer.speciesSlug }}
 										className="text-sm no-underline hover:underline"
 									>
@@ -347,7 +348,7 @@ function AnsweredRailRow({
 
 			<div className="min-w-0 flex-1">
 				<Link
-					to="/species/$comName"
+					to="/birds/$comName"
 					params={{ comName: answer.speciesSlug }}
 					className="block min-w-0 max-w-fit truncate font-medium text-sm no-underline hover:underline"
 				>
@@ -564,7 +565,7 @@ function RoundSummary({
 			aria-label="Round results"
 			className="feature-card rise-in rounded-md p-4"
 		>
-			<div className="island-kicker">Round complete</div>
+			<CardHeader title="Round complete" />
 
 			<div className="mt-(--page-gap) flex flex-wrap items-baseline gap-x-4 gap-y-1 max-[400px]:gap-x-2">
 				<div className="tabular-data font-semibold text-4xl leading-none">
@@ -604,7 +605,7 @@ function RoundSummary({
 							<ChoiceThumbnail choice={answer} />
 							<div className="min-w-0 flex-1">
 								<Link
-									to="/species/$comName"
+									to="/birds/$comName"
 									params={{ comName: answer.speciesSlug }}
 									className="block max-w-fit truncate font-medium no-underline hover:underline"
 								>

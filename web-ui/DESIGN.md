@@ -91,8 +91,8 @@ the full figure (a heat-map cell) shortens past three digits: 1k, 1.2k, 300k,
 - **Nav rows**: active is marked by fill alone (a step deeper than the meadow
   hover), never bolder text. Gated pages stay listed with a lock icon.
 - **Sidebar**: logo, then site search (species, pages, filtered detections;
-  `/` to focus), then the nav, with the account row at the foot linking to
-  `/account`. The Live pill lives in the Live page's hero, not the chrome.
+  `/` to focus), then the nav (Explore, Manage, then an Account link to
+  `/account`), with Settings and Species control at the foot. The Live pill lives in the Live page's hero, not the chrome.
 - **Empty states**: `EmptyNote` inside a populated page; `EmptyState` only
   when the whole page is empty.
 - **Chart tooltip**: one line, "6 AM — 1,284 detections", only the bucket bold.

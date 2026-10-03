@@ -11,17 +11,19 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AccountRouteImport } from './routes/account'
+import { Route as BirdsRouteImport } from './routes/birds'
 import { Route as DetectionsRouteImport } from './routes/detections'
 import { Route as LearnRouteImport } from './routes/learn'
 import { Route as LiveRouteImport } from './routes/live'
 import { Route as ReviewRouteImport } from './routes/review'
 import { Route as SettingsRouteImport } from './routes/settings'
-import { Route as SpeciesRouteImport } from './routes/species'
 import { Route as SpeciesControlRouteImport } from './routes/species-control'
 import { Route as StatsRouteImport } from './routes/stats'
 import { Route as TimelineRouteImport } from './routes/timeline'
 import { Route as TodayRouteImport } from './routes/today'
 import { Route as ApiLiveStreamRouteImport } from './routes/api/live-stream'
+import { Route as BirdsIndexRouteImport } from './routes/birds.index'
+import { Route as BirdsComNameRouteImport } from './routes/birds.$comName'
 import { Route as DayDateRouteImport } from './routes/day.$date'
 import { Route as SpeciesIndexRouteImport } from './routes/species.index'
 import { Route as SpeciesComNameRouteImport } from './routes/species.$comName'
@@ -35,6 +37,11 @@ const IndexRoute = IndexRouteImport.update({
 const AccountRoute = AccountRouteImport.update({
   id: '/account',
   path: '/account',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BirdsRoute = BirdsRouteImport.update({
+  id: '/birds',
+  path: '/birds',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DetectionsRoute = DetectionsRouteImport.update({
@@ -62,11 +69,6 @@ const SettingsRoute = SettingsRouteImport.update({
   path: '/settings',
   getParentRoute: () => rootRouteImport,
 } as any)
-const SpeciesRoute = SpeciesRouteImport.update({
-  id: '/species',
-  path: '/species',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const SpeciesControlRoute = SpeciesControlRouteImport.update({
   id: '/species-control',
   path: '/species-control',
@@ -92,20 +94,30 @@ const ApiLiveStreamRoute = ApiLiveStreamRouteImport.update({
   path: '/api/live-stream',
   getParentRoute: () => rootRouteImport,
 } as any)
+const BirdsIndexRoute = BirdsIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => BirdsRoute,
+} as any)
+const BirdsComNameRoute = BirdsComNameRouteImport.update({
+  id: '/$comName',
+  path: '/$comName',
+  getParentRoute: () => BirdsRoute,
+} as any)
 const DayDateRoute = DayDateRouteImport.update({
   id: '/day/$date',
   path: '/day/$date',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SpeciesIndexRoute = SpeciesIndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => SpeciesRoute,
+  id: '/species/',
+  path: '/species/',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const SpeciesComNameRoute = SpeciesComNameRouteImport.update({
-  id: '/$comName',
-  path: '/$comName',
-  getParentRoute: () => SpeciesRoute,
+  id: '/species/$comName',
+  path: '/species/$comName',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const ApiAudioDateSpeciesAndFileRoute =
   ApiAudioDateSpeciesAndFileRouteImport.update({
@@ -117,19 +129,21 @@ const ApiAudioDateSpeciesAndFileRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/account': typeof AccountRoute
+  '/birds': typeof BirdsRouteWithChildren
   '/detections': typeof DetectionsRoute
   '/learn': typeof LearnRoute
   '/live': typeof LiveRoute
   '/review': typeof ReviewRoute
   '/settings': typeof SettingsRoute
-  '/species': typeof SpeciesRouteWithChildren
   '/species-control': typeof SpeciesControlRoute
   '/stats': typeof StatsRoute
   '/timeline': typeof TimelineRoute
   '/today': typeof TodayRoute
   '/api/live-stream': typeof ApiLiveStreamRoute
+  '/birds/$comName': typeof BirdsComNameRoute
   '/day/$date': typeof DayDateRoute
   '/species/$comName': typeof SpeciesComNameRoute
+  '/birds/': typeof BirdsIndexRoute
   '/species/': typeof SpeciesIndexRoute
   '/api/audio/$date/$speciesAndFile': typeof ApiAudioDateSpeciesAndFileRoute
 }
@@ -146,8 +160,10 @@ export interface FileRoutesByTo {
   '/timeline': typeof TimelineRoute
   '/today': typeof TodayRoute
   '/api/live-stream': typeof ApiLiveStreamRoute
+  '/birds/$comName': typeof BirdsComNameRoute
   '/day/$date': typeof DayDateRoute
   '/species/$comName': typeof SpeciesComNameRoute
+  '/birds': typeof BirdsIndexRoute
   '/species': typeof SpeciesIndexRoute
   '/api/audio/$date/$speciesAndFile': typeof ApiAudioDateSpeciesAndFileRoute
 }
@@ -155,19 +171,21 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/account': typeof AccountRoute
+  '/birds': typeof BirdsRouteWithChildren
   '/detections': typeof DetectionsRoute
   '/learn': typeof LearnRoute
   '/live': typeof LiveRoute
   '/review': typeof ReviewRoute
   '/settings': typeof SettingsRoute
-  '/species': typeof SpeciesRouteWithChildren
   '/species-control': typeof SpeciesControlRoute
   '/stats': typeof StatsRoute
   '/timeline': typeof TimelineRoute
   '/today': typeof TodayRoute
   '/api/live-stream': typeof ApiLiveStreamRoute
+  '/birds/$comName': typeof BirdsComNameRoute
   '/day/$date': typeof DayDateRoute
   '/species/$comName': typeof SpeciesComNameRoute
+  '/birds/': typeof BirdsIndexRoute
   '/species/': typeof SpeciesIndexRoute
   '/api/audio/$date/$speciesAndFile': typeof ApiAudioDateSpeciesAndFileRoute
 }
@@ -176,19 +194,21 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/account'
+    | '/birds'
     | '/detections'
     | '/learn'
     | '/live'
     | '/review'
     | '/settings'
-    | '/species'
     | '/species-control'
     | '/stats'
     | '/timeline'
     | '/today'
     | '/api/live-stream'
+    | '/birds/$comName'
     | '/day/$date'
     | '/species/$comName'
+    | '/birds/'
     | '/species/'
     | '/api/audio/$date/$speciesAndFile'
   fileRoutesByTo: FileRoutesByTo
@@ -205,27 +225,31 @@ export interface FileRouteTypes {
     | '/timeline'
     | '/today'
     | '/api/live-stream'
+    | '/birds/$comName'
     | '/day/$date'
     | '/species/$comName'
+    | '/birds'
     | '/species'
     | '/api/audio/$date/$speciesAndFile'
   id:
     | '__root__'
     | '/'
     | '/account'
+    | '/birds'
     | '/detections'
     | '/learn'
     | '/live'
     | '/review'
     | '/settings'
-    | '/species'
     | '/species-control'
     | '/stats'
     | '/timeline'
     | '/today'
     | '/api/live-stream'
+    | '/birds/$comName'
     | '/day/$date'
     | '/species/$comName'
+    | '/birds/'
     | '/species/'
     | '/api/audio/$date/$speciesAndFile'
   fileRoutesById: FileRoutesById
@@ -233,18 +257,20 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AccountRoute: typeof AccountRoute
+  BirdsRoute: typeof BirdsRouteWithChildren
   DetectionsRoute: typeof DetectionsRoute
   LearnRoute: typeof LearnRoute
   LiveRoute: typeof LiveRoute
   ReviewRoute: typeof ReviewRoute
   SettingsRoute: typeof SettingsRoute
-  SpeciesRoute: typeof SpeciesRouteWithChildren
   SpeciesControlRoute: typeof SpeciesControlRoute
   StatsRoute: typeof StatsRoute
   TimelineRoute: typeof TimelineRoute
   TodayRoute: typeof TodayRoute
   ApiLiveStreamRoute: typeof ApiLiveStreamRoute
   DayDateRoute: typeof DayDateRoute
+  SpeciesComNameRoute: typeof SpeciesComNameRoute
+  SpeciesIndexRoute: typeof SpeciesIndexRoute
   ApiAudioDateSpeciesAndFileRoute: typeof ApiAudioDateSpeciesAndFileRoute
 }
 
@@ -262,6 +288,13 @@ declare module '@tanstack/react-router' {
       path: '/account'
       fullPath: '/account'
       preLoaderRoute: typeof AccountRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/birds': {
+      id: '/birds'
+      path: '/birds'
+      fullPath: '/birds'
+      preLoaderRoute: typeof BirdsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/detections': {
@@ -299,13 +332,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SettingsRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/species': {
-      id: '/species'
-      path: '/species'
-      fullPath: '/species'
-      preLoaderRoute: typeof SpeciesRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/species-control': {
       id: '/species-control'
       path: '/species-control'
@@ -341,6 +367,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiLiveStreamRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/birds/': {
+      id: '/birds/'
+      path: '/'
+      fullPath: '/birds/'
+      preLoaderRoute: typeof BirdsIndexRouteImport
+      parentRoute: typeof BirdsRoute
+    }
+    '/birds/$comName': {
+      id: '/birds/$comName'
+      path: '/$comName'
+      fullPath: '/birds/$comName'
+      preLoaderRoute: typeof BirdsComNameRouteImport
+      parentRoute: typeof BirdsRoute
+    }
     '/day/$date': {
       id: '/day/$date'
       path: '/day/$date'
@@ -350,17 +390,17 @@ declare module '@tanstack/react-router' {
     }
     '/species/': {
       id: '/species/'
-      path: '/'
+      path: '/species'
       fullPath: '/species/'
       preLoaderRoute: typeof SpeciesIndexRouteImport
-      parentRoute: typeof SpeciesRoute
+      parentRoute: typeof rootRouteImport
     }
     '/species/$comName': {
       id: '/species/$comName'
-      path: '/$comName'
+      path: '/species/$comName'
       fullPath: '/species/$comName'
       preLoaderRoute: typeof SpeciesComNameRouteImport
-      parentRoute: typeof SpeciesRoute
+      parentRoute: typeof rootRouteImport
     }
     '/api/audio/$date/$speciesAndFile': {
       id: '/api/audio/$date/$speciesAndFile'
@@ -372,34 +412,35 @@ declare module '@tanstack/react-router' {
   }
 }
 
-interface SpeciesRouteChildren {
-  SpeciesComNameRoute: typeof SpeciesComNameRoute
-  SpeciesIndexRoute: typeof SpeciesIndexRoute
+interface BirdsRouteChildren {
+  BirdsComNameRoute: typeof BirdsComNameRoute
+  BirdsIndexRoute: typeof BirdsIndexRoute
 }
 
-const SpeciesRouteChildren: SpeciesRouteChildren = {
-  SpeciesComNameRoute: SpeciesComNameRoute,
-  SpeciesIndexRoute: SpeciesIndexRoute,
+const BirdsRouteChildren: BirdsRouteChildren = {
+  BirdsComNameRoute: BirdsComNameRoute,
+  BirdsIndexRoute: BirdsIndexRoute,
 }
 
-const SpeciesRouteWithChildren =
-  SpeciesRoute._addFileChildren(SpeciesRouteChildren)
+const BirdsRouteWithChildren = BirdsRoute._addFileChildren(BirdsRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AccountRoute: AccountRoute,
+  BirdsRoute: BirdsRouteWithChildren,
   DetectionsRoute: DetectionsRoute,
   LearnRoute: LearnRoute,
   LiveRoute: LiveRoute,
   ReviewRoute: ReviewRoute,
   SettingsRoute: SettingsRoute,
-  SpeciesRoute: SpeciesRouteWithChildren,
   SpeciesControlRoute: SpeciesControlRoute,
   StatsRoute: StatsRoute,
   TimelineRoute: TimelineRoute,
   TodayRoute: TodayRoute,
   ApiLiveStreamRoute: ApiLiveStreamRoute,
   DayDateRoute: DayDateRoute,
+  SpeciesComNameRoute: SpeciesComNameRoute,
+  SpeciesIndexRoute: SpeciesIndexRoute,
   ApiAudioDateSpeciesAndFileRoute: ApiAudioDateSpeciesAndFileRoute,
 }
 export const routeTree = rootRouteImport

@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-
+import { CardHeader } from "~/components/card-header.tsx";
 import { EmptyNote } from "~/components/empty-state.tsx";
 import { LIST_ROW, SpeciesThumbnail } from "~/components/species-row.tsx";
 import { comNameToSlug } from "~/lib/species-slug.ts";
@@ -43,7 +43,7 @@ export function SpeciesList({
 			aria-label={ariaLabel}
 			className={`feature-card flex flex-col rounded-md p-4 ${className}`}
 		>
-			<div className="island-kicker">{title}</div>
+			<CardHeader title={title} />
 
 			{species.length === 0 ? (
 				<EmptyNote>{emptyMessage}</EmptyNote>
@@ -79,7 +79,7 @@ function SpeciesListRow({
 			<div className="min-w-0 flex-1">
 				<div className="flex items-baseline justify-between gap-2">
 					<Link
-						to="/species/$comName"
+						to="/birds/$comName"
 						params={{ comName: item.speciesSlug ?? comNameToSlug(comName) }}
 						className="truncate font-medium no-underline hover:underline"
 					>

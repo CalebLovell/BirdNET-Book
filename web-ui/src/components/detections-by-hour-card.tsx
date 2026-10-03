@@ -9,7 +9,7 @@ import {
 	XAxis,
 	YAxis,
 } from "recharts";
-
+import { CardHeader } from "~/components/card-header.tsx";
 import { ChartDataTable } from "~/components/chart-data-table.tsx";
 import { ChartValueTooltip } from "~/components/chart-tooltip.tsx";
 import { EmptyNote } from "~/components/empty-state.tsx";
@@ -51,7 +51,7 @@ export function DetectionsByHourCard({
 				aria-label="Detections by hour"
 				className={`feature-card flex flex-col rounded-md p-4 ${className}`}
 			>
-				<div className="island-kicker">Detections by hour</div>
+				<CardHeader title="Detections by hour" />
 				<EmptyNote>{emptyMessage}</EmptyNote>
 			</section>
 		);
@@ -62,7 +62,7 @@ export function DetectionsByHourCard({
 			aria-label="Detections by hour"
 			className={`feature-card flex min-h-72 flex-col rounded-md p-4 ${className}`}
 		>
-			<div className="island-kicker">Detections by hour</div>
+			<CardHeader title="Detections by hour" />
 
 			<div className="mt-(--page-gap) min-h-0 flex-1">
 				{/* `minHeight` is not decoration: ResponsiveContainer measures its own

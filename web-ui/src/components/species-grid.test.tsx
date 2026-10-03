@@ -64,7 +64,7 @@ const robin: SpeciesGridItem = {
 test("a species row shows its name and count", async () => {
 	const markup = await renderGrid([robin]);
 	assert.match(markup, /European Robin/);
-	assert.match(markup, /href="\/species\/european-robin"/);
+	assert.match(markup, /href="\/birds\/european-robin"/);
 	assert.match(markup, /128/);
 	// No chips on an ordinary resident.
 	assert.doesNotMatch(markup, /lucide-sparkles/);

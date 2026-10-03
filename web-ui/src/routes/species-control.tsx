@@ -12,7 +12,7 @@ import {
 import { normalizeSpeciesControlWorkspaceSearch } from "~/lib/species-control-workspace.ts";
 
 export const Route = createFileRoute("/species-control")({
-	head: () => ({ meta: [{ title: pageTitle("Species control") }] }),
+	head: () => ({ meta: [{ title: pageTitle("Species Control") }] }),
 	validateSearch: normalizeSpeciesControlWorkspaceSearch,
 	beforeLoad: ({ context, location }) =>
 		requireUnlocked(context.auth, location),
