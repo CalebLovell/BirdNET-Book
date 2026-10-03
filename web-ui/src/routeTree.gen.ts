@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AccountRouteImport } from './routes/account'
 import { Route as DetectionsRouteImport } from './routes/detections'
 import { Route as LearnRouteImport } from './routes/learn'
 import { Route as LiveRouteImport } from './routes/live'
@@ -29,6 +30,11 @@ import { Route as ApiAudioDateSpeciesAndFileRouteImport } from './routes/api/aud
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AccountRoute = AccountRouteImport.update({
+  id: '/account',
+  path: '/account',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DetectionsRoute = DetectionsRouteImport.update({
@@ -110,6 +116,7 @@ const ApiAudioDateSpeciesAndFileRoute =
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/account': typeof AccountRoute
   '/detections': typeof DetectionsRoute
   '/learn': typeof LearnRoute
   '/live': typeof LiveRoute
@@ -128,6 +135,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/account': typeof AccountRoute
   '/detections': typeof DetectionsRoute
   '/learn': typeof LearnRoute
   '/live': typeof LiveRoute
@@ -146,6 +154,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/account': typeof AccountRoute
   '/detections': typeof DetectionsRoute
   '/learn': typeof LearnRoute
   '/live': typeof LiveRoute
@@ -166,6 +175,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/account'
     | '/detections'
     | '/learn'
     | '/live'
@@ -184,6 +194,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/account'
     | '/detections'
     | '/learn'
     | '/live'
@@ -201,6 +212,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/account'
     | '/detections'
     | '/learn'
     | '/live'
@@ -220,6 +232,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AccountRoute: typeof AccountRoute
   DetectionsRoute: typeof DetectionsRoute
   LearnRoute: typeof LearnRoute
   LiveRoute: typeof LiveRoute
@@ -242,6 +255,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/account': {
+      id: '/account'
+      path: '/account'
+      fullPath: '/account'
+      preLoaderRoute: typeof AccountRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/detections': {
@@ -367,6 +387,7 @@ const SpeciesRouteWithChildren =
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AccountRoute: AccountRoute,
   DetectionsRoute: DetectionsRoute,
   LearnRoute: LearnRoute,
   LiveRoute: LiveRoute,

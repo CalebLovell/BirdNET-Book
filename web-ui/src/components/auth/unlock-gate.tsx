@@ -23,7 +23,14 @@ const MESSAGES = {
  * masthead above it, so this card only ever has to explain the lock. That also
  * means adding a gate to a new page needs nothing from this file.
  */
-export function UnlockGate() {
+export function UnlockGate({
+	title = "This page is locked",
+	description = "This part of the station is only for whoever runs it. Detections, species and stats stay open to everyone.",
+}: {
+	/** Overridden on the Account page, which isn't itself a locked page. */
+	title?: string;
+	description?: string;
+} = {}) {
 	const unlock = useServerFn(unlockFn);
 	const router = useRouter();
 	const [password, setPassword] = useState("");
@@ -79,11 +86,10 @@ export function UnlockGate() {
 						id="unlock-title"
 						className="display-title font-semibold text-lg leading-tight"
 					>
-						This page is locked
+						{title}
 					</h2>
 					<p className="mt-1 text-muted-foreground text-sm leading-relaxed">
-						This part of the station is only for whoever runs it. Detections,
-						species and stats stay open to everyone.
+						{description}
 					</p>
 				</div>
 			</header>

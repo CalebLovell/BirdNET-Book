@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 
+import { LivePill } from "~/components/now/live-pill.tsx";
 import {
 	HERO_CARD_SHELL,
 	HeroCardShell,
@@ -20,16 +21,22 @@ export function CurrentBirdCard({
 	hasAnyDetections,
 	offsetMs,
 	flash,
+	generatedAt,
 }: {
 	current: CurrentBird | null;
 	hasAnyDetections: boolean;
 	offsetMs: number;
 	flash: boolean;
+	/** The poll's reading time, shown beside the Live pill. */
+	generatedAt: string;
 }) {
+	const live = <LivePill generatedAt={generatedAt} />;
+
 	if (!current && hasAnyDetections) {
 		return (
 			<HeroCardShell label="Last 24 hours" portrait={<NestPortrait />}>
 				<CenteredBody>
+					{live}
 					<h1 className="display-title font-bold text-2xl sm:text-3xl">
 						All quiet
 					</h1>
@@ -47,6 +54,7 @@ export function CurrentBirdCard({
 		return (
 			<HeroCardShell label="Station status" portrait={<NestPortrait />}>
 				<CenteredBody>
+					{live}
 					<h1 className="display-title font-bold text-2xl sm:text-3xl">
 						Nothing recorded yet
 					</h1>
@@ -77,6 +85,7 @@ export function CurrentBirdCard({
 			heardAt={formatDateTime(current.detectedAt)}
 			confidence={current.confidence}
 			audioUrl={current.audioUrl}
+			actions={live}
 			className={flash ? `${HERO_CARD_SHELL} flash-in` : HERO_CARD_SHELL}
 		/>
 	);

@@ -8,13 +8,10 @@ import { ConfirmDialog } from "~/components/ui/confirm-dialog.tsx";
 import { lockFn, signOutAllDevicesFn } from "~/lib/auth.ts";
 
 /**
- * Access sits in the settings flow as one of the cards rather than above the
- * masthead: it configures who may open this page at all, which is a peer of the
- * other cards, not a banner over them.
+ * The Account page's card while this browser is signed in.
  *
- * It borrows `SettingsCard`'s chrome -- tinted left edge, disc-and-title header,
- * message beside the controls -- without borrowing the form. Nothing here is a
- * pending edit waiting on Save; both controls act the moment they are confirmed.
+ * Nothing here is a pending edit waiting on Save; both controls act the moment
+ * they are confirmed.
  */
 export function SessionCard({
 	isDefaultPassword,
@@ -59,7 +56,7 @@ export function SessionCard({
 
 	return (
 		<section
-			aria-labelledby="settings-access"
+			aria-labelledby="account-session"
 			className="feature-card overflow-hidden rounded-md"
 		>
 			<header className="flex items-center gap-3 border-b p-(--page-gap) max-[400px]:gap-2">
@@ -68,14 +65,14 @@ export function SessionCard({
 				</div>
 				<div className="min-w-0">
 					<h2
-						id="settings-access"
+						id="account-session"
 						className="display-title font-semibold text-lg leading-tight"
 					>
-						Access
+						Signed in
 					</h2>
 					<p className="mt-1 text-muted-foreground text-sm leading-relaxed">
-						Who can open Settings, Species control and Review. Everything else
-						on this station stays public.
+						This browser can open Review, Control and Settings until you lock
+						it.
 					</p>
 				</div>
 			</header>

@@ -1,7 +1,8 @@
 import { Link } from "@tanstack/react-router";
 
+import { AccountRow } from "~/components/sidebar/account-row.tsx";
 import { SidebarNav } from "~/components/sidebar/sidebar-nav.tsx";
-import { StationStatus } from "~/components/sidebar/station-status.tsx";
+import { SiteSearch } from "~/components/sidebar/site-search.tsx";
 
 /**
  * Everything inside the sidebar, shared by the desktop column and the mobile
@@ -18,13 +19,17 @@ export function SidebarBody({ onNavigate }: { onNavigate?: () => void }) {
 				BirdNET-Book
 			</Link>
 
+			<SiteSearch onNavigate={onNavigate} />
+
 			<SidebarNav onNavigate={onNavigate} />
 
 			{/* Pushed to the bottom on a tall viewport, and simply last in the flow
 			    on a short one -- `mt-auto` does both. */}
-			<div className="mt-auto">
-				<hr className="mx-4 border-0 border-[var(--line)] border-t" />
-				<StationStatus />
+			<div className="mt-auto pt-4">
+				<hr className="mx-4 mb-3 border-0 border-[var(--line)] border-t" />
+				<div className="px-2">
+					<AccountRow onNavigate={onNavigate} />
+				</div>
 			</div>
 		</div>
 	);
@@ -42,7 +47,7 @@ export function SidebarBody({ onNavigate }: { onNavigate?: () => void }) {
  * The inset lives on the `aside` and the scrolling on the card inside it: a
  * single element can't both be the full-height box and the padded card without
  * the padding scrolling away with the content. `h-full` then makes the card
- * exactly a viewport minus the inset, so the station block stays reachable on a
+ * exactly a viewport minus the inset, so the account row stays reachable on a
  * short window.
  */
 // From `xl` (1280px), not earlier: the sidebar's 272px column has to leave the

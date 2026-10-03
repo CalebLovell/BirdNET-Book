@@ -1,13 +1,8 @@
-import {
-	createFileRoute,
-	useRouteContext,
-	useRouter,
-} from "@tanstack/react-router";
+import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { Settings } from "lucide-react";
 import { LockedPage } from "~/components/auth/locked-page.tsx";
 import { PageStatus } from "~/components/page-status.tsx";
-import { SessionCard } from "~/components/settings/session-card.tsx";
 import {
 	SETTINGS_PAGE_DESCRIPTION,
 	SETTINGS_PAGE_TITLE,
@@ -82,13 +77,11 @@ function SettingsContent({
 	const reset = useServerFn(resetSettingsFn);
 	const restart = useServerFn(restartStationFn);
 	const router = useRouter();
-	const { auth } = useRouteContext({ from: "__root__" });
 
 	return (
 		<SettingsPage
 			data={data}
 			health={health}
-			access={<SessionCard isDefaultPassword={auth.isDefaultPassword} />}
 			onRestart={(card) => restart({ data: { card } })}
 			onReset={async () => {
 				const result = await reset({});
