@@ -10,6 +10,9 @@ import { Button } from "~/components/ui/button.tsx";
  *
  * With a single year on record there is nothing to step to, so it renders
  * nothing at all rather than a pair of dead buttons.
+ *
+ * On the smallest phones (under 400px, where the page gap halves) it steps
+ * down a size with everything else, so it doesn't crowd the card's kicker.
  */
 export function YearSelector({
 	year,
@@ -31,22 +34,24 @@ export function YearSelector({
 	const nextYear = ascending.find((it) => it > year) ?? null;
 
 	return (
-		<div className="flex items-center gap-2">
+		<div className="flex items-center gap-2 max-[400px]:gap-1.5">
 			<Button
 				variant="outline"
 				size="icon-xs"
+				className="max-[400px]:size-5"
 				disabled={previousYear === null}
 				aria-label="Previous year"
 				onClick={() => previousYear !== null && onChange(previousYear)}
 			>
 				<ChevronLeft />
 			</Button>
-			<div className="tabular-data min-w-12 text-center font-semibold text-sm">
+			<div className="tabular-data min-w-12 text-center font-semibold text-sm max-[400px]:min-w-10 max-[400px]:text-xs">
 				{year}
 			</div>
 			<Button
 				variant="outline"
 				size="icon-xs"
+				className="max-[400px]:size-5"
 				disabled={nextYear === null}
 				aria-label="Next year"
 				onClick={() => nextYear !== null && onChange(nextYear)}

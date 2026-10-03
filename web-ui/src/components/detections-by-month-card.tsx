@@ -1,3 +1,4 @@
+import { useState } from "react";
 import {
 	Bar,
 	BarChart,
@@ -13,6 +14,14 @@ import { ChartValueTooltip } from "~/components/chart-tooltip.tsx";
 import { EmptyNote } from "~/components/empty-state.tsx";
 import { CHART_MARGIN, X_AXIS_HEIGHT } from "~/lib/chart-style.ts";
 import type { TrendPoint } from "~/lib/stats-data.ts";
+
+/**
+ * Below this chart width the twelve three-letter months run into each other
+ * (12px Georgia needs ~26px a label, plus the y-axis), so each shortens to its
+ * initial: J F M A M J J A S O N D. The tooltip and the data table keep the
+ * full names, so the initials are never the only way to tell the Js apart.
+ */
+const INITIALS_BELOW_PX = 380;
 
 /**
  * The species page's detections-by-month chart: every detection on record,
@@ -32,6 +41,7 @@ export function DetectionsByMonthCard({
 	className?: string;
 }) {
 	const isEmpty = trend.every((point) => point.count === 0);
+	const [initials, setInitials] = useState(false);
 
 	return (
 		<section
@@ -52,7 +62,12 @@ export function DetectionsByMonthCard({
 				    nothing unless a parent grid row happens to stretch the card to a
 				    definite height. The floor makes the chart render wherever the card
 				    is put, and it still grows past it when a row does stretch. */}
-					<ResponsiveContainer width="100%" height="100%" minHeight={220}>
+					<ResponsiveContainer
+						width="100%"
+						height="100%"
+						minHeight={220}
+						onResize={(width) => setInitials(width < INITIALS_BELOW_PX)}
+					>
 						<BarChart
 							data={trend}
 							aria-label="Detections by month chart. Use the left and right arrow keys to read each month."
@@ -72,6 +87,9 @@ export function DetectionsByMonthCard({
 								tickLine={false}
 								minTickGap={0}
 								interval={0}
+								tickFormatter={(month: string) =>
+									initials ? month.charAt(0) : month
+								}
 							/>
 							<YAxis
 								stroke="var(--muted-foreground)"
