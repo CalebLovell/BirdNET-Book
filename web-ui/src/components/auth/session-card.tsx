@@ -5,6 +5,7 @@ import { useState } from "react";
 import { CardHeader } from "~/components/card-header.tsx";
 import { Button } from "~/components/ui/button.tsx";
 import { ConfirmDialog } from "~/components/ui/confirm-dialog.tsx";
+import { destructiveToast, toast } from "~/components/ui/toaster.tsx";
 import { lockFn, signOutAllDevicesFn } from "~/lib/auth.ts";
 
 /**
@@ -24,31 +25,29 @@ export function SessionCard({
 	const [lockPending, setLockPending] = useState(false);
 	const [signOutPending, setSignOutPending] = useState(false);
 	const [confirming, setConfirming] = useState(false);
-	const [error, setError] = useState<string | undefined>();
 
 	async function onLock() {
-		setError(undefined);
 		setLockPending(true);
 		try {
 			await lock({ data: undefined });
 			await router.invalidate();
 		} catch (cause) {
 			console.error(cause);
-			setError("This browser could not be locked.");
+			toast.error("This browser could not be locked.");
 		} finally {
 			setLockPending(false);
 		}
 	}
 
 	async function onSignOutAll() {
-		setError(undefined);
 		setSignOutPending(true);
 		try {
 			await signOutAll({ data: undefined });
 			await router.invalidate();
+			destructiveToast("Signed out every device.");
 		} catch (cause) {
 			console.error(cause);
-			setError("The other devices could not be signed out.");
+			toast.error("The other devices could not be signed out.");
 		} finally {
 			setSignOutPending(false);
 		}
@@ -82,24 +81,9 @@ export function SessionCard({
 					</div>
 				) : null}
 
-				{/* Wraps, unlike the settings cards' equivalent row: two buttons
-				    rather than one leave a failure message about 40px on a phone,
-				    so it takes its own line instead of being crushed. */}
-				<div className="flex flex-wrap items-center justify-between gap-3">
-					{/* Nothing at rest, like the settings cards: the consequence of
-					    signing every device out is stated in its confirmation, where it
-					    is actually load-bearing, rather than standing here permanently. */}
-					<p
-						aria-live="polite"
-						className="flex min-w-0 items-center gap-2 text-destructive text-xs"
-					>
-						{error ? (
-							<>
-								<AlertTriangle aria-hidden="true" className="size-3.5" />
-								<span>{error}</span>
-							</>
-						) : null}
-					</p>
+				{/* A failure arrives as a toast, so the row holds only the two
+				    buttons, set to the right like the settings cards' Save. */}
+				<div className="flex flex-wrap items-center justify-end gap-2">
 					<div className="flex shrink-0 items-center gap-2">
 						<Button
 							type="button"

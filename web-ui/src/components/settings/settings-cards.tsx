@@ -11,6 +11,7 @@ import { useEffect, useState } from "react";
 
 import { InfoTip } from "~/components/ui/info-tip.tsx";
 import { Input } from "~/components/ui/input.tsx";
+import { toast } from "~/components/ui/toaster.tsx";
 import type {
 	AudioSettings,
 	DetectionSettings,
@@ -24,7 +25,7 @@ import type {
 } from "~/lib/settings-data.ts";
 import { modernTimezone } from "~/lib/timezones.ts";
 import { RestartButton } from "./restart-button.tsx";
-import { type CardSaveState, SettingsCard } from "./settings-card.tsx";
+import { SettingsCard } from "./settings-card.tsx";
 import { StationLocation } from "./station-location.tsx";
 
 type Saver<T> = (values: T) => Promise<SettingsSaveResult<T>>;
@@ -59,14 +60,24 @@ function unchanged<T>(a: T, b: T) {
 	return JSON.stringify(a) === JSON.stringify(b);
 }
 
-function useCardSave<T>(initial: T, save?: Saver<T>, restart?: CardRestarter) {
+/**
+ * Reports a card's save as one toast that changes in place: a spinner while it
+ * runs, then how it went. Keyed on the card, so saving the same card twice
+ * replaces its toast rather than stacking a second one.
+ */
+function useCardSave<T>(
+	title: string,
+	initial: T,
+	save?: Saver<T>,
+	restart?: CardRestarter,
+) {
+	const toastId = `settings-${title}`;
 	const [values, setValues] = useState(initial);
 	// What the station currently holds, as far as this card knows: the values it
 	// loaded with, or the ones it last saved. Save has nothing to do until the
 	// form differs from this.
 	const [saved, setSaved] = useState(initial);
-	const [state, setState] = useState<CardSaveState>("idle");
-	const [message, setMessage] = useState<string>();
+	const [saving, setSaving] = useState(false);
 	// The card's values are on disk but BirdNET is still running the old ones.
 	// Both save outcomes that mean this -- the restart was refused, or the
 	// environment declined to try -- are the same situation to the reader, and
@@ -75,8 +86,8 @@ function useCardSave<T>(initial: T, save?: Saver<T>, restart?: CardRestarter) {
 
 	async function submit() {
 		if (!save) return;
-		setState("saving");
-		setMessage("Saving this section…");
+		setSaving(true);
+		toast.loading(`Saving ${title.toLowerCase()} settings…`, { id: toastId });
 		try {
 			const result = await save(values);
 			setValues(result.values);
@@ -88,36 +99,44 @@ function useCardSave<T>(initial: T, save?: Saver<T>, restart?: CardRestarter) {
 				result.status === "saved-action-failed" ||
 				result.status === "saved-restart-skipped";
 			setNeedsRestart(pending);
-			setState(pending ? "warning" : "saved");
-			setMessage(result.message);
+			// A pending restart stays up until it is read: the Restart button it
+			// explains sits beside Save with no words of its own.
+			if (pending) {
+				toast.warning(result.message, { id: toastId, duration: 10_000 });
+			} else {
+				toast.success(result.message, { id: toastId });
+			}
 		} catch (error) {
-			setState("error");
-			setMessage(
+			toast.error(
 				error instanceof Error
 					? error.message
 					: "These settings could not be saved.",
+				{ id: toastId },
 			);
+		} finally {
+			setSaving(false);
 		}
 	}
 
 	async function applyNow() {
 		if (!restart) return;
-		setState("saving");
-		setMessage("Restarting BirdNET…");
+		setSaving(true);
+		toast.loading("Restarting BirdNET…", { id: toastId });
 		try {
 			const result = await restart();
 			setNeedsRestart(false);
-			setState("saved");
-			setMessage(result.message);
+			toast.success(result.message, { id: toastId });
 		} catch (error) {
 			// The values are still saved -- only the restart failed -- so the card
 			// keeps offering the button rather than dropping back to a clean state.
-			setState("warning");
-			setMessage(
+			toast.warning(
 				error instanceof Error
 					? error.message
 					: "BirdNET could not be restarted.",
+				{ id: toastId, duration: 10_000 },
 			);
+		} finally {
+			setSaving(false);
 		}
 	}
 
@@ -125,12 +144,10 @@ function useCardSave<T>(initial: T, save?: Saver<T>, restart?: CardRestarter) {
 	return {
 		values,
 		setValues,
-		state,
-		message,
 		submit,
 		dirty,
 		// A failed save leaves the card dirty, so the button stays live to retry.
-		saveDisabled: state === "saving" || !dirty,
+		saveDisabled: saving || !dirty,
 		needsRestart: needsRestart && restart !== undefined,
 		applyNow,
 	};
@@ -253,14 +270,12 @@ function StationCard({
 	save?: Saver<StationSettings>;
 	restart?: CardRestarter;
 }) {
-	const form = useCardSave(initial, save, restart);
+	const form = useCardSave("Station", initial, save, restart);
 	return (
 		<SettingsCard
 			title="Station"
 			description="Name the station and locate it for geographic species filtering."
 			icon={MapPin}
-			state={form.state}
-			message={form.message}
 			onSave={() => void form.submit()}
 			restart={restartControl(form)}
 			saveDisabled={form.saveDisabled}
@@ -399,15 +414,13 @@ function DetectionCard({
 	save?: Saver<DetectionSettings>;
 	restart?: CardRestarter;
 }) {
-	const form = useCardSave(initial, save, restart);
+	const form = useCardSave("Detection", initial, save, restart);
 	const selectedModel = models.find((model) => model.id === form.values.model);
 	return (
 		<SettingsCard
 			title="Detection"
 			description="Tune which model predictions become saved detections."
 			icon={SlidersHorizontal}
-			state={form.state}
-			message={form.message}
 			onSave={() => void form.submit()}
 			restart={restartControl(form)}
 			saveDisabled={form.saveDisabled}
@@ -558,14 +571,12 @@ function PrivacyCard({
 	save?: Saver<PrivacySettings>;
 	restart?: CardRestarter;
 }) {
-	const form = useCardSave(initial, save, restart);
+	const form = useCardSave("Privacy", initial, save, restart);
 	return (
 		<SettingsCard
 			title="Privacy"
 			description="Suppress chunks where the model detects likely human sounds."
 			icon={ShieldCheck}
-			state={form.state}
-			message={form.message}
 			onSave={() => void form.submit()}
 			restart={restartControl(form)}
 			saveDisabled={form.saveDisabled}
@@ -606,14 +617,12 @@ function AudioCard({
 	save?: Saver<AudioSettings>;
 	restart?: CardRestarter;
 }) {
-	const form = useCardSave(initial, save, restart);
+	const form = useCardSave("Audio input", initial, save, restart);
 	return (
 		<SettingsCard
 			title="Audio input"
 			description="Choose a local microphone or one or more network audio streams."
 			icon={Mic2}
-			state={form.state}
-			message={form.message}
 			onSave={() => void form.submit()}
 			restart={restartControl(form)}
 			saveDisabled={form.saveDisabled}
@@ -732,14 +741,12 @@ function RecordingCard({
 	save?: Saver<RecordingSettings>;
 	restart?: CardRestarter;
 }) {
-	const form = useCardSave(initial, save, restart);
+	const form = useCardSave("Recording", initial, save, restart);
 	return (
 		<SettingsCard
 			title="Recording"
 			description="Control capture duration and the files retained for playback."
 			icon={Disc3}
-			state={form.state}
-			message={form.message}
 			onSave={() => void form.submit()}
 			restart={restartControl(form)}
 			saveDisabled={form.saveDisabled}
@@ -819,14 +826,12 @@ function StorageCard({
 	save?: Saver<StorageSettings>;
 	restart?: CardRestarter;
 }) {
-	const form = useCardSave(initial, save, restart);
+	const form = useCardSave("Storage", initial, save, restart);
 	return (
 		<SettingsCard
 			title="Storage"
 			description="Decide what happens as the station fills its disk."
 			icon={HardDrive}
-			state={form.state}
-			message={form.message}
 			onSave={() => void form.submit()}
 			restart={restartControl(form)}
 			saveDisabled={form.saveDisabled}

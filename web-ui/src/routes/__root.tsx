@@ -2,6 +2,7 @@ import { createRootRoute, HeadContent, Scripts } from "@tanstack/react-router";
 import { RouteError, RouteNotFound } from "~/components/root-status.tsx";
 import { MobileNav } from "~/components/sidebar/mobile-nav.tsx";
 import { SiteSidebar } from "~/components/sidebar/site-sidebar.tsx";
+import { Toaster } from "~/components/ui/toaster.tsx";
 import { getUnlockStatusFn } from "~/lib/auth.ts";
 import { pageTitle } from "~/lib/page-title.ts";
 import { DEFAULT_FAVICON } from "~/lib/use-favicon.ts";
@@ -84,6 +85,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
 						</main>
 					</div>
 				</div>
+				<Toaster />
 				<Scripts />
 			</body>
 		</html>

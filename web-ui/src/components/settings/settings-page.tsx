@@ -1,7 +1,8 @@
-import { AlertTriangle, CheckCircle2, Settings } from "lucide-react";
+import { Settings } from "lucide-react";
 import { useState } from "react";
 
 import { PageHeaderCard } from "~/components/page-header-card.tsx";
+import { destructiveToast, toast } from "~/components/ui/toaster.tsx";
 import type { StationHealth } from "~/lib/health-data.ts";
 import type { SettingsPageData } from "~/lib/settings-data.ts";
 import { RestartButton } from "./restart-button.tsx";
@@ -36,7 +37,9 @@ export function SettingsPage({
 	/** Bounces a card's services. Omit to hide every restart control. */
 	onRestart?: SettingsRestarter;
 }) {
-	const [reset, setReset] = useState<ResetOutcome | null>(null);
+	// A reset that stored the defaults but could not get BirdNET onto them
+	// leaves the Restart button beside Reset until it has done so.
+	const [needsRestart, setNeedsRestart] = useState(false);
 
 	// Each card seeds its own state from `data` once, so a reset that only
 	// refetched would leave six forms showing the values it just discarded.
@@ -61,56 +64,47 @@ export function SettingsPage({
 				stats={health ? healthStats(health) : []}
 				action={
 					onReset ? (
-						<SettingsReset
-							onReset={async () => {
-								const outcome = await onReset();
-								setReset(outcome);
-								return outcome.message;
-							}}
-						/>
-					) : undefined
-				}
-			>
-				{reset ? (
-					<div className="mt-(--page-gap) flex flex-wrap items-center justify-between gap-3 border-[var(--line)] border-t pt-(--page-gap)">
-						<p
-							aria-live="polite"
-							className={`flex items-center gap-2 text-xs ${
-								reset.needsRestart
-									? "text-[var(--bark)]"
-									: "text-muted-foreground"
-							}`}
-						>
-							{reset.needsRestart ? (
-								<AlertTriangle aria-hidden="true" className="size-3.5" />
-							) : (
-								<CheckCircle2 aria-hidden="true" className="size-3.5" />
-							)}
-							{reset.message}
-						</p>
-						{reset.needsRestart && onRestart ? (
-							<RestartButton
-								onRestart={async () => {
-									try {
-										// No card: a reset touched every one of them, so the
-										// whole set comes back together.
-										const result = await onRestart(undefined);
-										setReset({ message: result.message, needsRestart: false });
-									} catch (error) {
-										setReset({
-											message:
+						<div className="flex flex-wrap items-center justify-end gap-2">
+							{needsRestart && onRestart ? (
+								<RestartButton
+									onRestart={async () => {
+										const toastId = "settings-reset";
+										toast.loading("Restarting BirdNET…", { id: toastId });
+										try {
+											// No card: a reset touched every one of them, so the
+											// whole set comes back together.
+											const result = await onRestart(undefined);
+											setNeedsRestart(false);
+											toast.success(result.message, { id: toastId });
+										} catch (error) {
+											toast.warning(
 												error instanceof Error
 													? error.message
 													: "BirdNET could not be restarted.",
-											needsRestart: true,
+												{ id: toastId, duration: 10_000 },
+											);
+										}
+									}}
+								/>
+							) : null}
+							<SettingsReset
+								onReset={async () => {
+									const outcome = await onReset();
+									setNeedsRestart(outcome.needsRestart);
+									if (outcome.needsRestart) {
+										toast.warning(outcome.message, {
+											id: "settings-reset",
+											duration: 10_000,
 										});
+									} else {
+										destructiveToast(outcome.message, { id: "settings-reset" });
 									}
 								}}
 							/>
-						) : null}
-					</div>
-				) : null}
-			</PageHeaderCard>
+						</div>
+					) : undefined
+				}
+			/>
 			<SettingsCards
 				key={loadedValues}
 				data={data}

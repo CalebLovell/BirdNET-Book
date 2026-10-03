@@ -43,6 +43,15 @@
 	--confidence-high: color-mix(in oklab, var(--moss) 12%, var(--paper-raised));
 	--confidence-mid: color-mix(in oklab, var(--sand) 20%, var(--paper-raised));
 	--confidence-low: color-mix(in oklab, var(--sage) 32%, var(--paper-raised));
+	/* Toast tones (ui/toaster.tsx): a fill and a border per outcome, with the
+	   title in the full colour. Done is moss, done-with-a-catch is sand with
+	   bark text, failed is clay. Neutral news (info, in progress) stays white. */
+	--toast-success-fill: color-mix(in oklab, var(--moss) 7%, var(--paper-raised));
+	--toast-success-line: color-mix(in oklab, var(--moss) 28%, var(--paper-raised));
+	--toast-warning-fill: color-mix(in oklab, var(--sand) 14%, var(--paper-raised));
+	--toast-warning-line: color-mix(in oklab, var(--sand) 50%, var(--paper-raised));
+	--toast-error-fill: color-mix(in oklab, var(--clay) 8%, var(--paper-raised));
+	--toast-error-line: color-mix(in oklab, var(--clay) 32%, var(--paper-raised));
 
   --background: var(--paper);
   --foreground: var(--ink);
@@ -423,4 +432,32 @@ a {
   input[type="date"]::-webkit-calendar-picker-indicator:hover {
     opacity: 1;
   }
+}
+
+/* A destructive action that succeeded (`destructiveToast`) takes the error
+   tone over sonner's success one. Unlayered, so it outranks the toaster's
+   `data-[type=success]` utilities without needing `!important`. */
+[data-sonner-toast].toast-destructive {
+	border-color: var(--toast-error-line);
+	background: var(--toast-error-fill);
+}
+
+[data-sonner-toast].toast-destructive [data-title] {
+	color: var(--destructive);
+}
+
+/* Toasts (`ui/toaster.tsx`) slide in from the right edge they are pinned to,
+   and leave the same way, rather than sonner's default drop from above. Only
+   the enter and exit states are touched: once a toast is in, sonner's own
+   stacking transforms take over unchanged. */
+[data-sonner-toaster] [data-sonner-toast][data-x-position="right"][data-mounted="false"],
+[data-sonner-toaster]
+	[data-sonner-toast][data-x-position="right"][data-removed="true"][data-front="true"][data-swipe-out="false"] {
+	--y: translateX(calc(100% + var(--offset-right, 16px)));
+}
+
+[data-sonner-toaster]
+	[data-sonner-toast][data-x-position="right"][data-removed="true"][data-front="false"][data-swipe-out="false"][data-expanded="true"] {
+	--y: translateY(calc(var(--lift) * var(--offset)))
+		translateX(calc(100% + var(--offset-right, 16px)));
 }

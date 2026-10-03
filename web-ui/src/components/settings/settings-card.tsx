@@ -1,12 +1,10 @@
 import type { LucideIcon } from "lucide-react";
-import { AlertTriangle, CheckCircle2, LoaderCircle, Save } from "lucide-react";
+import { Save } from "lucide-react";
 import { type ReactNode, useState } from "react";
 
 import { Button } from "~/components/ui/button.tsx";
 import { ConfirmDialog } from "~/components/ui/confirm-dialog.tsx";
 import { settingsCardId } from "./settings-index.ts";
-
-export type CardSaveState = "idle" | "saving" | "saved" | "warning" | "error";
 
 /**
  * What saving a card actually costs the reader. Every card's save writes the
@@ -21,8 +19,6 @@ export function SettingsCard({
 	title,
 	description,
 	icon: Icon,
-	state,
-	message,
 	onSave,
 	confirmDescription = DEFAULT_CONFIRM_DESCRIPTION,
 	action,
@@ -33,8 +29,6 @@ export function SettingsCard({
 	title: string;
 	description: string;
 	icon: LucideIcon;
-	state: CardSaveState;
-	message?: string;
 	/**
 	 * Runs once the reader has confirmed. The card owns the form's submit event
 	 * and the dialog in front of it, so this is only ever called for a save that
@@ -67,9 +61,9 @@ export function SettingsCard({
 			// The anchor the sidebar search lands on, e.g. `/settings#storage`.
 			id={cardId}
 			aria-labelledby={headingId}
-			// A plain card. The save state is already spoken by the message beside
-			// the Save button; a coloured stripe down the edge said the same thing
-			// again, in a shape no other card on the site has.
+			// A plain card. How a save went is reported in a toast; a coloured
+			// stripe down the edge said the same thing again, in a shape no other
+			// card on the site has.
 			className="feature-card scroll-mt-4 overflow-hidden rounded-md"
 		>
 			<form
@@ -114,42 +108,13 @@ export function SettingsCard({
 				<div className="flex flex-1 flex-col gap-(--page-gap) p-(--page-gap)">
 					<div className="flex-1 space-y-(--page-gap)">{children}</div>
 
-					<div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
-						<div
-							aria-live="polite"
-							className={`flex min-w-0 items-center gap-2 text-xs ${
-								state === "error"
-									? "text-destructive"
-									: state === "warning"
-										? "text-[var(--bark)]"
-										: "text-muted-foreground"
-							}`}
-						>
-							{/* Nothing at rest. The card has no news until it has some, and
-							    a standing note explaining that cards save separately was
-							    read once and then permanently in the way. */}
-							{message ? (
-								<>
-									{state === "saving" ? (
-										<LoaderCircle
-											aria-hidden="true"
-											className="size-3.5 animate-spin"
-										/>
-									) : state === "saved" ? (
-										<CheckCircle2 aria-hidden="true" className="size-3.5" />
-									) : state === "warning" || state === "error" ? (
-										<AlertTriangle aria-hidden="true" className="size-3.5" />
-									) : null}
-									<span>{message}</span>
-								</>
-							) : null}
-						</div>
-						<div className="ml-auto flex shrink-0 items-center gap-2">
-							{restart}
-							<Button type="submit" icon={Save} disabled={saveDisabled}>
-								Save
-							</Button>
-						</div>
+					{/* No status line beside Save: how the save went arrives as a
+					    toast, so the row holds only the controls. */}
+					<div className="flex flex-wrap items-center justify-end gap-2">
+						{restart}
+						<Button type="submit" icon={Save} disabled={saveDisabled}>
+							Save
+						</Button>
 					</div>
 				</div>
 			</form>

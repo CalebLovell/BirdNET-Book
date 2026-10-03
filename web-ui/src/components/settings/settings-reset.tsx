@@ -2,25 +2,28 @@ import { RotateCcw } from "lucide-react";
 import { useState } from "react";
 
 import { Button } from "~/components/ui/button.tsx";
+import { toast } from "~/components/ui/toaster.tsx";
 
 /**
  * Returns the station to its install defaults. Destructive and immediate, so it
  * asks first and spells out both halves of what it does -- the cards it
  * rewrites, and the one it deliberately leaves alone.
  */
-export function SettingsReset({ onReset }: { onReset: () => Promise<string> }) {
+export function SettingsReset({ onReset }: { onReset: () => Promise<void> }) {
 	const [open, setOpen] = useState(false);
 	const [busy, setBusy] = useState(false);
-	const [error, setError] = useState<string | null>(null);
 
 	async function confirm() {
 		setBusy(true);
-		setError(null);
 		try {
 			await onReset();
 			setOpen(false);
 		} catch {
-			setError("Settings could not be reset. The station is unchanged.");
+			// The dialog stays open, so trying again is one click away.
+			toast.error("Settings could not be reset.", {
+				id: "settings-reset",
+				description: "The station is unchanged.",
+			});
 		} finally {
 			setBusy(false);
 		}
@@ -28,14 +31,7 @@ export function SettingsReset({ onReset }: { onReset: () => Promise<string> }) {
 
 	return (
 		<>
-			<Button
-				variant="outline"
-				icon={RotateCcw}
-				onClick={() => {
-					setError(null);
-					setOpen(true);
-				}}
-			>
+			<Button variant="outline" icon={RotateCcw} onClick={() => setOpen(true)}>
 				Reset to defaults
 			</Button>
 			{open ? (
@@ -63,9 +59,6 @@ export function SettingsReset({ onReset }: { onReset: () => Promise<string> }) {
 						<p className="mt-4 text-muted-foreground text-xs leading-relaxed">
 							Your detections and recordings are not touched.
 						</p>
-						{error ? (
-							<p className="mt-4 text-destructive text-sm">{error}</p>
-						) : null}
 						<div className="mt-4 flex justify-end gap-2">
 							<Button
 								variant="outline"

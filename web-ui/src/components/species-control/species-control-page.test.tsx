@@ -143,6 +143,8 @@ test("status is the only verdict the table states", async () => {
 test("bulk status waits in the footer until species are picked", async () => {
 	const markup = await renderPage();
 	assert.doesNotMatch(markup, /aria-label="Set selected species to /);
+	// The statuses' explanation comes and goes with the buttons it explains.
+	assert.doesNotMatch(markup, /aria-label="About Species statuses"/);
 	assert.doesNotMatch(markup, /Select species for bulk changes/);
 });
 
@@ -166,20 +168,6 @@ test("the selection bar offers the count, a clear and four statuses", () => {
 		previous = index;
 	}
 	assert.doesNotMatch(markup, /disabled=""/);
-});
-
-test("the four statuses are explained beside the actions, in the footer", async () => {
-	const markup = await renderPage();
-	const info = markup.indexOf('aria-label="About Species statuses"');
-	assert.ok(
-		info < markup.indexOf('aria-label="Species pages"'),
-		"expected the info tip ahead of the pager",
-	);
-	assert.ok(
-		info > markup.lastIndexOf('role="row"'),
-		"expected the info tip below the rows",
-	);
-	assert.doesNotMatch(markup, /Normal mode|Custom mode|Detection mode/);
 });
 
 test("detection history is no longer deletable from this page", async () => {

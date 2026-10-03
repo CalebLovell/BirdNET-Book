@@ -13,6 +13,7 @@ import { PageHeaderCard } from "~/components/page-header-card.tsx";
 import { Button } from "~/components/ui/button.tsx";
 import { InfoTip } from "~/components/ui/info-tip.tsx";
 import { SearchInput } from "~/components/ui/search-input.tsx";
+import { destructiveToast, toast } from "~/components/ui/toaster.tsx";
 import {
 	type SpeciesControlPageData,
 	type SpeciesControlSaveInput,
@@ -180,7 +181,6 @@ export function SpeciesControlPage({
 	const [removedUnresolved, setRemovedUnresolved] = useState(new Set<string>());
 	const [dialog, setDialog] = useState<ProposedDialog | null>(null);
 	const [pending, setPending] = useState(false);
-	const [errorMessage, setErrorMessage] = useState<string | null>(null);
 	useEffect(() => setQueryInput(search.query ?? ""), [search.query]);
 
 	const debouncedSetQuery = useDebouncedCallback((value: string) => {
@@ -264,12 +264,11 @@ export function SpeciesControlPage({
 
 	async function commit(
 		input: SpeciesControlSaveInput,
-		fallbackMessage: string,
+		messages: { success: string; failure: string; destructive?: boolean },
 		clearSelection = false,
 	) {
 		if (!onSave) return;
 		setPending(true);
-		setErrorMessage(null);
 		try {
 			const result = await onSave(input);
 			setRevision(result.revision);
@@ -288,8 +287,10 @@ export function SpeciesControlPage({
 			if (clearSelection) setSelected(new Set());
 			setDialog(null);
 			await onCommitted?.();
+			if (messages.destructive) destructiveToast(messages.success);
+			else toast.success(messages.success);
 		} catch (error) {
-			setErrorMessage(error instanceof Error ? error.message : fallbackMessage);
+			toast.error(error instanceof Error ? error.message : messages.failure);
 			setDialog(null);
 		} finally {
 			setPending(false);
@@ -349,7 +350,7 @@ export function SpeciesControlPage({
 				},
 			});
 		} catch {
-			setErrorMessage("That file is not a valid species-list export.");
+			toast.error("That file is not a valid species-list export.");
 		}
 	}
 
@@ -414,13 +415,6 @@ export function SpeciesControlPage({
 						onReset={() => setDialog({ kind: "reset" })}
 					/>
 				</div>
-
-				{errorMessage ? (
-					<p className="flex items-center gap-2 text-destructive text-sm">
-						<CircleAlert className="size-4" />
-						{errorMessage}
-					</p>
-				) : null}
 			</div>
 
 			{/* The detections card: the table's header band, rows and footer run
@@ -447,24 +441,27 @@ export function SpeciesControlPage({
 						setSelected(new Set());
 						onSearchChange({ ...search, page });
 					}}
+					// The tip explains the four status buttons, so it arrives with them:
+					// with nothing selected there is nothing for it to explain.
 					actions={
-						<>
-							<InfoTip label="Species statuses">
-								<p>
-									<strong>Automatic</strong> uses BirdNET's usual species rules.{" "}
-									<strong>Custom</strong> adds the species to your custom list.{" "}
-									<strong>Always detect</strong> skips its species-frequency
-									check, and <strong>Never detect</strong> excludes it outright.
-								</p>
-							</InfoTip>
-							{selected.size > 0 ? (
+						selected.size > 0 ? (
+							<>
+								<InfoTip label="Species statuses">
+									<p>
+										<strong>Automatic</strong> uses BirdNET's usual species
+										rules. <strong>Custom</strong> adds the species to your
+										custom list. <strong>Always detect</strong> skips its
+										species-frequency check, and <strong>Never detect</strong>{" "}
+										excludes it outright.
+									</p>
+								</InfoTip>
 								<SpeciesSelectionBar
 									count={selected.size}
 									onClear={() => setSelected(new Set())}
 									onStatus={proposeBulkStatus}
 								/>
-							) : null}
-						</>
+							</>
+						) : null
 					}
 				/>
 			</section>
@@ -542,7 +539,14 @@ export function SpeciesControlPage({
 					pending={pending}
 					onCancel={() => setDialog(null)}
 					onConfirm={() =>
-						commit(dialog.input, "Species statuses could not be saved.", true)
+						commit(
+							dialog.input,
+							{
+								success: `Set ${dialog.count} species to ${dialog.label}.`,
+								failure: "Species statuses could not be saved.",
+							},
+							true,
+						)
 					}
 				/>
 			) : null}
@@ -556,7 +560,14 @@ export function SpeciesControlPage({
 					pending={pending}
 					onCancel={() => setDialog(null)}
 					onConfirm={() =>
-						commit(dialog.input, "Species lists could not be imported.", true)
+						commit(
+							dialog.input,
+							{
+								success: "Imported the species lists.",
+								failure: "Species lists could not be imported.",
+							},
+							true,
+						)
 					}
 				/>
 			) : null}
@@ -571,7 +582,11 @@ export function SpeciesControlPage({
 					pending={pending}
 					onCancel={() => setDialog(null)}
 					onConfirm={() =>
-						commit(dialog.input, "The unmatched entry could not be removed.")
+						commit(dialog.input, {
+							success: `Removed ${dialog.raw}.`,
+							failure: "The unmatched entry could not be removed.",
+							destructive: true,
+						})
 					}
 				/>
 			) : null}
@@ -588,7 +603,11 @@ export function SpeciesControlPage({
 					onConfirm={() =>
 						commit(
 							speciesControlResetInput(revision),
-							"Species lists could not be reset.",
+							{
+								success: "Cleared all species lists.",
+								failure: "Species lists could not be reset.",
+								destructive: true,
+							},
 							true,
 						)
 					}

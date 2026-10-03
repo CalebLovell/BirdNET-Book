@@ -5,7 +5,7 @@ import {
 } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import type { RowSelectionState } from "@tanstack/react-table";
-import { AudioWaveform, Bird, CircleAlert } from "lucide-react";
+import { AudioWaveform, Bird } from "lucide-react";
 import { useState } from "react";
 import { DeleteDetectionsDialog } from "~/components/detections/delete-detections-dialog.tsx";
 import {
@@ -14,17 +14,13 @@ import {
 } from "~/components/detections/detections-table.tsx";
 import { EmptyNote, EmptyState } from "~/components/empty-state.tsx";
 import { PageHeaderCard } from "~/components/page-header-card.tsx";
+import { destructiveToast, toast } from "~/components/ui/toaster.tsx";
 import {
 	hasActiveFilters,
 	normalizeDetectionWorkspaceSearch,
 } from "~/lib/detection-workspace.ts";
 import { deleteDetections, getDetectionsPage } from "~/lib/detections.ts";
 import { pageTitle } from "~/lib/page-title.ts";
-
-type Feedback = {
-	message: string;
-	tone: "error" | "success";
-};
 
 export const Route = createFileRoute("/detections")({
 	head: () => ({ meta: [{ title: pageTitle("Detections") }] }),
@@ -48,7 +44,6 @@ function Detections() {
 	const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
 	const [deleteOpen, setDeleteOpen] = useState(false);
 	const [isDeleting, setIsDeleting] = useState(false);
-	const [feedback, setFeedback] = useState<Feedback | null>(null);
 	const selectedRowIds = Object.entries(rowSelection)
 		.filter(([, isSelected]) => isSelected)
 		.map(([rowId]) => Number(rowId));
@@ -62,19 +57,19 @@ function Detections() {
 
 	async function confirmDeletion() {
 		setIsDeleting(true);
-		setFeedback(null);
 
 		try {
 			const result = await runDeletion({ data: { rowIds: selectedRowIds } });
 			setDeleteOpen(false);
 			setRowSelection({});
-			setFeedback({
-				tone: result.failedFiles > 0 ? "error" : "success",
-				message:
-					result.failedFiles > 0
-						? `Deleted ${result.deletedRecords} detection${result.deletedRecords === 1 ? "" : "s"}, but ${result.failedFiles} audio file${result.failedFiles === 1 ? "" : "s"} could not be removed.`
-						: `Deleted ${result.deletedRecords} detection${result.deletedRecords === 1 ? "" : "s"}.`,
-			});
+			const deleted = `Deleted ${result.deletedRecords} detection${result.deletedRecords === 1 ? "" : "s"}.`;
+			if (result.failedFiles > 0) {
+				toast.warning(deleted, {
+					description: `${result.failedFiles} audio file${result.failedFiles === 1 ? "" : "s"} could not be removed.`,
+				});
+			} else {
+				destructiveToast(deleted);
+			}
 
 			if (search.page > 1 && selectedCount === page.rows.length) {
 				navigate({
@@ -85,9 +80,8 @@ function Detections() {
 
 			await router.invalidate();
 		} catch {
-			setFeedback({
-				tone: "error",
-				message: "Unable to delete the selected detections. Please try again.",
+			toast.error("Unable to delete the selected detections.", {
+				description: "Please try again.",
 			});
 		} finally {
 			setIsDeleting(false);
@@ -116,21 +110,6 @@ function Detections() {
 						}}
 					/>
 				)}
-
-				{feedback ? (
-					<p
-						className={
-							feedback.tone === "error"
-								? "flex items-center gap-2 text-destructive text-sm"
-								: "text-muted-foreground text-sm"
-						}
-					>
-						{feedback.tone === "error" ? (
-							<CircleAlert className="size-4" />
-						) : null}
-						{feedback.message}
-					</p>
-				) : null}
 			</div>
 
 			{/* A station that has never recorded anything replaces the table card

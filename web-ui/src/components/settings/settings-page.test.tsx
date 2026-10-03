@@ -87,13 +87,14 @@ test("a freshly loaded card has nothing to save", () => {
 	assert.match(markup, />Use my location</);
 });
 
-test("says nothing in a card footer until there is something to say", () => {
+test("keeps card footers to their controls", () => {
 	const markup = renderToStaticMarkup(<SettingsPage data={data} />);
 	// The old standing note explained the page's save model on every card,
 	// forever. It is a property of the page, not news about this card.
 	assert.doesNotMatch(markup, /save separately/i);
-	// The live region survives, empty, so a save result still announces.
-	assert.match(markup, /aria-live="polite"/);
+	// How a save went is a toast now (the root's Toaster owns the live region),
+	// so no card carries a status line of its own.
+	assert.doesNotMatch(markup, /aria-live/);
 });
 
 test("offers reset only when the page can perform one, and asks first", () => {

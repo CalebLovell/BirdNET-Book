@@ -45,6 +45,7 @@ for a meaning; don't write a new mix inline when one exists:
 | `--row-selected` | a selected row in a list or table |
 | `--live-fill` | the Live pill |
 | `--confidence-high/mid/low` | confidence pills; text is moss / bark / ink |
+| `--toast-{success,warning,error}-fill/-line` | toast tones; title is moss / bark / clay, neutral toasts stay white |
 
 Confidence tiers are fixed at ≥90%, ≥75% and below (`lib/confidence.ts`),
 never a gradient. Destructive is clay. Single-series charts are moss. Heat
