@@ -273,6 +273,24 @@ class InstallTest(unittest.TestCase):
         self.assertTrue(rewritten.startswith('const NEW_SLUGS = new Set([\n\t"genus-species0",\n'))
         self.assertTrue(rewritten.endswith('\t"genus-species5",\n]);\n'))
 
+    def test_bounds_are_where_the_animal_is_painted(self):
+        """Catches a crop measured from the canvas rather than the painting."""
+        from PIL import Image
+
+        image = Image.new("RGBA", (800, 800), (0, 0, 0, 0))
+        image.paste((200, 100, 50, 255), (55, 108, 744, 692))
+        self.assertEqual(illustrate.painted_bounds(image), (55, 108, 689, 584))
+        self.assertIsNone(illustrate.painted_bounds(Image.new("RGBA", (8, 8), (0, 0, 0, 0))))
+
+    def test_bounds_are_added_once_then_replaced(self):
+        """Catches a second install appending a duplicate bounds table."""
+        source = 'export const NEW_SLUGS = new Set(["a-b"]);\n'
+        once = illustrate.rewrite_bounds(source, {"a-b": (1, 2, 3, 4)})
+        twice = illustrate.rewrite_bounds(once, {"a-b": (5, 6, 7, 8), "a-b-2": (0, 0, 9, 9)})
+        self.assertEqual(twice.count("PAINTED_BOUNDS"), 1)
+        self.assertIn('\t"a-b": [5, 6, 7, 8],\n\t"a-b-2": [0, 0, 9, 9],\n};', twice)
+        self.assertTrue(twice.startswith(source))
+
     def test_flight_poses_are_listed_apart_from_perched_ones(self):
         """Catches a hero slot pointing at a flight pose that doesn't exist."""
         with tempfile.TemporaryDirectory() as tmp:

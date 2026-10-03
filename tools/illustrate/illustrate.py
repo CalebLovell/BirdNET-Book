@@ -11,7 +11,8 @@ birds.db. The loop:
     review     write a contact sheet of every attempt, to pick by eye
     pick       (optional) override the automatic pick
     cutout     remove the paper and crop to the animal
-    install    copy into web-ui/public/illustrations-new and list the species
+    install    copy into web-ui/public/illustrations-new, list the species
+               and record where each painting sits on its canvas
 
 The style lives in prompt.md and the style/ folder; per-species field marks
 in notes.json. Every attempt is kept under work/<slug>/, so nothing is ever
@@ -703,6 +704,54 @@ def rewrite_slugs(source: str, slugs: list[str], name: str = SLUGS_NAME) -> str:
     return new
 
 
+BOUNDS_NAME = 'PAINTED_BOUNDS'
+
+
+def painted_bounds(image) -> tuple[int, int, int, int] | None:
+    """Where the animal sits on its canvas, as (x, y, width, height): the same
+    alpha cut place_on_canvas trims to, so a slot can crop to the painting."""
+    box = image.getchannel('A').point(lambda a: 255 if a > 16 else 0).getbbox()
+    if box is None:
+        return None
+    left, top, right, bottom = box
+    return left, top, right - left, bottom - top
+
+
+def rewrite_bounds(source: str, bounds: dict[str, tuple[int, int, int, int]], name: str = BOUNDS_NAME) -> str:
+    """The TypeScript `source` with `export const <name>` mapping each file's
+    stem to its painted bounds, one per line as Biome would format it; added
+    at the end when it isn't there yet."""
+    entries = ''.join(
+        f'\t"{stem}": [{", ".join(str(n) for n in box)}],\n' for stem, box in sorted(bounds.items())
+    )
+    block = f'export const {name}: Record<string, PaintedBounds> = {{\n{entries}}};'
+    new, count = re.subn(
+        rf'^export const {name}: Record<[^>]*> = \{{.*?^\}};', lambda _: block, source,
+        flags=re.DOTALL | re.MULTILINE,
+    )
+    if count == 1:
+        return new
+    intro = (
+        '\n// Where each painting sits on its square canvas, as [x, y, width, height]\n'
+        '// in canvas pixels, so a large slot can crop to the animal itself.\n'
+        'export type PaintedBounds = [number, number, number, number];\n\n'
+    )
+    return source.rstrip('\n') + '\n' + intro + block + '\n'
+
+
+def installed_bounds(folder: Path) -> dict[str, tuple[int, int, int, int]]:
+    """Each installed illustration's painted bounds, by file stem."""
+    from PIL import Image
+
+    bounds = {}
+    for path in sorted(folder.glob('*.png')):
+        with Image.open(path) as image:
+            box = painted_bounds(image.convert('RGBA'))
+        if box is not None:
+            bounds[path.stem] = box
+    return bounds
+
+
 def installed_slugs(folder: Path) -> tuple[list[str], list[str]]:
     """Species with a perched pose in `folder`, and those that also have a
     flight pose; the web UI shows the perched one in place of a missing flight."""
@@ -722,6 +771,7 @@ def cmd_install(args):
     perched, flight = installed_slugs(PUBLIC_DIR)
     source = SLUGS_TS.read_text(encoding='utf-8')
     source = rewrite_slugs(rewrite_slugs(source, perched), flight, FLIGHT_SLUGS_NAME)
+    source = rewrite_bounds(source, installed_bounds(PUBLIC_DIR))
     SLUGS_TS.write_text(source, encoding='utf-8', newline='\n')
     print(f'Copied {copied} files. {len(perched)} species in {SLUGS_TS.name}, {len(flight)} with a flight pose.')
 

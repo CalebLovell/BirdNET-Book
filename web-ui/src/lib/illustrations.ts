@@ -1,4 +1,9 @@
-import { NEW_FLIGHT_SLUGS, NEW_SLUGS } from "~/lib/illustrations-new.ts";
+import {
+	NEW_FLIGHT_SLUGS,
+	NEW_SLUGS,
+	PAINTED_BOUNDS,
+	type PaintedBounds,
+} from "~/lib/illustrations-new.ts";
 
 // The kachō-e style illustrations painted with tools/illustrate
 // (public/illustrations-new/, listed in illustrations-new.ts). A species
@@ -27,4 +32,15 @@ export function illustrationUrlFor(
 	if (!NEW_SLUGS.has(slug)) return null;
 	const flight = pose === "flight" && NEW_FLIGHT_SLUGS.has(slug);
 	return `/illustrations-new/${slug}${flight ? "-2" : ""}.png`;
+}
+
+/**
+ * Where the animal sits on an illustration's square canvas, as [x, y, width,
+ * height] in canvas pixels -- or null for anything that isn't one of ours.
+ * The canvases leave each animal a different margin on purpose (so lists keep
+ * a finch and a nuthatch at a like size); a large slot crops to this instead.
+ */
+export function paintedBoundsFor(imageUrl: string): PaintedBounds | null {
+	const stem = imageUrl.match(/^\/illustrations-new\/([a-z0-9-]+)\.png$/)?.[1];
+	return (stem && PAINTED_BOUNDS[stem]) || null;
 }
