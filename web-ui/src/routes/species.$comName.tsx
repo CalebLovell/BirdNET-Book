@@ -5,13 +5,7 @@ import {
 	stripSearchParams,
 } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import {
-	CalendarDays,
-	ChartNoAxesColumnIncreasing,
-	Feather,
-	Gauge,
-	Sunrise,
-} from "lucide-react";
+import { Feather } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { z } from "zod";
 
@@ -21,16 +15,9 @@ import { DetectionsByHourCard } from "~/components/detections-by-hour-card.tsx";
 import { DetectionsByMonthCard } from "~/components/detections-by-month-card.tsx";
 import { EmptyNote } from "~/components/empty-state.tsx";
 import { IndexDot } from "~/components/index-dot.tsx";
-import {
-	PageHeaderCard,
-	type PageHeaderStat,
-} from "~/components/page-header-card.tsx";
+import { PageHeaderCard } from "~/components/page-header-card.tsx";
 import { RecordingButton } from "~/components/recording-button.tsx";
 import { SpeciesActions } from "~/components/species-actions.tsx";
-import {
-	HERO_CARD_SHELL,
-	SpeciesHeroCard,
-} from "~/components/species-hero-card.tsx";
 import { SpeciesImage } from "~/components/species-image.tsx";
 import { StatusPage } from "~/components/status-page.tsx";
 import { Button } from "~/components/ui/button.tsx";
@@ -43,7 +30,7 @@ import {
 } from "~/components/ui/tooltip.tsx";
 import { YearSelector } from "~/components/year-selector.tsx";
 import { formatConfidence } from "~/lib/confidence.ts";
-import { formatDate, formatDateTime } from "~/lib/date-format.ts";
+import { formatDate, formatDateTime, formatTime } from "~/lib/date-format.ts";
 import { ebirdUrlFor } from "~/lib/ebird.ts";
 import { heatColor, heatColorAt } from "~/lib/heatmap.ts";
 import { illustrationUrlFor } from "~/lib/illustrations.ts";
@@ -337,11 +324,16 @@ function SpeciesDetailView({ detail }: { detail: SpeciesDetail }) {
 					>
 						<div className="flex flex-wrap items-center justify-between gap-2">
 							<div className="island-kicker">Detection history</div>
-							<YearSelector
-								year={year}
-								years={detail.availableYears}
-								onChange={selectYear}
-							/>
+							{/* Pulled into the kicker's line box: the 24px stepper
+							    otherwise sets the row's height and centres the kicker
+							    4px below where every other card's sits. */}
+							<div className="-my-1">
+								<YearSelector
+									year={year}
+									years={detail.availableYears}
+									onChange={selectYear}
+								/>
+							</div>
 						</div>
 
 						{/* The weekday labels sit outside the scroller, so they stay put
@@ -396,16 +388,21 @@ function SpeciesDetailView({ detail }: { detail: SpeciesDetail }) {
 								</div>
 							</div>
 						</div>
-						<div className="mt-3 flex items-center justify-end gap-1 text-[10px] text-muted-foreground max-[400px]:mt-2">
-							<span>Less</span>
-							{LEGEND_SHARES.map((share) => (
-								<span
-									key={share}
-									className="size-3 rounded-[3px] border border-[var(--line)]"
-									style={{ backgroundColor: heatColorAt(share) }}
-								/>
-							))}
-							<span>More</span>
+						{/* The bird's all-time tally on the left, the legend held right;
+						    the tally wraps above the legend when they can't share a line. */}
+						<div className="mt-3 flex flex-wrap items-center justify-between gap-x-4 gap-y-2 max-[400px]:mt-2">
+							<StationRecord detail={detail} />
+							<div className="ml-auto flex items-center gap-1 text-[10px] text-muted-foreground">
+								<span>Less</span>
+								{LEGEND_SHARES.map((share) => (
+									<span
+										key={share}
+										className="size-3 rounded-[3px] border border-[var(--line)]"
+										style={{ backgroundColor: heatColorAt(share) }}
+									/>
+								))}
+								<span>More</span>
+							</div>
 						</div>
 					</section>
 
@@ -502,9 +499,9 @@ function HeatMapDay({
 }
 
 /**
- * The Today page's hero card with this species' figures in it -- same shell,
- * same portrait column, same lines. Only the data differs: this card's clock
- * runs from the species' last visit rather than from a live poll.
+ * The species masthead: the portrait, and beside it the name, when it was last
+ * heard and the eBird link. Just the bird -- its all-time figures sit under
+ * the detection history, and the recording lives in the visit log below.
  */
 function SummaryCard({
 	detail,
@@ -514,57 +511,103 @@ function SummaryCard({
 	offsetMs: number;
 }) {
 	// The most recent visit is the same detection as `lastDetected`, and it is the
-	// only one carrying a server-measured age and a clip, so the relative label
-	// and the recording both agree with the visit log instead of drifting.
+	// only one carrying a server-measured age, so the relative label agrees with
+	// the visit log instead of drifting.
 	const lastVisit = detail.recentVisits[0];
+	const lastHeard = lastVisit
+		? formatTimeAgo(lastVisit.ageMs + offsetMs)
+		: formatHeardDate(detail.lastDetected.date);
+	return (
+		<section
+			aria-label="Species profile"
+			className="feature-card mt-(--page-gap) grid overflow-hidden rounded-md sm:grid-cols-[12rem_minmax(0,1fr)]"
+		>
+			{/* The portrait's own column -- above the text on a phone, where the
+			    column becomes a band. */}
+			{/* A fixed height, as on the Today hero, so the illustration's own size
+				    never sets the card's: the figure cards beside it are sized to fit. */}
+			<div className="flex h-36 items-center justify-center overflow-hidden p-4 pb-0 sm:h-44 sm:pr-0 sm:pb-4">
+				<SpeciesImage
+					imageUrl={detail.imageUrl}
+					alt={detail.comName}
+					glyphClassName="size-16"
+				/>
+			</div>
 
-	const stats = [
-		{
-			label: "Total detections",
-			value: detail.totalDetections,
-			icon: ChartNoAxesColumnIncreasing,
-		},
-		{
-			label: "Avg. confidence",
-			value: formatConfidence(detail.averageConfidence),
-			icon: Gauge,
-		},
-		{
-			label: "First heard",
-			value: formatHeardDate(detail.firstDetected.date),
-			icon: Sunrise,
-		},
-		{
-			label: "Last heard",
-			value: formatHeardDate(detail.lastDetected.date),
-			icon: CalendarDays,
-		},
-	] satisfies PageHeaderStat[];
+			{/* Centred against the portrait, which is usually the taller of the
+			    two, so the text doesn't sit high with a gap pooled beneath it. */}
+			<div className="flex min-w-0 flex-col justify-center gap-3 p-4">
+				<div className="min-w-0">
+					<h1 className="display-title font-bold text-2xl text-[var(--moss)] sm:text-3xl">
+						{detail.comName}
+					</h1>
+					<p className="text-[var(--bark)] text-xs italic">{detail.sciName}</p>
+				</div>
+
+				{/* Only the moments are bold; the phrasing around them stays muted. */}
+				<p className="tabular-data text-muted-foreground text-sm">
+					Last heard{" "}
+					<span className="font-semibold text-foreground">{lastHeard}</span>
+					{lastVisit && detail.lastDetected.date ? (
+						<>
+							{" "}
+							on{" "}
+							<span className="font-semibold text-foreground">
+								{formatDate(detail.lastDetected.date)}
+							</span>
+							{detail.lastDetected.time ? (
+								<>
+									{" "}
+									at{" "}
+									<span className="font-semibold text-foreground">
+										{formatTime(detail.lastDetected.time)}
+									</span>
+								</>
+							) : null}
+						</>
+					) : null}
+				</p>
+				{/* Every row of the column on one even step; the eBird link takes its
+				    own row under the last-heard line rather than the card's far edge. */}
+				<SpeciesActions ebirdUrl={detail.ebirdUrl} comName={detail.comName} />
+			</div>
+		</section>
+	);
+}
+
+/**
+ * The bird's whole record at this station, under its heat map: how many times
+ * it has been detected, and how many days from its first detection to its
+ * latest. All-time, whichever year the heat map is showing.
+ */
+function StationRecord({ detail }: { detail: SpeciesDetail }) {
+	const days = daysBetween(detail.firstDetected.date, detail.lastDetected.date);
 
 	return (
-		<SpeciesHeroCard
-			label="Species profile"
-			comName={detail.comName}
-			sciName={detail.sciName}
-			imageUrl={detail.imageUrl}
-			relativeTime={
-				lastVisit
-					? formatTimeAgo(lastVisit.ageMs + offsetMs)
-					: formatHeardDate(detail.lastDetected.date)
-			}
-			heardAt={formatDateTime(
-				detail.lastDetected.date,
-				detail.lastDetected.time,
+		<p className="tabular-data text-muted-foreground text-xs">
+			<span className="count-figure">
+				{detail.totalDetections.toLocaleString()}
+			</span>{" "}
+			{detail.totalDetections === 1 ? "detection" : "detections"}
+			{days === null ? null : (
+				<>
+					{" "}
+					over <span className="count-figure">{days.toLocaleString()}</span>{" "}
+					{days === 1 ? "day" : "days"} on record
+				</>
 			)}
-			confidence={detail.lastDetected.confidence}
-			audioUrl={lastVisit?.audioUrl ?? null}
-			stats={stats}
-			actions={
-				<SpeciesActions ebirdUrl={detail.ebirdUrl} comName={detail.comName} />
-			}
-			className={`${HERO_CARD_SHELL} mt-(--page-gap)`}
-		/>
+		</p>
 	);
+}
+
+/** Days from the first detection to the last, counting both ends: a bird heard
+ * on a single day has one day on record. Null when either date is missing. */
+function daysBetween(first: string, last: string): number | null {
+	if (!first || !last) return null;
+	const start = Date.parse(`${first}T00:00:00Z`);
+	const end = Date.parse(`${last}T00:00:00Z`);
+	if (Number.isNaN(start) || Number.isNaN(end)) return null;
+	return Math.round((end - start) / 86_400_000) + 1;
 }
 
 function formatHeardDate(date: string): string {

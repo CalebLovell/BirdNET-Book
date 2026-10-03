@@ -43,3 +43,14 @@ export function formatDateTime(dateOrTimestamp: string, time?: string): string {
 		? DATE_TIME.format(parsed)
 		: [dateOrTimestamp, time].filter(Boolean).join(" ");
 }
+
+const TIME = new Intl.DateTimeFormat("en-US", {
+	hour: "numeric",
+	minute: "2-digit",
+});
+
+/** "1:49 PM" from the detections table's "HH:MM:SS" time column. */
+export function formatTime(time: string): string {
+	const parsed = parse("2000-01-01", time);
+	return parsed ? TIME.format(parsed) : time;
+}

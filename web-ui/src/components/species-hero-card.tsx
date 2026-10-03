@@ -2,18 +2,13 @@ import { Link } from "@tanstack/react-router";
 import type { CSSProperties, ReactNode } from "react";
 
 import { ConfidencePill } from "~/components/confidence-pill.tsx";
-import {
-	type PageHeaderStat,
-	PageHeaderStats,
-} from "~/components/page-header-card.tsx";
 import { RecordingButton } from "~/components/recording-button.tsx";
 import { SpeciesImage } from "~/components/species-image.tsx";
 
 /**
- * The one masthead shape shared by the Today page's hero and the species
- * profile: portrait on the left, and a content column that always reads name,
- * scientific name, how long ago, when and how confidently, then the figures.
- * Only the data differs between the two pages -- never the shape.
+ * The Today page's masthead shape: portrait on the left, and a content column
+ * that reads name, scientific name, how long ago, then when and how
+ * confidently.
  */
 export const HERO_CARD_SHELL = "feature-card rounded-md p-4";
 
@@ -98,7 +93,6 @@ export function SpeciesHeroCard({
 	heardAt,
 	confidence,
 	audioUrl,
-	stats,
 	actions,
 	footer,
 	className,
@@ -107,7 +101,7 @@ export function SpeciesHeroCard({
 	label: string;
 	comName: string;
 	sciName: string;
-	/** Links the title to the species page. Omit on the species page itself. */
+	/** Links the title to the species page. */
 	speciesSlug?: string;
 	imageUrl: string | null;
 	/** The moss line: "5 minutes ago". */
@@ -117,18 +111,14 @@ export function SpeciesHeroCard({
 	heardAt: string;
 	confidence: number | null;
 	audioUrl: string | null;
-	/** The figures, rendered as their own row of little cards below the portrait
-	    card. Omit them entirely -- as the Live hero does -- where the page's own
-	    cards already carry these counts. */
-	stats?: PageHeaderStat[];
 	/** Top-right controls, e.g. the species page's eBird link. */
 	actions?: ReactNode;
-	/** Unfolds beneath the figures -- what `actions` opens, if anything. */
+	/** Unfolds beneath the card's row -- what `actions` opens, if anything. */
 	footer?: ReactNode;
 	className?: string;
 	style?: CSSProperties;
 }) {
-	const hero = (
+	return (
 		<HeroCardShell
 			label={label}
 			portrait={<HeroPortrait imageUrl={imageUrl} comName={comName} />}
@@ -168,25 +158,11 @@ export function SpeciesHeroCard({
 				    the outline button (which inherits its text colour), leaving it
 				    greyer than the same button everywhere else. */}
 				<div className="tabular-data mt-1 flex flex-wrap items-center gap-2 text-sm">
-					{/* Phrased identically on both pages: the card always describes the
-					    most recent detection, whether or not the page is polling. */}
 					<span className="text-muted-foreground">last heard {heardAt}</span>
 					<ConfidencePill confidence={confidence} />
 					<RecordingButton audioUrl={audioUrl} />
 				</div>
 			</div>
 		</HeroCardShell>
-	);
-
-	// The figures are their own row of little cards below the portrait card, not
-	// a strip inside it -- siblings, so nothing sits card-inside-card. Without
-	// figures the card stands alone and needs no wrapper.
-	if (!stats || stats.length === 0) return hero;
-
-	return (
-		<div className="space-y-(--page-gap)">
-			{hero}
-			<PageHeaderStats stats={stats} />
-		</div>
 	);
 }
