@@ -37,20 +37,13 @@ export function confidenceStyle(confidence: number): CSSProperties {
 	};
 }
 
-/**
- * The confidence pill's hover text: the score in words, then what its tier
- * means -- "BirdNET was 88% sure — probably right."
- */
+/** The confidence pill's hover text: the score in words -- "BirdNET was 88% sure." */
 export function confidenceTooltip(
 	confidence: number,
 	{ average = false }: { average?: boolean } = {},
 ): string {
 	const score = formatConfidence(confidence);
-	const lead = average
-		? `BirdNET averaged ${score} sure across these detections`
-		: `BirdNET was ${score} sure`;
-
-	if (confidence >= CONFIDENT_MIN) return `${lead} — a confident ID.`;
-	if (confidence >= PROBABLE_MIN) return `${lead} — probably right.`;
-	return `${lead} — worth a listen to check.`;
+	return average
+		? `BirdNET averaged ${score} sure across these detections.`
+		: `BirdNET was ${score} sure.`;
 }
