@@ -69,7 +69,11 @@ export function PageHeaderCard({
 							<h1 className="display-title font-bold text-xl leading-tight">
 								{title}
 							</h1>
-							<p className="mt-1 text-muted-foreground text-sm">
+							{/* Figures set into the sentence (`.count-figure`, 13px with its
+							    own line-height) would otherwise stretch the line box a
+							    fraction of a pixel, so a masthead with counts stood taller
+							    than one without and the page jumped between them. */}
+							<p className="mt-1 text-muted-foreground text-sm [&_.count-figure]:leading-none">
 								{description}
 							</p>
 						</div>
