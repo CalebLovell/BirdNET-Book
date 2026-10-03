@@ -6,17 +6,28 @@ import { SiteSearch } from "~/components/sidebar/site-search.tsx";
 /**
  * Everything inside the sidebar, shared by the desktop column and the mobile
  * drawer so the two can never drift apart.
+ *
+ * The drawer passes `withTitle={false}`: it carries the site name in its own
+ * top bar, a copy of the mobile bar, so the name doesn't jump when it opens.
  */
-export function SidebarBody({ onNavigate }: { onNavigate?: () => void }) {
+export function SidebarBody({
+	onNavigate,
+	withTitle = true,
+}: {
+	onNavigate?: () => void;
+	withTitle?: boolean;
+}) {
 	return (
 		<div className="flex min-h-full flex-col py-3">
-			<Link
-				to="/"
-				onClick={onNavigate}
-				className="display-title px-3 pb-4 font-semibold text-xl no-underline"
-			>
-				BirdNET-Book
-			</Link>
+			{withTitle ? (
+				<Link
+					to="/"
+					onClick={onNavigate}
+					className="display-title px-3 pb-4 font-semibold text-xl no-underline"
+				>
+					BirdNET-Book
+				</Link>
+			) : null}
 
 			<SiteSearch onNavigate={onNavigate} />
 

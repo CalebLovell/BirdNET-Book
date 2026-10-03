@@ -100,32 +100,39 @@ export function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
 						<SearchCheck className="sidebar-icon" aria-hidden="true" />
 						Review
 					</Link>
-					<Link
-						to="/species-control"
-						search={{ page: 1, sort: "species", direction: "asc" }}
-						activeOptions={{ includeSearch: false }}
-						{...linkProps}
-					>
-						<SlidersHorizontal className="sidebar-icon" aria-hidden="true" />
-						Species Control
-					</Link>
 				</nav>
 			) : null}
 
 			{/* Set apart at the foot of the sidebar: `mt-auto` pushes it down on a
 			    tall viewport and leaves it last in the flow on a short one. Account
 			    is open to everyone -- a visitor signs in there, an owner locks up
-			    there -- and Settings joins it once unlocked. */}
-			<nav className="mt-auto flex flex-col gap-0.5 pt-4" aria-label="Station">
+			    there -- and Species Control and Settings join it once unlocked. Its label is "Station",
+			    which a visitor sees over Account alone too. */}
+			<nav
+				className="mt-auto flex flex-col gap-0.5 pt-4"
+				aria-labelledby={`${id}-station`}
+			>
+				<SectionLabel id={`${id}-station`}>Station</SectionLabel>
 				<Link to="/account" {...linkProps}>
 					<CircleUserRound className="sidebar-icon" aria-hidden="true" />
 					Account
 				</Link>
 				{auth.unlocked ? (
-					<Link to="/settings" {...linkProps}>
-						<Settings className="sidebar-icon" aria-hidden="true" />
-						Settings
-					</Link>
+					<>
+						<Link
+							to="/species-control"
+							search={{ page: 1, sort: "species", direction: "asc" }}
+							activeOptions={{ includeSearch: false }}
+							{...linkProps}
+						>
+							<SlidersHorizontal className="sidebar-icon" aria-hidden="true" />
+							Species Control
+						</Link>
+						<Link to="/settings" {...linkProps}>
+							<Settings className="sidebar-icon" aria-hidden="true" />
+							Settings
+						</Link>
+					</>
 				) : null}
 			</nav>
 		</div>
