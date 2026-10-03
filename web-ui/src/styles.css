@@ -165,6 +165,17 @@ a:hover {
   color: var(--ink);
 }
 
+/* A link drawn as a button (`ButtonLink`, or `Button asChild` around an <a>)
+   takes its colours from the button variant, not from the link rules above.
+   Those are unlayered, so they would otherwise beat the variant's layered
+   utilities -- moss text on a moss primary fill. `revert-layer` hands colour
+   back to the layered cascade, where the variant wins. */
+a[data-slot="button"],
+a[data-slot="button"]:hover {
+  color: revert-layer;
+  text-decoration: none;
+}
+
 code {
   font-family: var(--font-mono);
   font-size: 0.9em;

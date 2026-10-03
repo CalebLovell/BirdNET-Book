@@ -1,3 +1,4 @@
+import { Trash2, X } from "lucide-react";
 import { Button } from "~/components/ui/button.tsx";
 
 type DeleteDetectionsDialogProps = {
@@ -32,10 +33,20 @@ export function DeleteDetectionsDialog({
 					</p>
 				</div>
 				<div className="mt-4 flex justify-end gap-2">
-					<Button variant="outline" onClick={onCancel} disabled={pending}>
+					<Button
+						icon={X}
+						variant="outline"
+						onClick={onCancel}
+						disabled={pending}
+					>
 						Cancel
 					</Button>
-					<Button variant="destructive" onClick={onConfirm} disabled={pending}>
+					<Button
+						variant="destructive"
+						icon={Trash2}
+						onClick={onConfirm}
+						disabled={pending}
+					>
 						{pending
 							? "Deleting…"
 							: `Delete ${count} detection${count === 1 ? "" : "s"}`}

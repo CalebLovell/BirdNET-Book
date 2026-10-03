@@ -1,4 +1,4 @@
-import { Crosshair } from "lucide-react";
+import { Check, Crosshair, X } from "lucide-react";
 import { useState } from "react";
 
 import { Button } from "~/components/ui/button.tsx";
@@ -154,6 +154,7 @@ export function StationLocation({
 							<Button
 								type="button"
 								variant="outline"
+								icon={X}
 								onClick={() => setState({ kind: "idle" })}
 							>
 								{state.kind === "found" ? "Cancel" : "Close"}
@@ -161,6 +162,7 @@ export function StationLocation({
 							{state.kind === "found" ? (
 								<Button
 									type="button"
+									icon={Check}
 									onClick={() => {
 										onApply(state.coordinates);
 										setState({ kind: "idle" });

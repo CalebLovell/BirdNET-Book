@@ -23,8 +23,9 @@ export function CardHeader({
 	title: ReactNode;
 	/** For a card that names itself by its title with `aria-labelledby`. */
 	titleId?: string;
-	/** `h2` where the title is the card's heading; a plain kicker otherwise. */
-	as?: "div" | "h2";
+	/** `h2` where the title is the card's heading (`h1` where the card is the
+	 * whole page); a plain kicker otherwise. */
+	as?: "div" | "h1" | "h2";
 	/** Held against the right edge: a count, a link, a control. */
 	children?: ReactNode;
 	className?: string;

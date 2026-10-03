@@ -1,7 +1,9 @@
-import { Link, useRouter, useRouterState } from "@tanstack/react-router";
+import { useRouter, useRouterState } from "@tanstack/react-router";
+import { Activity, RotateCcw } from "lucide-react";
 
 import { PageStatus } from "~/components/page-status.tsx";
 import { Button } from "~/components/ui/button.tsx";
+import { ButtonLink } from "~/components/ui/button-link.tsx";
 
 /**
  * The last resort for an address that matches no route at all. There is no
@@ -19,9 +21,9 @@ export function RouteNotFound() {
 				tone="missing"
 				title="Page not found"
 				actions={
-					<Button variant="outline" size="sm" asChild>
-						<Link to="/live">Go to Live</Link>
-					</Button>
+					<ButtonLink to="/live" variant="outline" size="sm" icon={Activity}>
+						Go to Live
+					</ButtonLink>
 				}
 			>
 				There is nothing at <code>{pathname}</code>. The address may be
@@ -50,13 +52,14 @@ export function RouteError() {
 						<Button
 							variant="outline"
 							size="sm"
+							icon={RotateCcw}
 							onClick={() => router.invalidate()}
 						>
 							Try again
 						</Button>
-						<Button variant="ghost" size="sm" asChild>
-							<Link to="/live">Go to Live</Link>
-						</Button>
+						<ButtonLink to="/live" variant="ghost" size="sm" icon={Activity}>
+							Go to Live
+						</ButtonLink>
 					</>
 				}
 			>

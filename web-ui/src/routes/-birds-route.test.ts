@@ -10,7 +10,9 @@ test("an unknown slug throws notFound and the route catches it itself", async ()
 	assert.match(source, /status === "unknown"/);
 	assert.match(source, /throw notFound\(\)/);
 	assert.match(source, /notFoundComponent:\s*SpeciesNotFound/);
-	assert.match(source, /<StatusPage/);
+	assert.match(source, /<PageStatus/);
+	// A bird's page: no "All Birds" masthead above the dead end.
+	assert.doesNotMatch(source, /<StatusPage|<PageHeaderCard/);
 });
 
 test("a known but unheard bird gets a profile, not an error", async () => {
@@ -23,8 +25,11 @@ test("a known but unheard bird gets a profile, not an error", async () => {
 	assert.match(source, /ebirdUrlFor/);
 	assert.match(source, /illustrationUrlFor/);
 	// An undetected bird is not a PageStatus card.
-	const undetected = source.slice(source.indexOf("function UndetectedSpecies"));
-	assert.doesNotMatch(undetected.slice(0, 1600), /<PageStatus/);
+	const undetected = source.slice(
+		source.indexOf("function UndetectedSpecies"),
+		source.indexOf("function SpeciesNotFound"),
+	);
+	assert.doesNotMatch(undetected, /<PageStatus/);
 });
 
 test("hooks live in the detail view, not behind a conditional", async () => {

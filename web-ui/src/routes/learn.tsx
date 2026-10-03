@@ -4,7 +4,7 @@ import {
 	useRouter,
 	useRouterState,
 } from "@tanstack/react-router";
-import { Bird, Lightbulb } from "lucide-react";
+import { Lightbulb } from "lucide-react";
 import { z } from "zod";
 import { CardHeader } from "~/components/card-header.tsx";
 import { EmptyNote, EmptyState } from "~/components/empty-state.tsx";
@@ -103,9 +103,9 @@ function EmptyPool({
 	// someone around a loop of empty pools.
 	if (!hasAnyDetections) {
 		return (
-			<EmptyState icon={Bird} title="No detections recorded yet.">
-				A round needs recordings to play, so this page waits until the station
-				has heard something.
+			<EmptyState title="Nothing to play yet">
+				No detections recorded yet. A round needs recordings to play, so this
+				page waits until the station has heard something.
 			</EmptyState>
 		);
 	}

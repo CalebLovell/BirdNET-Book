@@ -20,10 +20,10 @@ test("a station that has never recorded anything gets the page-level card", asyn
 	]) {
 		const source = await read(file);
 		assert.match(source, /<EmptyState/, `${file} should use EmptyState`);
-		assert.match(
+		assert.doesNotMatch(
 			source,
-			/icon=\{Bird\}/,
-			`${file}'s page-level empty should carry the bird`,
+			/<EmptyState icon=/,
+			`${file}'s page-level empty is a plain titled card, no artwork`,
 		);
 	}
 });

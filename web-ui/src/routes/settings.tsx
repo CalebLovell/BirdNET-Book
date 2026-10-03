@@ -1,5 +1,6 @@
 import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
+import { RotateCcw } from "lucide-react";
 import { PageStatus } from "~/components/page-status.tsx";
 import { SettingsPage } from "~/components/settings/settings-page.tsx";
 import { Button } from "~/components/ui/button.tsx";
@@ -98,6 +99,7 @@ function SettingsUnavailable() {
 					<Button
 						variant="outline"
 						size="sm"
+						icon={RotateCcw}
 						onClick={() => router.invalidate()}
 					>
 						Try again

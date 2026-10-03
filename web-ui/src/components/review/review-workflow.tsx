@@ -1,13 +1,18 @@
 import {
+	ArrowRight,
+	Check,
 	ExternalLink,
 	Search,
 	ShieldCheck,
 	Shuffle,
 	SkipForward,
 	Trash2,
+	X,
 } from "lucide-react";
 import { useMemo, useState } from "react";
+import { CardHeader } from "~/components/card-header.tsx";
 import { ConfidencePill } from "~/components/confidence-pill.tsx";
+import { EmptyNote } from "~/components/empty-state.tsx";
 import { IndexDot } from "~/components/index-dot.tsx";
 import { ClipPlayer } from "~/components/learn/clip-player.tsx";
 import { SpeciesImage } from "~/components/species-image.tsx";
@@ -96,31 +101,26 @@ export function ReviewWorkflow({
 		return (
 			<section
 				aria-label="Review queue"
-				className="feature-card rounded-md p-4 text-center"
+				className="feature-card rounded-md p-4"
 			>
-				{/* The same empty-nest artwork the Today hero falls back to, so a
-				    cleared queue reads as a state of the station, not a broken page. */}
-				<img
-					src="/illustrations/nest.webp"
-					alt=""
-					className="mx-auto h-32 object-contain"
-				/>
-				<h2 className="display-title mt-2 font-bold text-xl">All caught up</h2>
-				<p className="mt-1 text-muted-foreground text-sm">
+				<CardHeader title="Review queue">
+					{page.page < pageCount ? (
+						<Button
+							variant="outline"
+							size="xs"
+							icon={ArrowRight}
+							iconPosition="end"
+							onClick={() => onPageChange(page.page + 1)}
+						>
+							Next page
+						</Button>
+					) : null}
+				</CardHeader>
+				<EmptyNote>
 					{page.page < pageCount
-						? "Nothing left on this page."
-						: "No more recordings in the queue."}
-				</p>
-				{page.page < pageCount ? (
-					<Button
-						className="mt-4"
-						variant="outline"
-						size="xs"
-						onClick={() => onPageChange(page.page + 1)}
-					>
-						Next page
-					</Button>
-				) : null}
+						? "All caught up. Nothing left on this page."
+						: "All caught up. No more recordings in the queue."}
+				</EmptyNote>
 			</section>
 		);
 	const position = rows.indexOf(row);
@@ -379,7 +379,11 @@ export function ReviewWorkflow({
 							))}
 						</div>
 						<div className="mt-4 flex justify-end">
-							<Button variant="outline" onClick={() => setPicker(null)}>
+							<Button
+								icon={X}
+								variant="outline"
+								onClick={() => setPicker(null)}
+							>
 								Cancel
 							</Button>
 						</div>
@@ -409,6 +413,7 @@ export function ReviewWorkflow({
 						<div className="mt-4 flex justify-end gap-2">
 							<Button
 								variant="outline"
+								icon={X}
 								disabled={busy}
 								onClick={() => setAction(null)}
 							>
@@ -416,6 +421,7 @@ export function ReviewWorkflow({
 							</Button>
 							<Button
 								variant={action.kind === "delete" ? "destructive" : "default"}
+								icon={action.kind === "delete" ? Trash2 : Check}
 								disabled={busy}
 								onClick={confirm}
 							>

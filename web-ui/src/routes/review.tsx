@@ -1,6 +1,6 @@
 import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { CircleAlert, SearchCheck } from "lucide-react";
+import { CircleAlert, RotateCcw, SearchCheck } from "lucide-react";
 import { useState } from "react";
 import { PageHeaderCard } from "~/components/page-header-card.tsx";
 import { PageStatus } from "~/components/page-status.tsx";
@@ -124,6 +124,7 @@ function ReviewUnavailable() {
 					<Button
 						variant="outline"
 						size="sm"
+						icon={RotateCcw}
 						onClick={() => router.invalidate()}
 					>
 						Try again

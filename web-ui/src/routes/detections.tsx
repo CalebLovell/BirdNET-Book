@@ -5,7 +5,7 @@ import {
 } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import type { RowSelectionState } from "@tanstack/react-table";
-import { AudioWaveform, Bird } from "lucide-react";
+import { AudioWaveform } from "lucide-react";
 import { useState } from "react";
 import { DeleteDetectionsDialog } from "~/components/detections/delete-detections-dialog.tsx";
 import {
@@ -118,8 +118,9 @@ function Detections() {
 			    an empty frame around one message. A filter that matched nothing
 			    keeps the card: the control that emptied it is right there. */}
 			{stationEmpty ? (
-				<EmptyState icon={Bird} title="No detections recorded yet.">
-					Detections will appear here once the station hears something.
+				<EmptyState title="Detections">
+					No detections recorded yet. They will appear here once the station
+					hears something.
 				</EmptyState>
 			) : (
 				/* Takes the leftover height when there are rows to scroll. An empty

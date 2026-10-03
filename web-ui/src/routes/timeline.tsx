@@ -1,11 +1,6 @@
-import {
-	createFileRoute,
-	Link,
-	stripSearchParams,
-} from "@tanstack/react-router";
+import { createFileRoute, stripSearchParams } from "@tanstack/react-router";
 import {
 	ArrowRight,
-	Bird,
 	CalendarRange,
 	LayoutDashboard,
 	Rows3,
@@ -22,7 +17,7 @@ import {
 } from "~/components/species-grid.tsx";
 import { StatusPage } from "~/components/status-page.tsx";
 import { PeriodToolbar } from "~/components/timeline/period-toolbar.tsx";
-import { Button } from "~/components/ui/button.tsx";
+import { ButtonLink } from "~/components/ui/button-link.tsx";
 import { TooltipProvider } from "~/components/ui/tooltip.tsx";
 import { useShareCard } from "~/components/use-share-card.tsx";
 import { formatDate } from "~/lib/date-format.ts";
@@ -175,9 +170,10 @@ function Timeline() {
 						onViewChange={(next) => show({ view: next })}
 					/>
 				) : (
-					<EmptyState icon={Bird} title="No detections recorded yet.">
-						Once the station hears something, its rhythm will show up here --
-						hour by hour, day by day, and across the whole of its history.
+					<EmptyState title="Timeline">
+						No detections recorded yet. Once the station hears something, its
+						rhythm will show up here -- hour by hour, day by day, and across the
+						whole of its history.
 					</EmptyState>
 				)}
 			</div>
@@ -390,18 +386,16 @@ function TimelineCards({
 	// it reads as the next step rather than the tail of a sentence; the two
 	// cards beside it just say they're empty.
 	const emptyAction = jumpTo ? (
-		<Button asChild size="sm" icon={ArrowRight} iconPosition="end">
-			<Link
-				to="/timeline"
-				search={(prev) => ({ ...prev, date: jumpTo.anchor })}
-				// Forced: the global link colour (moss) is unlayered and would
-				// otherwise beat the button's paper text on its moss fill.
-				className="text-primary-foreground! no-underline hover:text-primary-foreground!"
-			>
-				{jumpTo.direction === "last" ? "Last" : "Next"} {jumpTo.noun} with
-				detections: {jumpTo.label}
-			</Link>
-		</Button>
+		<ButtonLink
+			to="/timeline"
+			search={(prev) => ({ ...prev, date: jumpTo.anchor })}
+			size="sm"
+			icon={ArrowRight}
+			iconPosition="end"
+		>
+			{jumpTo.direction === "last" ? "Last" : "Next"} {jumpTo.noun} with
+			detections: {jumpTo.label}
+		</ButtonLink>
 	) : undefined;
 
 	const gridItems: SpeciesGridItem[] = rows.map((row) => ({

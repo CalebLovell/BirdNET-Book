@@ -1,4 +1,4 @@
-import { SlidersHorizontal } from "lucide-react";
+import { Save, SlidersHorizontal, X } from "lucide-react";
 import { useState } from "react";
 
 import { Button } from "~/components/ui/button.tsx";
@@ -107,12 +107,13 @@ export function ReviewQueueSettings({
 							<Button
 								type="button"
 								variant="outline"
+								icon={X}
 								disabled={saving}
 								onClick={() => setOpen(false)}
 							>
 								Cancel
 							</Button>
-							<Button type="submit" disabled={saving}>
+							<Button type="submit" icon={Save} disabled={saving}>
 								{saving ? "Saving…" : "Save threshold"}
 							</Button>
 						</div>

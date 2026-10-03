@@ -9,7 +9,6 @@ import {
 	ArrowDownWideNarrow,
 	ArrowUpNarrowWide,
 	BarChart3,
-	Bird,
 	ChevronDown,
 	Clock,
 	Feather,
@@ -217,8 +216,9 @@ function Species() {
 				cards.length === 0 ? (
 					// Nothing has ever been recorded: the page itself is empty, so it
 					// carries the card rather than a line inside one.
-					<EmptyState icon={Bird} title="No species recorded yet.">
-						Every species the station hears will be listed here.
+					<EmptyState title="Species recorded">
+						No species recorded yet. Every species the station hears will be
+						listed here.
 					</EmptyState>
 				) : (
 					<section

@@ -1,6 +1,5 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { Bird } from "lucide-react";
 import { renderToStaticMarkup } from "react-dom/server";
 
 import { EmptyNote, EmptyState } from "~/components/empty-state.tsx";
@@ -18,25 +17,29 @@ test("a section-level empty is a quiet line, not a card", () => {
 	assert.doesNotMatch(markup, /<svg/);
 });
 
-test("a page-level empty carries a card, an icon and a headline", () => {
+test("a page-level empty is a card under the standard header band", () => {
 	const markup = renderToStaticMarkup(
-		<EmptyState icon={Bird} title="Nothing recorded yet">
+		<EmptyState title="Timeline">
 			The station has not heard anything so far.
 		</EmptyState>,
 	);
 
-	assert.match(markup, /feature-card/);
-	assert.match(markup, /<svg/);
-	assert.match(markup, /aria-hidden="true"/);
-	assert.match(markup, /<p class="font-semibold">Nothing recorded yet<\/p>/);
+	assert.match(
+		markup,
+		/^<section aria-label="Timeline" class="feature-card rounded-md p-4">/,
+	);
+	assert.match(
+		markup,
+		/min-h-\[45px\][^>]*><div class="island-kicker m-0 shrink-0">Timeline<\/div>/,
+	);
 	assert.match(markup, /The station has not heard anything so far\./);
+	assert.doesNotMatch(markup, /<svg/);
 });
 
-test("the supporting line is optional", () => {
+test("it adds no top margin of its own; the page spaces it", () => {
 	const markup = renderToStaticMarkup(
-		<EmptyState icon={Bird} title="Nothing recorded yet" />,
+		<EmptyState title="Timeline">Nothing yet.</EmptyState>,
 	);
 
-	assert.match(markup, /Nothing recorded yet/);
-	assert.doesNotMatch(markup, /text-muted-foreground text-sm/);
+	assert.doesNotMatch(markup, /^<section[^>]*mt-/);
 });

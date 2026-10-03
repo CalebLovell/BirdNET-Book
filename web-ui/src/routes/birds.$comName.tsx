@@ -16,12 +16,11 @@ import { DetectionsByHourCard } from "~/components/detections-by-hour-card.tsx";
 import { DetectionsByMonthCard } from "~/components/detections-by-month-card.tsx";
 import { EmptyNote } from "~/components/empty-state.tsx";
 import { IndexDot } from "~/components/index-dot.tsx";
-import { PageHeaderCard } from "~/components/page-header-card.tsx";
+import { PageStatus } from "~/components/page-status.tsx";
 import { RecordingButton } from "~/components/recording-button.tsx";
 import { SpeciesActions } from "~/components/species-actions.tsx";
 import { SpeciesImage } from "~/components/species-image.tsx";
-import { StatusPage } from "~/components/status-page.tsx";
-import { Button } from "~/components/ui/button.tsx";
+import { ButtonLink } from "~/components/ui/button-link.tsx";
 import { PageStepper } from "~/components/ui/page-stepper.tsx";
 import {
 	Tooltip,
@@ -165,10 +164,6 @@ function buildHeatMap(history: TrendPoint[]): {
 	return { weeks, maximum };
 }
 
-const SPECIES_SECTION = "All Birds";
-const SPECIES_SECTION_DESCRIPTION =
-	"Every species ever recorded at this station.";
-
 function BirdPage() {
 	const result = Route.useLoaderData();
 
@@ -186,8 +181,9 @@ function BirdPage() {
 
 /**
  * A bird the installed model knows about that this station has never heard.
- * Not an error card: it carries the bird's name, its portrait and its eBird
- * link, because someone arriving here is usually waiting on exactly this
+ * Not an error card: it is the same profile hero a heard bird opens with --
+ * portrait, name, eBird link -- with "not heard yet" where the last-heard line
+ * would be, because someone arriving here is usually waiting on exactly this
  * species rather than recovering from a typo.
  */
 function UndetectedSpecies({
@@ -197,76 +193,65 @@ function UndetectedSpecies({
 	comName: string;
 	sciName: string;
 }) {
-	const illustration = illustrationUrlFor(sciName, "flight");
-
 	return (
-		<div className="page-wrap space-y-(--page-gap) py-4">
-			<PageHeaderCard
-				icon={Feather}
-				title={SPECIES_SECTION}
-				description={SPECIES_SECTION_DESCRIPTION}
-			/>
-			<section className="feature-card rounded-md p-4">
-				<div className="flex flex-wrap items-start gap-5 max-[400px]:gap-2">
-					<div className="flex size-32 shrink-0 items-center justify-center">
-						<SpeciesImage
-							imageUrl={illustration}
-							alt=""
-							glyphClassName="size-16"
-						/>
+		<div className="page-wrap pb-4">
+			<section
+				aria-label="Species profile"
+				className="feature-card mt-(--page-gap) grid overflow-hidden rounded-md sm:grid-cols-[12rem_minmax(0,1fr)]"
+			>
+				<div className="flex h-36 items-center justify-center overflow-hidden p-4 pb-0 sm:h-44 sm:pb-4">
+					<SpeciesImage
+						imageUrl={illustrationUrlFor(sciName)}
+						alt={comName}
+						glyphClassName="size-16"
+						cropToPainting
+					/>
+				</div>
+
+				<div className="flex min-w-0 flex-col justify-center gap-3 p-4">
+					<div className="min-w-0">
+						<h1 className="display-title font-bold text-2xl text-[var(--moss)] sm:text-3xl">
+							{comName}
+						</h1>
+						<p className="text-[var(--bark)] text-xs italic">{sciName}</p>
 					</div>
-					<div className="min-w-0 flex-1">
-						<h2 className="display-title font-semibold text-xl">{comName}</h2>
-						<p className="mt-0.5 text-muted-foreground text-sm italic">
-							{sciName}
-						</p>
-						{/* No measure cap here, unlike the diagnostic prose in
-						    `PageStatus`: this is one sentence, and capping it at 42rem
-						    inside a much wider card broke the line nowhere near any edge
-						    you could see, which read as an accident. Left alone it sets on
-						    one line and wraps against the card itself when the column is
-						    narrow. */}
-						<p className="mt-3 text-muted-foreground text-sm leading-relaxed max-[400px]:mt-2">
-							Not detected at this station yet. The installed model can
-							recognise this bird, so it will appear here the first time it is
-							heard.
-						</p>
-						<div className="mt-(--page-gap) flex flex-wrap items-center gap-2">
-							<SpeciesActions
-								ebirdUrl={ebirdUrlFor(sciName, comName)}
-								comName={comName}
-							/>
-							<Button variant="ghost" size="sm" asChild>
-								<Link to="/birds">All species</Link>
-							</Button>
-						</div>
-					</div>
+					<p className="text-muted-foreground text-sm">
+						Not detected at this station yet. It will appear here the first time
+						it is heard.
+					</p>
+					<SpeciesActions
+						ebirdUrl={ebirdUrlFor(sciName, comName)}
+						comName={comName}
+					/>
 				</div>
 			</section>
 		</div>
 	);
 }
 
-/** The slug matched no bird the installed classifier can even emit. */
+/**
+ * The slug matched no bird the installed classifier can even emit. Like the
+ * profile it stands in for, it carries no "All Birds" masthead -- this is a
+ * bird's page, so the card is the page and owns its h1.
+ */
 function SpeciesNotFound() {
 	const { comName } = Route.useParams();
 
 	return (
-		<StatusPage
-			icon={Feather}
-			section={SPECIES_SECTION}
-			sectionDescription={SPECIES_SECTION_DESCRIPTION}
-			tone="missing"
-			title="No such species"
-			actions={
-				<Button variant="outline" size="sm" asChild>
-					<Link to="/birds">Browse all species</Link>
-				</Button>
-			}
-		>
-			“{comName}” doesn’t match any bird this station’s classifier knows about.
-			The address may be mistyped.
-		</StatusPage>
+		<div className="page-wrap py-4">
+			<PageStatus
+				tone="missing"
+				title="No such species"
+				actions={
+					<ButtonLink to="/birds" size="sm" icon={Feather}>
+						Browse all species
+					</ButtonLink>
+				}
+			>
+				“{comName}” doesn’t match any bird this station’s classifier knows
+				about. The address may be mistyped.
+			</PageStatus>
+		</div>
 	);
 }
 

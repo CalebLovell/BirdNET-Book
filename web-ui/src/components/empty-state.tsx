@@ -1,5 +1,6 @@
-import type { LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
+
+import { CardHeader } from "~/components/card-header.tsx";
 
 /**
  * A card inside an otherwise populated page that happens to have nothing in
@@ -20,28 +21,24 @@ export function EmptyNote({ children }: { children: ReactNode }) {
  * A page with nothing on it at all -- a station that has never recorded
  * anything, a day that stayed silent.
  *
- * This one earns the weight. There is no surrounding page to carry the
- * meaning, so a lone grey line reads as a page that failed to load rather than
- * one that is genuinely empty, which is the whole reason this component
- * exists.
+ * Titled like every other card, with the standard header band, so an empty
+ * page still looks like the site rather than a different kind of thing. The
+ * page around it already spaces its children, so it adds no top margin of its
+ * own.
  */
 export function EmptyState({
-	icon: Icon,
 	title,
 	children,
 }: {
-	icon: LucideIcon;
+	/** The card's kicker, as on the populated card this one stands in for. */
 	title: string;
-	/** The line beneath -- what to do about it, or why it is empty. */
-	children?: ReactNode;
+	/** What is missing, and what will fill it. */
+	children: ReactNode;
 }) {
 	return (
-		<section className="feature-card mt-(--page-gap) flex flex-col items-start gap-2 rounded-md p-4">
-			<Icon aria-hidden="true" className="size-8 text-muted-foreground" />
-			<p className="font-semibold">{title}</p>
-			{children ? (
-				<p className="text-muted-foreground text-sm">{children}</p>
-			) : null}
+		<section aria-label={title} className="feature-card rounded-md p-4">
+			<CardHeader title={title} />
+			<EmptyNote>{children}</EmptyNote>
 		</section>
 	);
 }

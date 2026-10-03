@@ -1,4 +1,4 @@
-import { RotateCcw } from "lucide-react";
+import { RotateCcw, X } from "lucide-react";
 import { useState } from "react";
 
 import { Button } from "~/components/ui/button.tsx";
@@ -62,12 +62,18 @@ export function SettingsReset({ onReset }: { onReset: () => Promise<void> }) {
 						<div className="mt-4 flex justify-end gap-2">
 							<Button
 								variant="outline"
+								icon={X}
 								disabled={busy}
 								onClick={() => setOpen(false)}
 							>
 								Cancel
 							</Button>
-							<Button variant="destructive" disabled={busy} onClick={confirm}>
+							<Button
+								variant="destructive"
+								icon={RotateCcw}
+								disabled={busy}
+								onClick={confirm}
+							>
 								{busy ? "Resetting…" : "Reset to defaults"}
 							</Button>
 						</div>
