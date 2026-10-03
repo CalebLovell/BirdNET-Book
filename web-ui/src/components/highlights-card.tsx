@@ -63,7 +63,7 @@ export function HighlightsCard({
 			aria-label="Highlights"
 			className={`feature-card rounded-md p-4 ${className}`}
 		>
-			<div className="flex min-h-6 items-center justify-between gap-2">
+			<div className="flex items-center justify-between gap-2">
 				<div className="island-kicker">Highlights</div>
 				{period ? <HighlightsInfo period={period} /> : null}
 			</div>
