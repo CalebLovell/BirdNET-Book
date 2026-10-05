@@ -33,10 +33,7 @@ export function CurrentBirdCard({
 		return (
 			<HeroCardShell label="Last 24 hours" portrait={<NestPortrait />}>
 				<CenteredBody>
-					{live}
-					<h1 className="display-title font-bold text-2xl sm:text-3xl">
-						All quiet
-					</h1>
+					<TitleRow live={live}>All quiet</TitleRow>
 					<p className="text-muted-foreground">
 						Nothing heard in the last 24 hours. New detections will appear here
 						on their own.
@@ -51,7 +48,6 @@ export function CurrentBirdCard({
 		return (
 			<HeroCardShell label="Station status" portrait={<NestPortrait />}>
 				<CenteredBody>
-					{live}
 					<h1 className="display-title font-bold text-2xl sm:text-3xl">
 						Nothing recorded yet
 					</h1>
@@ -85,6 +81,24 @@ export function CurrentBirdCard({
 			actions={live}
 			className={flash ? `${HERO_CARD_SHELL} flash-in` : HERO_CARD_SHELL}
 		/>
+	);
+}
+
+// Title and pill share a line, pill on the right, as on the bird card.
+function TitleRow({
+	live,
+	children,
+}: {
+	live: ReactNode;
+	children: ReactNode;
+}) {
+	return (
+		<div className="flex flex-wrap items-start justify-between gap-3 max-[400px]:gap-2">
+			<h1 className="display-title font-bold text-2xl sm:text-3xl">
+				{children}
+			</h1>
+			{live}
+		</div>
 	);
 }
 
