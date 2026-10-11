@@ -19,7 +19,8 @@
     "format": "biome format --write",
     "lint": "biome lint --write --unsafe",
     "typecheck": "tsc --noEmit",
-    "clean": "biome check --write --unsafe && tsc --noEmit"
+    "clean": "biome check --write --unsafe && tsc --noEmit",
+    "smoke": "playwright test"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.1.18",
@@ -46,6 +47,7 @@
   },
   "devDependencies": {
     "@biomejs/biome": "2.4.5",
+    "@playwright/test": "^1.56.1",
     "@tailwindcss/typography": "^0.5.16",
     "@tanstack/router-cli": "^1.132.0",
     "@types/node": "^22.10.2",
