@@ -13,6 +13,8 @@
     "db:push": "drizzle-kit push",
     "db:pull": "drizzle-kit pull",
     "db:reset": "python ../scripts/seed_test_data.py",
+    "db:reset:empty": "python ../scripts/seed_test_data.py --empty",
+    "db:reset:5y": "python ../scripts/seed_test_data.py --years 5",
     "db:studio": "drizzle-kit studio",
     "format": "biome format --write",
     "lint": "biome lint --write --unsafe",

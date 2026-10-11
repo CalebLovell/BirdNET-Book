@@ -193,6 +193,56 @@ class ExtrapolationTests(unittest.TestCase):
         self.assertLess(abs(math.log(first_synthetic / last_real)), math.log(2))
 
 
+class MultiYearTests(unittest.TestCase):
+    """Five years is the longest history the UI is checked against, so these
+    lock in that the earlier years are real years, not one year on repeat."""
+
+    NOW = ReplayTests.NOW
+
+    @classmethod
+    def setUpClass(cls):
+        cls.days = seeder.days_for_years(5, cls.NOW.date())
+        cls.rows = seeder.generate_rows(days=cls.days, now=cls.NOW)
+
+    def counts_by_year(self, rows):
+        """Detections per species in each year counted back from today."""
+        by_year = defaultdict(Counter)
+        for row in rows:
+            years_back = (self.NOW.date() - date.fromisoformat(row[0])).days // 365
+            by_year[years_back][row[3]] += 1
+        return by_year
+
+    def test_five_years_is_five_calendar_years_ending_today(self):
+        """Catches --years dropping leap days or overshooting into a sixth year."""
+        self.assertEqual(self.days, 1826)
+        self.assertEqual(self.rows[-1][0], str(self.NOW.date()))
+        self.assertEqual(self.rows[0][0], str(self.NOW.date() - timedelta(days=self.days - 1)))
+
+    def test_every_year_is_populated(self):
+        """Catches the extrapolation stopping after the first year."""
+        by_year = self.counts_by_year(self.rows)
+        one_year_total = sum(by_year[0].values())
+        for years_back in range(5):
+            self.assertGreater(sum(by_year[years_back].values()), one_year_total / 2)
+
+    def test_years_differ_species_by_species(self):
+        """Catches every earlier year being a carbon copy of the last."""
+        by_year = self.counts_by_year(self.rows)
+        ratios = [
+            by_year[1][name] / by_year[2][name]
+            for name in ("Blue Jay", "Northern Cardinal", "House Finch", "American Robin")
+        ]
+        self.assertGreater(max(ratios) / min(ratios), 1.2)
+
+    def test_real_recording_is_replayed_untouched(self):
+        """Catches the multi-year variation leaking into the real data."""
+        real = seeder.generate_rows(days=None, now=self.NOW)
+        self.assertEqual(self.rows[-len(real):], real)
+
+    def test_zero_days_is_no_history(self):
+        self.assertEqual(seeder.generate_rows(days=0, now=self.NOW), [])
+
+
 class SeedTestDataTests(unittest.TestCase):
     def setUp(self):
         self.temp_dir = tempfile.TemporaryDirectory()
@@ -258,6 +308,34 @@ class SeedTestDataTests(unittest.TestCase):
         with closing(sqlite3.connect(self.db_path)) as con:
             detection_count = con.execute("SELECT COUNT(*) FROM detections").fetchone()[0]
         self.assertGreater(detection_count, 0)
+
+    def test_empty_clears_detections_and_reviews_and_seeds_nothing(self):
+        """Catches --empty leaving old rows behind or inventing new ones."""
+        self.create_existing_database()
+
+        subprocess.run(
+            [sys.executable, str(SEED_SCRIPT), "--db", str(self.db_path), "--empty"],
+            cwd=REPO_ROOT, check=True, capture_output=True, text=True,
+        )
+
+        with closing(sqlite3.connect(self.db_path)) as con:
+            detection_count = con.execute("SELECT COUNT(*) FROM detections").fetchone()[0]
+            review_count = con.execute("SELECT COUNT(*) FROM reviews").fetchone()[0]
+            sentinel = con.execute("SELECT marker FROM sentinel").fetchone()[0]
+        self.assertEqual(detection_count, 0)
+        self.assertEqual(review_count, 0)
+        self.assertEqual(sentinel, "keep me")
+
+    def test_empty_creates_the_table_on_a_fresh_database(self):
+        """Catches an empty reset leaving the web-ui with no detections table to query."""
+        subprocess.run(
+            [sys.executable, str(SEED_SCRIPT), "--db", str(self.db_path), "--empty"],
+            cwd=REPO_ROOT, check=True, capture_output=True, text=True,
+        )
+
+        with closing(sqlite3.connect(self.db_path)) as con:
+            detection_count = con.execute("SELECT COUNT(*) FROM detections").fetchone()[0]
+        self.assertEqual(detection_count, 0)
 
     def test_append_preserves_existing_detections_and_reviews(self):
         """Catches reset behavior leaking into the explicitly non-destructive append path."""

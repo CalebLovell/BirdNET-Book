@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""Seed scripts/birds.db with a year of detections for local dev.
+"""Seed scripts/birds.db with detections for local dev: none, a year, or
+several years.
 
 The most recent twelve weeks are real: scripts/test_data/
 backyard_detections.csv.gz is one backyard station's actual detections
@@ -27,7 +28,13 @@ it:
     midwinter, peaks in the May dawn chorus, and has weather-length quiet
     spells and the odd recorder outage.
 
-The synthetic rows are seeded, so a reseed produces the same year again.
+Asked for more than a year, the extrapolation keeps going back. Each
+earlier year is the same yard's year with its own luck: overall volume
+drifts a little and every species has better and worse years, so year-
+over-year views have something to compare. The year leading into the
+real recording is never varied, so its seam still meets the real data.
+
+The synthetic rows are seeded, so a reseed produces the same history again.
 
 Everything is shifted by whole days so the last real day lands on today.
 Times of day are never moved; detections later today than right now are
@@ -45,6 +52,8 @@ default web-ui itself uses.
 
 Usage:
     python3 scripts/seed_test_data.py               # wipes and reseeds a full year
+    python3 scripts/seed_test_data.py --years 5     # wipes and reseeds five years
+    python3 scripts/seed_test_data.py --empty       # wipes, leaving no detections
     python3 scripts/seed_test_data.py --append      # adds on top of existing rows
     python3 scripts/seed_test_data.py --days 14     # only the most recent 14 days
     python3 scripts/seed_test_data.py --no-audio    # skip placeholder audio clips
@@ -438,19 +447,48 @@ def resample_time(rng: random.Random, profile: Profile, doy: int) -> float:
     return (hours + shift + rng.gauss(0, 0.15)) % 24
 
 
+# How much one year differs from the next, as lognormal sigmas: the yard
+# as a whole, and each species on top of that.
+YEAR_VOLUME_SIGMA = 0.08
+YEAR_SPECIES_SIGMA = 0.25
+
+
+def year_factors(profiles: list[Profile], years_back: int, seed: int) -> dict[str, float]:
+    """Each species' multiplier for the year `years_back` years before the
+    one leading into the recording. That year itself is 1 throughout, so
+    the one-year history -- and its seam with the real data -- is unchanged.
+
+    Drawn from their own generator, so how many years are generated never
+    changes any one year's luck."""
+    if years_back == 0:
+        return {profile.common: 1.0 for profile in profiles}
+    rng = random.Random(f'{seed}-year-{years_back}')
+    overall = rng.lognormvariate(0, YEAR_VOLUME_SIGMA)
+    return {
+        profile.common: overall * rng.lognormvariate(0, YEAR_SPECIES_SIGMA)
+        for profile in profiles
+    }
+
+
 def extrapolate(recorded: list[dict], first: date, last: date, seed: int = DEFAULT_SEED):
     """Synthetic detections for every day from `first` to `last`, in the
     recording's own calendar, as (datetime, Profile, confidence)."""
     rng = random.Random(seed)
     profiles = build_profiles(recorded)
-    first_real_doy = _doy(date.fromisoformat(recorded[0]['Date']))
+    first_recorded = date.fromisoformat(recorded[0]['Date'])
+    first_real_doy = _doy(first_recorded)
     last_real_doy = _doy(date.fromisoformat(recorded[-1]['Date']))
     detections = []
     weather = 1.0
     outage_days_left = 0
+    factors_by_year = {}
     day = first
     while day <= last:
         doy = _doy(day)
+        years_back = (first_recorded - day - timedelta(days=1)).days // 365
+        if years_back not in factors_by_year:
+            factors_by_year[years_back] = year_factors(profiles, years_back, seed)
+        factors = factors_by_year[years_back]
         # Weather doesn't reset at midnight, so it's a random walk pulled
         # back toward normal: quiet spells last a few days.
         weather = min(1.3, max(0.55, 1.0 + (weather - 1.0) * 0.8 + rng.gauss(0, 0.09)))
@@ -466,7 +504,8 @@ def extrapolate(recorded: list[dict], first: date, last: date, seed: int = DEFAU
 
         midnight = datetime.combine(day, datetime.min.time())
         for profile in profiles:
-            for _ in range(_poisson(rng, profile.expected_on(doy, first_real_doy, last_real_doy) * factor)):
+            expected = profile.expected_on(doy, first_real_doy, last_real_doy)
+            for _ in range(_poisson(rng, expected * factor * factors[profile.common])):
                 at = midnight + timedelta(hours=resample_time(rng, profile, doy))
                 confidence = rng.choice(profile.confidences) + rng.gauss(0, 0.01)
                 confidence = round(min(0.9999, max(CUTOFF, confidence)), 4)
@@ -480,7 +519,9 @@ def generate_rows(days: int | None = DEFAULT_DAYS, now: datetime | None = None, 
     extrapolated months before it, all shifted so the last real day is today.
 
     `days` keeps only the most recent N days (today included); None keeps
-    just the real recording."""
+    just the real recording, and 0 nothing at all."""
+    if days == 0:
+        return []
     now = (now or datetime.now()).replace(microsecond=0)
     recorded = load_fixture()
     first_recorded = date.fromisoformat(recorded[0]['Date'])
@@ -578,14 +619,32 @@ def seed_placeholder_audio(con: sqlite3.Connection, extracted_dir: str):
     print(f'Generated {len(updates)} placeholder audio clips under {extracted_dir}')
 
 
+def days_for_years(years: int, today: date | None = None) -> int:
+    """The days from this date `years` years ago to today, so N years means
+    N whole calendar years, leap days included."""
+    today = today or date.today()
+    try:
+        start = today.replace(year=today.year - years)
+    except ValueError:  # 29 February, in a year without one
+        start = today.replace(year=today.year - years, day=28)
+    return (today - start).days
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--db', default=DB_PATH, help='Path to birds.db')
-    parser.add_argument(
+    span = parser.add_mutually_exclusive_group()
+    span.add_argument(
         '--days',
         type=int,
         default=DEFAULT_DAYS,
         help='Keep only the most recent N days, including today (default: a year)',
+    )
+    span.add_argument(
+        '--years', type=int, help='Seed N years of history instead, ending today'
+    )
+    span.add_argument(
+        '--empty', action='store_true', help='Clear the detections and seed nothing'
     )
     parser.add_argument(
         '--seed', type=int, default=DEFAULT_SEED, help='Random seed for the extrapolated months'
@@ -600,6 +659,10 @@ def main():
         '--no-audio', action='store_true', help='Skip generating placeholder audio clips'
     )
     args = parser.parse_args()
+    if args.empty:
+        args.days = 0
+    elif args.years is not None:
+        args.days = days_for_years(args.years)
 
     con = sqlite3.connect(args.db)
     cur = con.cursor()
@@ -634,7 +697,7 @@ def main():
     )
     con.commit()
 
-    if not args.no_audio:
+    if rows and not args.no_audio:
         seed_placeholder_audio(con, args.extracted_dir)
 
     total = cur.execute('SELECT COUNT(*) FROM detections').fetchone()[0]
