@@ -15,6 +15,7 @@ import { IndexDot, TABLE_INDEX_FLOOR } from "~/components/index-dot.tsx";
 import { RecordingButton } from "~/components/recording-button.tsx";
 import { PageStepper } from "~/components/ui/page-stepper.tsx";
 import { SearchInput } from "~/components/ui/search-input.tsx";
+import { ShellBar, ShellSized, ShellText } from "~/components/ui/shell.tsx";
 import {
 	SELECT_COLUMN_WIDTH,
 	Table,
@@ -39,7 +40,13 @@ import { shortAnchorLabel } from "~/lib/timeline-window.ts";
 import { cn } from "~/lib/utils.ts";
 
 type DetectionsTableProps = {
-	page: DetectionPage;
+	/**
+	 * The rows, or null while they load: the table then draws itself as its
+	 * own skeleton -- the real header (its sorts work from the URL alone), a
+	 * page of rows whose cells are shells of what each column holds, and the
+	 * real footer -- so loading and loaded are one shape to the pixel.
+	 */
+	page: DetectionPage | null;
 	search: DetectionWorkspaceSearch;
 	onSearchChange: (search: DetectionWorkspaceSearch) => void;
 	rowSelection: RowSelectionState;
@@ -385,6 +392,96 @@ export function DetectionsFilters({
 	);
 }
 
+/** Stand-in rows for the skeleton: the cells never read them. */
+const SKELETON_ROWS = Array.from(
+	{ length: 100 },
+	() => ({}) as DetectionTableRow,
+);
+
+const SPECIES_WIDTHS = ["w-36", "w-28", "w-40", "w-32", "w-24"];
+const SCIENTIFIC_WIDTHS = ["w-40", "w-32", "w-44", "w-36", "w-28"];
+
+/**
+ * One cell of a loading row: a shell of whatever its column holds, in the
+ * column's own type and at its own size -- the checkbox's square, the index
+ * dot, the names' lines, the recorded time (two lines narrow, one wide), the
+ * pill and the recording button.
+ */
+function SkeletonCell({
+	columnId,
+	row,
+	widestIndex,
+}: {
+	columnId: string;
+	row: number;
+	widestIndex: number;
+}) {
+	switch (columnId) {
+		case "select":
+			return <ShellBar className="size-3.5 rounded-sm" />;
+		case "index":
+			return (
+				<ShellSized className="rounded-full">
+					<IndexDot index={widestIndex} widest={widestIndex} />
+				</ShellSized>
+			);
+		case "species":
+			return (
+				<ShellText
+					className="font-medium"
+					barClassName={SPECIES_WIDTHS[row % SPECIES_WIDTHS.length]}
+				/>
+			);
+		case "scientificName":
+			return (
+				<ShellText
+					barClassName={SCIENTIFIC_WIDTHS[row % SCIENTIFIC_WIDTHS.length]}
+				/>
+			);
+		case "recorded":
+			return (
+				<>
+					<span className="flex @min-[36rem]:hidden flex-col items-end">
+						<ShellText
+							className="w-14 text-sm leading-tight"
+							barClassName="right-0 left-auto w-full"
+						/>
+						<ShellText
+							className="w-16 text-xs leading-tight"
+							barClassName="right-0 left-auto w-full"
+						/>
+					</span>
+					<ShellText
+						className="@min-[36rem]:block hidden text-sm"
+						barClassName="w-40"
+					/>
+				</>
+			);
+		case "confidence":
+			return (
+				<div className="flex justify-end">
+					<ShellSized className="rounded-full">
+						<ConfidencePill confidence={0.9} />
+					</ShellSized>
+				</div>
+			);
+		case "audio":
+			return (
+				<div className="flex justify-end">
+					<ShellSized className="rounded-md">
+						<RecordingButton
+							audioUrl={null}
+							label="Recording"
+							labelClassName="hidden @min-[36rem]:inline"
+						/>
+					</ShellSized>
+				</div>
+			);
+		default:
+			return null;
+	}
+}
+
 export function DetectionsTable({
 	page,
 	search,
@@ -442,7 +539,7 @@ export function DetectionsTable({
 	// number says where it sits in the whole filtered list -- the same dots as
 	// the species visit log's.
 	const firstIndex = (search.page - 1) * search.pageSize + 1;
-	const lastIndex = firstIndex + page.rows.length - 1;
+	const lastIndex = firstIndex + (page?.rows.length ?? search.pageSize) - 1;
 	const indexColumn: ColumnDef<DetectionTableRow> = {
 		id: "index",
 		header: () => (
@@ -583,20 +680,39 @@ export function DetectionsTable({
 		},
 	];
 
+	const skeleton = page === null;
 	const table = useReactTable({
-		columns,
-		data: page.rows,
+		columns: skeleton
+			? columns.map(
+					(column) =>
+						({
+							...column,
+							cell: ({ row }: { row: { index: number } }) => (
+								<SkeletonCell
+									columnId={column.id ?? ""}
+									row={row.index}
+									widestIndex={Math.max(lastIndex, TABLE_INDEX_FLOOR)}
+								/>
+							),
+						}) as ColumnDef<DetectionTableRow>,
+				)
+			: columns,
+		data: page?.rows ?? SKELETON_ROWS.slice(0, search.pageSize),
 		getCoreRowModel: getCoreRowModel(),
-		getRowId: detectionRowKey,
+		getRowId: skeleton ? (_, index) => `skeleton-${index}` : detectionRowKey,
 		manualPagination: true,
 		manualSorting: true,
 		enableRowSelection: true,
-		pageCount: Math.max(1, Math.ceil(page.total / search.pageSize)),
+		pageCount: Math.max(1, Math.ceil((page?.total ?? 0) / search.pageSize)),
 		onRowSelectionChange,
 		state: { rowSelection },
 	});
 
-	const pageCount = Math.max(1, Math.ceil(page.total / search.pageSize));
+	// Unknown while loading, and a busy station's run to many pages: that is
+	// what sets the stepper's width, so the skeleton's pager is sized for it.
+	const pageCount = page
+		? Math.max(1, Math.ceil(page.total / search.pageSize))
+		: 1000;
 	const selectedCount = Object.values(rowSelection).filter(Boolean).length;
 	return (
 		// A column, not a stack: the scrollport takes the leftover height so the
@@ -707,6 +823,7 @@ export function DetectionsTable({
 				    this table, so the header, footer and pager come off with it. */}
 				<TableBody
 					role="rowgroup"
+					aria-busy={skeleton || undefined}
 					data-scroll-reset=""
 					className="col-span-full grid min-h-0 grid-cols-subgrid content-start overflow-y-auto [scrollbar-gutter:stable]"
 				>
@@ -767,13 +884,26 @@ export function DetectionsTable({
 						onDelete={onDeleteSelected}
 					/>
 				) : null}
-				<PageStepper
-					className="ml-auto"
-					label="Detections pages"
-					page={search.page}
-					pageCount={pageCount}
-					onPageChange={(page) => updateSearch({ page })}
-				/>
+				{skeleton ? (
+					<span className="ml-auto">
+						<ShellSized className="rounded-md">
+							<PageStepper
+								label="Detections pages"
+								page={search.page}
+								pageCount={pageCount}
+								onPageChange={() => {}}
+							/>
+						</ShellSized>
+					</span>
+				) : (
+					<PageStepper
+						className="ml-auto"
+						label="Detections pages"
+						page={search.page}
+						pageCount={pageCount}
+						onPageChange={(page) => updateSearch({ page })}
+					/>
+				)}
 			</div>
 		</div>
 	);

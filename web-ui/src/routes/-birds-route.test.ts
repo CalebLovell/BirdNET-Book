@@ -2,14 +2,14 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
-test("an unknown slug throws notFound and the route catches it itself", async () => {
+test("an unknown slug gets the page's own not-found card", async () => {
 	const source = await readFile(
 		new URL("./birds.$comName.tsx", import.meta.url),
 		"utf8",
 	);
-	assert.match(source, /status === "unknown"/);
-	assert.match(source, /throw notFound\(\)/);
-	assert.match(source, /notFoundComponent:\s*SpeciesNotFound/);
+	// The detail is deferred, so the loader returns before the slug resolves:
+	// the not-found card is rendered in place rather than thrown.
+	assert.match(source, /status !== "detected"\) return <SpeciesNotFound \/>/);
 	assert.match(source, /<PageStatus/);
 	// A bird's page: no "All Birds" masthead above the dead end.
 	assert.doesNotMatch(source, /<StatusPage|<PageHeaderCard/);

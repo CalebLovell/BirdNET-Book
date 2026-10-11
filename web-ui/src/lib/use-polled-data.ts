@@ -5,6 +5,10 @@ import { useEffect, useRef, useState } from "react";
  * Client-only by nature (useEffect never runs during SSR) -- the caller
  * supplies the loader's initial data so the first paint isn't empty.
  *
+ * That initial data may also be a deferred loader promise, so the page can
+ * render before it lands: `data` is then null until the promise settles (show
+ * a shell meanwhile), and the polls take over from there.
+ *
  * There's no server-push mechanism here (no WebSocket/SSE) -- this is a
  * deliberately simple poll. The underlying query is small, indexed, and
  * LIMIT-bounded, so even a Pi-class server handles a request every few
@@ -14,11 +18,40 @@ export function usePolledData<T>(
 	fetcher: () => Promise<T>,
 	initialData: T,
 	intervalMs: number,
+): { data: T; lastUpdated: Date };
+export function usePolledData<T>(
+	fetcher: () => Promise<T>,
+	initialData: Promise<T>,
+	intervalMs: number,
+): { data: T | null; lastUpdated: Date };
+export function usePolledData<T>(
+	fetcher: () => Promise<T>,
+	initialData: T | Promise<T>,
+	intervalMs: number,
 ) {
-	const [data, setData] = useState(initialData);
+	const [data, setData] = useState<T | null>(() =>
+		initialData instanceof Promise ? null : initialData,
+	);
 	const [lastUpdated, setLastUpdated] = useState(() => new Date());
 	const fetcherRef = useRef(fetcher);
 	fetcherRef.current = fetcher;
+
+	// A deferred first answer fills in when it lands -- unless a poll already
+	// brought something newer.
+	useEffect(() => {
+		if (!(initialData instanceof Promise)) return;
+		let cancelled = false;
+		initialData.then(
+			(value) => {
+				if (!cancelled) setData((current) => current ?? value);
+			},
+			// The polls will try again; a shell is better than a crash here.
+			() => {},
+		);
+		return () => {
+			cancelled = true;
+		};
+	}, [initialData]);
 
 	useEffect(() => {
 		let cancelled = false;

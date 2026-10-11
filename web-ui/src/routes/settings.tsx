@@ -2,7 +2,10 @@ import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { RotateCcw } from "lucide-react";
 import { PageStatus } from "~/components/page-status.tsx";
-import { SettingsPage } from "~/components/settings/settings-page.tsx";
+import {
+	SettingsPage,
+	SettingsPageSkeleton,
+} from "~/components/settings/settings-page.tsx";
 import { Button } from "~/components/ui/button.tsx";
 import { getStationHealth } from "~/lib/health.ts";
 import { pageTitle } from "~/lib/page-title.ts";
@@ -19,6 +22,7 @@ import {
 	saveStorageSettingsFn,
 } from "~/lib/settings.ts";
 import { usePolledData } from "~/lib/use-polled-data.ts";
+import { useSettled } from "~/lib/use-settled.ts";
 
 /**
  * Refreshed every half minute so "Last detection" keeps aging while the page
@@ -34,9 +38,11 @@ export const Route = createFileRoute("/settings")({
 	// cannot be what sends this route to its error component.
 	beforeLoad: ({ context, location }) =>
 		requireUnlocked(context.auth, location),
-	loader: async () => ({
-		data: await getSettingsPage(),
-		health: await getStationHealth(),
+	// Deferred: the page renders at once (see Deferred), and the cards fill in
+	// when the configuration arrives.
+	loader: () => ({
+		data: getSettingsPage(),
+		health: getStationHealth(),
 	}),
 	component: SettingsRoute,
 	errorComponent: SettingsUnavailable,
@@ -44,7 +50,9 @@ export const Route = createFileRoute("/settings")({
 
 function SettingsRoute() {
 	const loaded = Route.useLoaderData();
-	const data = loaded.data;
+	// Held, not suspended on: a reset refetches the configuration, and the
+	// page -- its pending reset among it -- has to stay mounted through that.
+	const settled = useSettled(loaded.data);
 	const { data: health } = usePolledData(
 		getStationHealth,
 		loaded.health,
@@ -60,16 +68,21 @@ function SettingsRoute() {
 	const restart = useServerFn(restartStationFn);
 	const router = useRouter();
 
+	if (!settled) return <SettingsPageSkeleton />;
+
 	return (
 		<SettingsPage
-			data={data}
-			health={health}
+			data={settled.value}
+			health={health ?? undefined}
 			onRestart={(card) => restart({ data: { card } })}
 			onReset={async () => {
 				const result = await reset({});
 				// The cards remount against this reload, so it has to land before
-				// the page reports the reset as done.
+				// the page reports the reset as done. The loader itself returns at
+				// once (its data is deferred), so wait on the data it started.
 				await router.invalidate();
+				await router.state.matches.find((match) => match.routeId === Route.id)
+					?.loaderData?.data;
 				return {
 					message: result.message,
 					needsRestart: result.status !== "reset",

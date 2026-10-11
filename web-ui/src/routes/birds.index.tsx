@@ -11,23 +11,34 @@ import {
 	BarChart3,
 	ChevronDown,
 	Clock,
+	ExternalLink,
 	Feather,
+	Volume2,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useDebouncedCallback } from "use-debounce";
 import { z } from "zod";
 import { CardHeader } from "~/components/card-header.tsx";
+import { Deferred } from "~/components/deferred.tsx";
 import { EmptyNote, EmptyState } from "~/components/empty-state.tsx";
 import { PageHeaderCard } from "~/components/page-header-card.tsx";
 import { SpeciesActions } from "~/components/species-actions.tsx";
 import { SpeciesImage } from "~/components/species-image.tsx";
+import { Button } from "~/components/ui/button.tsx";
 import { PageStepper } from "~/components/ui/page-stepper.tsx";
 import { SearchInput } from "~/components/ui/search-input.tsx";
+import {
+	ShellBar,
+	ShellFigure,
+	ShellSized,
+	ShellText,
+} from "~/components/ui/shell.tsx";
 import { ToggleGroup, ToggleGroupItem } from "~/components/ui/toggle-group.tsx";
 import { formatDateTime } from "~/lib/date-format.ts";
 import { getLifeListCards, type LifeListCard } from "~/lib/detections.ts";
 import { pageTitle } from "~/lib/page-title.ts";
 import { comNameToSlug } from "~/lib/species-slug.ts";
+import { useSettled } from "~/lib/use-settled.ts";
 import { cn } from "~/lib/utils.ts";
 
 const SORT_KEYS = ["count", "recent", "alpha"] as const;
@@ -69,14 +80,81 @@ export const Route = createFileRoute("/birds/")({
 		middlewares: [stripSearchParams(DEFAULT_SEARCH)],
 	},
 	component: Species,
-	loader: () => getLifeListCards(),
+	// Deferred: the page renders at once and its parts fill in as the life
+	// list arrives (see Deferred).
+	loader: () => ({ cards: getLifeListCards() }),
 });
 
 const PAGE_SIZE = 24;
 
+// Shared by the real grid and its skeleton, so the two are one shape.
+const GRID_CLASS =
+	"grid grid-cols-[repeat(auto-fill,minmax(240px,1fr))] gap-(--page-gap)";
+const CARD_CLASS =
+	"feature-card relative flex flex-col gap-3 overflow-hidden rounded-md p-4 max-[400px]:gap-2";
+const FOOTER_CLASS =
+	"feature-card mt-auto flex flex-wrap items-center gap-x-4 gap-y-2 rounded-md px-(--page-gap) py-2 text-sm";
+
 function Species() {
-	const cards = Route.useLoaderData();
-	const { q: search, sort, reverse, page } = Route.useSearch();
+	const { cards } = Route.useLoaderData();
+	// Only to learn whether the station is empty, which takes the controls away.
+	const settled = useSettled(cards);
+	const stationEmpty = settled !== null && settled.value.length === 0;
+
+	return (
+		<div className="page-wrap flex min-h-full flex-col gap-(--page-gap) py-4">
+			<PageHeaderCard
+				icon={Feather}
+				title="All Birds"
+				description={<LifeListSummary cards={cards} />}
+			/>
+
+			{/* Drawn at once: what you search and how you sort live in the URL,
+			    not the life list. Gated only on the station being known empty --
+			    a search that matches nothing keeps the box you need to clear it. */}
+			{stationEmpty ? null : <SpeciesControls />}
+
+			<Deferred promise={cards} shell={<SpeciesGridShell />}>
+				{(loaded) => <SpeciesBrowser cards={loaded} />}
+			</Deferred>
+		</div>
+	);
+}
+
+/** The station's own tally, for the header -- derived from the whole life list,
+    never the search: the header describes the station, and only the grid
+    below answers the query. The sentence is there from the first frame; only
+    its two figures wait on the life list. */
+function LifeListSummary({ cards }: { cards: Promise<LifeListCard[]> }) {
+	const settled = useSettled(cards);
+	const loaded = settled?.value ?? null;
+	// An empty station has nothing to tally, so it keeps the plain line rather
+	// than reading as a pair of zeros.
+	if (loaded?.length === 0)
+		return "Every species ever recorded at this station.";
+	const detections = loaded?.reduce((sum, card) => sum + card.allTimeCount, 0);
+	return (
+		<>
+			This station has recorded{" "}
+			{detections === undefined ? (
+				<ShellFigure placeholder="000,000" />
+			) : (
+				<span className="count-figure">{detections.toLocaleString()}</span>
+			)}{" "}
+			total {detections === 1 ? "detection" : "detections"} from{" "}
+			{loaded ? (
+				<span className="count-figure">{loaded.length.toLocaleString()}</span>
+			) : (
+				<ShellFigure placeholder="00" />
+			)}{" "}
+			species.
+		</>
+	);
+}
+
+/** The search box and the sort, which read and write the URL alone. */
+function SpeciesControls() {
+	const { q: search, sort, reverse } = Route.useSearch();
 	const navigate = Route.useNavigate();
 
 	// Local state keeps typing responsive; the URL (and the Fuse search it
@@ -91,6 +169,145 @@ function Species() {
 			replace: true,
 		});
 	}, 200);
+
+	// A new sort starts in its natural direction; the direction button flips
+	// whichever sort is current. Both go back to page one, since the page you
+	// were on no longer holds the same species.
+	const pickSort = (next: SortKey) =>
+		navigate({
+			search: (prev) => ({ ...prev, sort: next, reverse: false, page: 1 }),
+			replace: true,
+		});
+	const flipDirection = () =>
+		navigate({
+			search: (prev) => ({ ...prev, reverse: !prev.reverse, page: 1 }),
+			replace: true,
+		});
+
+	return (
+		// One row at every width: the search takes what the sort leaves. The
+		// three sort tabs need about 340px beside a usable search box, so below
+		// 640px the same choice becomes a dropdown.
+		<div className="flex items-center gap-2 sm:gap-3">
+			<SearchInput
+				aria-label="Filter by species"
+				placeholder="Search species..."
+				value={queryInput}
+				onChange={(e) => {
+					const value = e.target.value;
+					setQueryInput(value);
+					debouncedSetQuery(value);
+				}}
+				onClear={() => {
+					setQueryInput("");
+					debouncedSetQuery.cancel();
+					navigate({
+						search: (prev) => ({ ...prev, q: "", page: 1 }),
+						replace: true,
+					});
+				}}
+			/>
+			{/* The same two controls at every width -- which sort, then its
+			    direction -- as a dropdown on a phone and tabs from 640px. */}
+			<SortSelect
+				sort={sort}
+				reverse={reverse}
+				onSort={pickSort}
+				onReverse={flipDirection}
+			/>
+			<SortTabs
+				sort={sort}
+				reverse={reverse}
+				onSort={pickSort}
+				onReverse={flipDirection}
+			/>
+		</div>
+	);
+}
+
+/**
+ * A full page of species cards and the footer, each built from the real
+ * card's pieces: the count line, the bird's slot, the two name lines, shells
+ * the size of its two buttons, and the last-heard line.
+ */
+function SpeciesGridShell() {
+	return (
+		<div aria-busy="true" className="flex flex-1 flex-col gap-(--page-gap)">
+			<div className={GRID_CLASS}>
+				{Array.from({ length: PAGE_SIZE }, (_, index) => (
+					// biome-ignore lint/suspicious/noArrayIndexKey: static decoration
+					<SpeciesCardSkeleton key={index} index={index} />
+				))}
+			</div>
+			<div aria-hidden="true" className={FOOTER_CLASS}>
+				<ShellText className="w-40 text-sm" barClassName="w-full" />
+				<span className="ml-auto">
+					<ShellSized className="rounded-md">
+						<PageStepper
+							label="Species pages"
+							page={1}
+							pageCount={2}
+							onPageChange={() => {}}
+						/>
+					</ShellSized>
+				</span>
+			</div>
+		</div>
+	);
+}
+
+const NAME_WIDTHS = ["w-36", "w-28", "w-40", "w-32"];
+
+function SpeciesCardSkeleton({ index }: { index: number }) {
+	return (
+		<div aria-hidden="true" className={CARD_CLASS}>
+			<div className="flex flex-col gap-1">
+				<div className="flex items-baseline gap-1">
+					<ShellText
+						className="w-14 font-semibold text-lg leading-none"
+						barClassName="w-full"
+					/>
+					<ShellText
+						className="w-12 text-[10px] leading-none"
+						barClassName="w-full"
+					/>
+				</div>
+			</div>
+			{/* The whole slot, not a bird-sized patch: the slot is the space the
+			    painting is given, however much of it a bird fills. */}
+			<div className="relative min-h-40 w-full flex-1">
+				<ShellBar className="absolute inset-0 rounded-md" />
+			</div>
+			<div className="flex flex-col gap-3 max-[400px]:gap-2">
+				<div>
+					<ShellText
+						className="display-title font-bold text-base"
+						barClassName={NAME_WIDTHS[index % NAME_WIDTHS.length]}
+					/>
+					<ShellText className="text-xs" barClassName="w-28" />
+				</div>
+				<div className="flex w-full flex-wrap items-center gap-2">
+					<ShellSized className="rounded-md">
+						<Button icon={Volume2}>Bird Call</Button>
+					</ShellSized>
+					<ShellSized className="rounded-md">
+						<Button variant="outline" icon={ExternalLink}>
+							eBird
+						</Button>
+					</ShellSized>
+				</div>
+				<ShellText
+					className="w-full text-[10px] leading-none"
+					barClassName="right-0 left-auto w-28"
+				/>
+			</div>
+		</div>
+	);
+}
+
+function SpeciesBrowser({ cards }: { cards: LifeListCard[] }) {
+	const { q: search, sort, reverse, page } = Route.useSearch();
+	const navigate = Route.useNavigate();
 
 	const fuse = useMemo(
 		() =>
@@ -116,27 +333,6 @@ function Species() {
 		});
 	}, [cards, fuse, search, sort, reverse]);
 
-	// Derived from the whole life list, never the search: the header describes
-	// the station, and only the grid below answers the query.
-	const detections = useMemo(
-		() => cards.reduce((sum, card) => sum + card.allTimeCount, 0),
-		[cards],
-	);
-
-	// A new sort starts in its natural direction; the direction button flips
-	// whichever sort is current. Both go back to page one, since the page you
-	// were on no longer holds the same species.
-	const pickSort = (next: SortKey) =>
-		navigate({
-			search: (prev) => ({ ...prev, sort: next, reverse: false, page: 1 }),
-			replace: true,
-		});
-	const flipDirection = () =>
-		navigate({
-			search: (prev) => ({ ...prev, reverse: !prev.reverse, page: 1 }),
-			replace: true,
-		});
-
 	const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
 	const currentPage = Math.min(page, pageCount);
 	const pageItems = filtered.slice(
@@ -145,73 +341,7 @@ function Species() {
 	);
 
 	return (
-		<div className="page-wrap flex min-h-full flex-col gap-(--page-gap) py-4">
-			<PageHeaderCard
-				icon={Feather}
-				title="All Birds"
-				description={
-					// An empty station has nothing to tally, so it keeps the plain line
-					// rather than reading as a pair of zeros.
-					cards.length > 0 ? (
-						<>
-							This station has recorded{" "}
-							<span className="count-figure">
-								{detections.toLocaleString()}
-							</span>{" "}
-							total {detections === 1 ? "detection" : "detections"} from{" "}
-							<span className="count-figure">
-								{cards.length.toLocaleString()}
-							</span>{" "}
-							species.
-						</>
-					) : (
-						"Every species ever recorded at this station."
-					)
-				}
-			/>
-
-			{/* Gated on the life list rather than the current result, so a search
-			    that matches nothing keeps the box you need to clear it. */}
-			{cards.length > 0 && (
-				// One row at every width: the search takes what the sort leaves. The
-				// three sort tabs need about 340px beside a usable search box, so
-				// below 640px the same choice becomes a dropdown.
-				<div className="flex items-center gap-2 sm:gap-3">
-					<SearchInput
-						aria-label="Filter by species"
-						placeholder="Search species..."
-						value={queryInput}
-						onChange={(e) => {
-							const value = e.target.value;
-							setQueryInput(value);
-							debouncedSetQuery(value);
-						}}
-						onClear={() => {
-							setQueryInput("");
-							debouncedSetQuery.cancel();
-							navigate({
-								search: (prev) => ({ ...prev, q: "", page: 1 }),
-								replace: true,
-							});
-						}}
-					/>
-					{/* The same two controls at every width -- which sort, then its
-					    direction -- as a dropdown on a phone and tabs from 640px. */}
-					<SortSelect
-						sort={sort}
-						reverse={reverse}
-						onSort={pickSort}
-						onReverse={flipDirection}
-					/>
-					<SortTabs
-						sort={sort}
-						reverse={reverse}
-						onSort={pickSort}
-						onReverse={flipDirection}
-					/>
-				</div>
-			)}
-
+		<div className="flex flex-1 flex-col gap-(--page-gap)">
 			{pageItems.length === 0 ? (
 				cards.length === 0 ? (
 					// Nothing has ever been recorded: the page itself is empty, so it
@@ -230,7 +360,7 @@ function Species() {
 					</section>
 				)
 			) : (
-				<div className="grid grid-cols-[repeat(auto-fill,minmax(240px,1fr))] gap-(--page-gap)">
+				<div className={GRID_CLASS}>
 					{pageItems.map((card) => (
 						<SpeciesCard key={card.comName} card={card} />
 					))}
@@ -309,7 +439,7 @@ function SpeciesFooter({
 }) {
 	const Icon = SORT_META[sort].icon;
 	return (
-		<div className="feature-card mt-auto flex flex-wrap items-center gap-x-4 gap-y-2 rounded-md px-(--page-gap) py-2 text-sm">
+		<div className={FOOTER_CLASS}>
 			<div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 text-muted-foreground">
 				<span>
 					<span className="tabular-data font-semibold text-foreground">
@@ -485,7 +615,9 @@ function SpeciesCard({ card }: { card: LifeListCard }) {
 	const lastHeard = card.lastDetected ? formatDateTime(card.lastDetected) : "—";
 
 	return (
-		<div className="feature-card feature-card-link relative flex flex-col gap-3 overflow-hidden rounded-md p-4 has-[[data-card-link]:focus-visible]:outline-2 has-[[data-card-link]:focus-visible]:outline-offset-2 max-[400px]:gap-2">
+		<div
+			className={`${CARD_CLASS} feature-card-link has-[[data-card-link]:focus-visible]:outline-2 has-[[data-card-link]:focus-visible]:outline-offset-2`}
+		>
 			{/* The whole-card link is an invisible overlay pinned to the card's
 			    edges, so its own focus ring would land under `overflow-hidden` and
 			    never be seen. Instead the card wears the ring on the overlay's

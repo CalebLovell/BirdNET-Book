@@ -4,6 +4,7 @@ import type { CSSProperties, ReactNode } from "react";
 import { ConfidencePill } from "~/components/confidence-pill.tsx";
 import { RecordingButton } from "~/components/recording-button.tsx";
 import { SpeciesImage } from "~/components/species-image.tsx";
+import { ShellBar, ShellSized, ShellText } from "~/components/ui/shell.tsx";
 
 /**
  * The Today page's masthead shape: portrait on the left, and a content column
@@ -165,6 +166,59 @@ export function SpeciesHeroCard({
 					<span className="text-muted-foreground">last heard {heardAt}</span>
 					<ConfidencePill confidence={confidence} />
 					<RecordingButton audioUrl={audioUrl} />
+				</div>
+			</div>
+		</HeroCardShell>
+	);
+}
+
+/**
+ * SpeciesHeroCard before its bird arrives: the same rows in the same type,
+ * each a skeleton bar, and skeletons the exact size of the pill and the play
+ * button. Built from the card's own line heights rather than bars of a
+ * guessed height, so the card is the same height loading and loaded and the
+ * page never shifts.
+ */
+export function SpeciesHeroCardShell({
+	label,
+	actions,
+}: {
+	label: string;
+	/** As on SpeciesHeroCard -- drawn as itself, since it needs no data. */
+	actions?: ReactNode;
+}) {
+	return (
+		<HeroCardShell
+			label={label}
+			portrait={
+				// The portrait's whole slot, as HeroPortrait sizes it -- the space the
+				// painting is given, however much of it a bird fills.
+				<div className="flex h-28 w-full shrink-0 items-center justify-center">
+					<ShellBar className="size-full rounded-md" />
+				</div>
+			}
+		>
+			<div className="flex flex-wrap items-start justify-between gap-3 max-[400px]:gap-2">
+				<div className="min-w-0 flex-1">
+					<ShellText
+						className="display-title font-bold text-2xl sm:text-3xl"
+						barClassName="w-60 max-w-full"
+					/>
+					<ShellText className="text-xs" barClassName="w-32" />
+				</div>
+				{actions}
+			</div>
+
+			<div>
+				<ShellText className="font-semibold text-lg" barClassName="w-32" />
+				<div className="tabular-data mt-1 flex flex-wrap items-center gap-2 text-sm">
+					<ShellText className="w-40 sm:w-52" barClassName="w-full" />
+					<ShellSized className="rounded-full">
+						<ConfidencePill confidence={0.9} />
+					</ShellSized>
+					<ShellSized className="rounded-md">
+						<RecordingButton audioUrl={null} />
+					</ShellSized>
 				</div>
 			</div>
 		</HeroCardShell>

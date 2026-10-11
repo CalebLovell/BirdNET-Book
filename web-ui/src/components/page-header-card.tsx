@@ -8,7 +8,9 @@ import type { ComponentType, ReactNode } from "react";
  */
 export type PageHeaderStat = {
 	label: string;
-	value: string | number;
+	/** A number is formatted for the locale; anything else is set as is -- a
+	    string, or a shell while the figure loads. */
+	value: ReactNode;
 	icon: ComponentType<{ className?: string }>;
 };
 

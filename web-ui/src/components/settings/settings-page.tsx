@@ -8,17 +8,18 @@ import type { SettingsPageData } from "~/lib/settings-data.ts";
 import { RestartButton } from "./restart-button.tsx";
 import {
 	SettingsCards,
+	SettingsCardsSkeleton,
 	type SettingsRestarter,
 	type SettingsSavers,
 } from "./settings-cards.tsx";
 import { SettingsReset } from "./settings-reset.tsx";
-import { healthStats } from "./station-health.tsx";
+import { healthStats, healthStatsSkeleton } from "./station-health.tsx";
 
 /** A reset that stored its values without getting BirdNET onto them. */
 type ResetOutcome = { message: string; needsRestart: boolean };
 
-const SETTINGS_PAGE_TITLE = "Settings";
-const SETTINGS_PAGE_DESCRIPTION =
+export const SETTINGS_PAGE_TITLE = "Settings";
+export const SETTINGS_PAGE_DESCRIPTION =
 	"Configure this station without editing birdnet.conf. Each card validates and saves independently.";
 
 export function SettingsPage({
@@ -61,7 +62,7 @@ export function SettingsPage({
 				icon={Settings}
 				title={SETTINGS_PAGE_TITLE}
 				description={SETTINGS_PAGE_DESCRIPTION}
-				stats={health ? healthStats(health) : []}
+				stats={health ? healthStats(health) : healthStatsSkeleton()}
 				action={
 					onReset ? (
 						<div className="flex flex-wrap items-center justify-end gap-2">
@@ -111,6 +112,30 @@ export function SettingsPage({
 				savers={savers}
 				restarter={onRestart}
 			/>
+		</div>
+	);
+}
+
+/**
+ * The page before the configuration arrives: the masthead as itself, its
+ * figures blurred, the reset control drawn but inert, and the six cards as
+ * their own skeleton (see SettingsCardsSkeleton).
+ */
+export function SettingsPageSkeleton() {
+	return (
+		<div className="page-wrap space-y-(--page-gap) py-4">
+			<PageHeaderCard
+				icon={Settings}
+				title={SETTINGS_PAGE_TITLE}
+				description={SETTINGS_PAGE_DESCRIPTION}
+				stats={healthStatsSkeleton()}
+				action={
+					<div inert className="flex flex-wrap items-center justify-end gap-2">
+						<SettingsReset onReset={async () => {}} />
+					</div>
+				}
+			/>
+			<SettingsCardsSkeleton />
 		</div>
 	);
 }

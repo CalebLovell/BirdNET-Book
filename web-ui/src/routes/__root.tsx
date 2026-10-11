@@ -3,15 +3,17 @@ import { RouteError, RouteNotFound } from "~/components/root-status.tsx";
 import { MobileNav } from "~/components/sidebar/mobile-nav.tsx";
 import { SiteSidebar } from "~/components/sidebar/site-sidebar.tsx";
 import { Toaster } from "~/components/ui/toaster.tsx";
-import { getUnlockStatusFn } from "~/lib/auth.ts";
 import { pageTitle } from "~/lib/page-title.ts";
+import { unlockStatusForNavigation } from "~/lib/unlock-status.ts";
 import { DEFAULT_FAVICON } from "~/lib/use-favicon.ts";
 import appCss from "../styles.css?url";
 
 export const Route = createRootRoute({
 	// Resolved here so the sidebar and every gated route read the same answer
-	// from router context instead of each making its own round trip.
-	beforeLoad: async () => ({ auth: await getUnlockStatusFn() }),
+	// from router context instead of each making its own round trip -- and from
+	// the browser's last answer rather than the server, so a click never waits
+	// on it (see unlock-status.ts).
+	beforeLoad: async () => ({ auth: await unlockStatusForNavigation() }),
 	head: () => ({
 		meta: [
 			{

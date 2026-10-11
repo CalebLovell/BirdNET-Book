@@ -2,13 +2,16 @@ import {
 	createFileRoute,
 	stripSearchParams,
 	useRouter,
-	useRouterState,
 } from "@tanstack/react-router";
 import { Lightbulb } from "lucide-react";
+import { useEffect, useState } from "react";
 import { z } from "zod";
 import { CardHeader } from "~/components/card-header.tsx";
 import { EmptyNote, EmptyState } from "~/components/empty-state.tsx";
-import { LearnGame } from "~/components/learn/learn-game.tsx";
+import {
+	LearnGame,
+	LearnGameSkeleton,
+} from "~/components/learn/learn-game.tsx";
 import { LearnPoolSelector } from "~/components/learn/learn-layout.tsx";
 import { PageHeaderCard } from "~/components/page-header-card.tsx";
 import { getLearnRound } from "~/lib/learn.ts";
@@ -30,21 +33,43 @@ export const Route = createFileRoute("/learn")({
 		middlewares: [stripSearchParams({ pool: DEFAULT_POOL })],
 	},
 	loaderDeps: ({ search }) => ({ pool: search.pool }),
-	loader: ({ deps }) => getLearnRound({ data: deps.pool }),
+	// Deferred: the page renders at once (see Deferred), and the round fills
+	// in when it arrives.
+	loader: ({ deps }) => ({ round: getLearnRound({ data: deps.pool }) }),
 	component: Learn,
 });
 
+type LoadedRound = Awaited<ReturnType<typeof getLearnRound>>;
+
 function Learn() {
-	const { round: loadedRound, hasAnyDetections } = Route.useLoaderData();
+	const { round: roundPromise } = Route.useLoaderData();
 	const { pool } = Route.useSearch();
 	const navigate = Route.useNavigate();
-	const router = useRouter();
-	// The loader hands back a freshly randomized round every time it runs, so
-	// "play again" is just an invalidation -- and the new round's id re-keys the
-	// game below, which is what clears the finished round's state. Reruns nobody
-	// asked for are held off, so they can't reshuffle a round mid-question.
-	const { round, requestNextRound } = useHeldRound(loadedRound, pool);
-	const isLoading = useRouterState({ select: (state) => state.isLoading });
+
+	// The latest round to arrive, with the pool it was dealt from and the
+	// promise it came on. A round from another pool is no use once the pool
+	// has changed -- the game drops to its shell -- but one from this pool
+	// stays on screen while "play again" deals the next.
+	const [loaded, setLoaded] = useState<{
+		data: LoadedRound;
+		pool: LearnPool;
+		from: Promise<LoadedRound>;
+	} | null>(null);
+	useEffect(() => {
+		let cancelled = false;
+		roundPromise.then(
+			(data) => {
+				if (!cancelled) setLoaded({ data, pool, from: roundPromise });
+			},
+			() => {},
+		);
+		return () => {
+			cancelled = true;
+		};
+	}, [roundPromise, pool]);
+	const forPool = loaded?.pool === pool ? loaded : null;
+	// Only a station known to have recorded nothing drops the switcher.
+	const hasAnyDetections = loaded?.data.hasAnyDetections ?? true;
 
 	return (
 		<div className="page-wrap py-4">
@@ -70,24 +95,52 @@ function Learn() {
 			)}
 
 			<div className="mt-(--page-gap) w-full">
-				{round.questions.length === 0 ? (
-					<EmptyPool
-						speciesInPool={round.speciesInPool}
-						hasAnyDetections={hasAnyDetections}
+				{forPool ? (
+					<LearnRoundView
+						key={pool}
+						loaded={forPool.data}
+						pool={pool}
+						isLoadingNextRound={forPool.from !== roundPromise}
 					/>
 				) : (
-					<LearnGame
-						key={round.id}
-						round={round}
-						onPlayAgain={() => {
-							requestNextRound();
-							router.invalidate();
-						}}
-						isLoadingNextRound={isLoading}
-					/>
+					<LearnGameSkeleton />
 				)}
 			</div>
 		</div>
+	);
+}
+
+function LearnRoundView({
+	loaded,
+	pool,
+	isLoadingNextRound,
+}: {
+	loaded: LoadedRound;
+	pool: LearnPool;
+	isLoadingNextRound: boolean;
+}) {
+	const router = useRouter();
+	// The loader hands back a freshly randomized round every time it runs, so
+	// "play again" is just an invalidation -- and the new round's id re-keys the
+	// game below, which is what clears the finished round's state. Reruns nobody
+	// asked for are held off, so they can't reshuffle a round mid-question.
+	const { round, requestNextRound } = useHeldRound(loaded.round, pool);
+
+	return round.questions.length === 0 ? (
+		<EmptyPool
+			speciesInPool={round.speciesInPool}
+			hasAnyDetections={loaded.hasAnyDetections}
+		/>
+	) : (
+		<LearnGame
+			key={round.id}
+			round={round}
+			onPlayAgain={() => {
+				requestNextRound();
+				router.invalidate();
+			}}
+			isLoadingNextRound={isLoadingNextRound}
+		/>
 	);
 }
 

@@ -7,6 +7,7 @@ import { useServerFn } from "@tanstack/react-start";
 import type { RowSelectionState } from "@tanstack/react-table";
 import { AudioWaveform } from "lucide-react";
 import { useState } from "react";
+import { Deferred } from "~/components/deferred.tsx";
 import { DeleteDetectionsDialog } from "~/components/detections/delete-detections-dialog.tsx";
 import {
 	DetectionsFilters,
@@ -16,22 +17,34 @@ import { EmptyNote, EmptyState } from "~/components/empty-state.tsx";
 import { PageHeaderCard } from "~/components/page-header-card.tsx";
 import { destructiveToast, toast } from "~/components/ui/toaster.tsx";
 import {
+	type DetectionWorkspaceSearch,
 	hasActiveFilters,
 	normalizeDetectionWorkspaceSearch,
 } from "~/lib/detection-workspace.ts";
 import { deleteDetections, getDetectionsPage } from "~/lib/detections.ts";
 import { pageTitle } from "~/lib/page-title.ts";
+import { useSettled } from "~/lib/use-settled.ts";
 
 export const Route = createFileRoute("/detections")({
 	head: () => ({ meta: [{ title: pageTitle("Detections") }] }),
 	validateSearch: (search) => normalizeDetectionWorkspaceSearch(search),
 	loaderDeps: ({ search }) => search,
-	loader: ({ deps }) => getDetectionsPage({ data: deps }),
+	// Deferred: the page and its filters render at once (see Deferred), and
+	// the table fills in when its page of rows arrives.
+	loader: ({ deps }) => ({ page: getDetectionsPage({ data: deps }) }),
 	component: Detections,
 });
 
+// Shared by the loaded table's card and its skeleton's.
+const TABLE_CARD_CLASS =
+	"feature-card flex min-h-0 flex-col overflow-hidden rounded-md p-(--page-gap) [--card-edge:min(var(--page-gap),0.75rem)]";
+
 function Detections() {
-	const page = Route.useLoaderData();
+	const { page: pagePromise } = Route.useLoaderData();
+	// The rows on screen, for the bits of the page outside the table that
+	// count them; null until the first page is in.
+	const settled = useSettled(pagePromise);
+	const page = settled?.current ? settled.value : null;
 	const search = Route.useSearch();
 	const navigate = Route.useNavigate();
 	const router = useRouter();
@@ -49,11 +62,10 @@ function Detections() {
 		.map(([rowId]) => Number(rowId));
 	const selectedCount = selectedRowIds.length;
 	const isFiltered = hasActiveFilters(search);
-	const isEmpty = page.total === 0;
 	// Only a station that has never recorded anything drops its filters. An empty
 	// filter result keeps them, or there would be no way to clear the filter that
-	// emptied it.
-	const stationEmpty = isEmpty && !isFiltered;
+	// emptied it. Unknown until the rows arrive, so the filters show meanwhile.
+	const stationEmpty = page !== null && page.total === 0 && !isFiltered;
 
 	async function confirmDeletion() {
 		setIsDeleting(true);
@@ -71,7 +83,7 @@ function Detections() {
 				destructiveToast(deleted);
 			}
 
-			if (search.page > 1 && selectedCount === page.rows.length) {
+			if (search.page > 1 && selectedCount === page?.rows.length) {
 				navigate({
 					search: { ...search, page: search.page - 1 },
 					replace: true,
@@ -123,35 +135,58 @@ function Detections() {
 					hears something.
 				</EmptyState>
 			) : (
-				/* Takes the leftover height when there are rows to scroll. An empty
-				   filter result has nothing to scroll, so it keeps its natural size
-				   rather than stretching a one-line message down the whole page.
-				   `overflow-hidden` clips the table's header band, which runs out to
-				   the card's top-left edge, to the card's rounded corner -- square, it
-				   painted over the border's curve there. */
-				<section
-					aria-label="Detections"
-					className={`feature-card flex min-h-0 flex-col overflow-hidden rounded-md p-(--page-gap) [--card-edge:min(var(--page-gap),0.75rem)] ${isEmpty ? "shrink-0 pt-0" : "flex-1 pr-(--card-edge) pb-0"}`}
-				>
-					{/* No header strip: the "All detections" kicker is gone and Delete
-					    moved up into the filter row, so the table starts at the top of
-					    the card and takes its full height. */}
-					{isEmpty ? (
-						<EmptyNote>No detections match these filters.</EmptyNote>
-					) : (
-						<DetectionsTable
-							page={page}
+				// Keyed on the search, so a new filter, sort or page drops the table
+				// to its shell at once rather than holding the old rows.
+				<Deferred
+					key={JSON.stringify(search)}
+					promise={pagePromise}
+					className="flex min-h-0 flex-1 flex-col"
+					shell={
+						<DetectionsTableShell
 							search={search}
+							canDelete={canDelete}
 							onSearchChange={(nextSearch) =>
 								navigate({ search: nextSearch, replace: true })
 							}
-							rowSelection={rowSelection}
-							onRowSelectionChange={setRowSelection}
-							canDelete={canDelete}
-							onDeleteSelected={() => setDeleteOpen(true)}
 						/>
-					)}
-				</section>
+					}
+				>
+					{(loaded) => {
+						const isEmpty = loaded.total === 0;
+						return (
+							/* Takes the leftover height when there are rows to scroll. An
+							   empty filter result has nothing to scroll, so it keeps its
+							   natural size rather than stretching a one-line message down
+							   the whole page. `overflow-hidden` clips the table's header
+							   band, which runs out to the card's top-left edge, to the
+							   card's rounded corner -- square, it painted over the
+							   border's curve there. */
+							<section
+								aria-label="Detections"
+								className={`${TABLE_CARD_CLASS} ${isEmpty ? "shrink-0 pt-0" : "flex-1 pr-(--card-edge) pb-0"}`}
+							>
+								{/* No header strip: the "All detections" kicker is gone and
+								    Delete moved up into the filter row, so the table starts
+								    at the top of the card and takes its full height. */}
+								{isEmpty ? (
+									<EmptyNote>No detections match these filters.</EmptyNote>
+								) : (
+									<DetectionsTable
+										page={loaded}
+										search={search}
+										onSearchChange={(nextSearch) =>
+											navigate({ search: nextSearch, replace: true })
+										}
+										rowSelection={rowSelection}
+										onRowSelectionChange={setRowSelection}
+										canDelete={canDelete}
+										onDeleteSelected={() => setDeleteOpen(true)}
+									/>
+								)}
+							</section>
+						);
+					}}
+				</Deferred>
 			)}
 
 			{deleteOpen ? (
@@ -163,5 +198,35 @@ function Detections() {
 				/>
 			) : null}
 		</div>
+	);
+}
+
+/** The table card as the loaded page draws it, holding the table's own
+    skeleton (see DetectionsTable with no page). */
+function DetectionsTableShell({
+	search,
+	canDelete,
+	onSearchChange,
+}: {
+	search: DetectionWorkspaceSearch;
+	canDelete: boolean;
+	onSearchChange: (search: DetectionWorkspaceSearch) => void;
+}) {
+	return (
+		<section
+			aria-busy="true"
+			aria-label="Detections"
+			className={`${TABLE_CARD_CLASS} flex-1 pr-(--card-edge) pb-0`}
+		>
+			<DetectionsTable
+				page={null}
+				search={search}
+				onSearchChange={onSearchChange}
+				rowSelection={{}}
+				onRowSelectionChange={() => {}}
+				canDelete={canDelete}
+				onDeleteSelected={() => {}}
+			/>
+		</section>
 	);
 }

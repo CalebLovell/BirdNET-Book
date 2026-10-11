@@ -1,27 +1,38 @@
 import {
 	createFileRoute,
 	Link,
-	notFound,
 	stripSearchParams,
 } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { Feather } from "lucide-react";
+import { ExternalLink, Feather } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { z } from "zod";
 
-import { BestRecordingCard } from "~/components/best-recording-card.tsx";
+import {
+	BestRecordingCard,
+	BestRecordingCardSkeleton,
+} from "~/components/best-recording-card.tsx";
 import { CardHeader } from "~/components/card-header.tsx";
 import { ConfidencePill } from "~/components/confidence-pill.tsx";
-import { DetectionsByHourCard } from "~/components/detections-by-hour-card.tsx";
-import { DetectionsByMonthCard } from "~/components/detections-by-month-card.tsx";
+import { Deferred } from "~/components/deferred.tsx";
+import {
+	DetectionsByHourCard,
+	DetectionsByHourCardSkeleton,
+} from "~/components/detections-by-hour-card.tsx";
+import {
+	DetectionsByMonthCard,
+	DetectionsByMonthCardSkeleton,
+} from "~/components/detections-by-month-card.tsx";
 import { EmptyNote } from "~/components/empty-state.tsx";
 import { IndexDot } from "~/components/index-dot.tsx";
 import { PageStatus } from "~/components/page-status.tsx";
 import { RecordingButton } from "~/components/recording-button.tsx";
 import { SpeciesActions } from "~/components/species-actions.tsx";
 import { SpeciesImage } from "~/components/species-image.tsx";
+import { Button } from "~/components/ui/button.tsx";
 import { ButtonLink } from "~/components/ui/button-link.tsx";
 import { PageStepper } from "~/components/ui/page-stepper.tsx";
+import { ShellBar, ShellSized, ShellText } from "~/components/ui/shell.tsx";
 import {
 	Tooltip,
 	TooltipContent,
@@ -73,35 +84,23 @@ export const Route = createFileRoute("/birds/$comName")({
 	// that page, rather than rerunning every query on the page. The loader still
 	// reads it so a deep link to page 40 server-renders page 40.
 	loaderDeps: ({ search }) => ({ year: search.year }),
-	loader: async ({ params, deps, location }) => {
-		const result = await getSpeciesDetail({
+	// Deferred: the page renders at once (see Deferred) and fills in when the
+	// bird's detail arrives. Which means an unknown slug can't be thrown as the
+	// router's not-found -- the loader has returned long before anyone knows --
+	// so the page renders its not-found card in place instead.
+	loader: ({ params, deps, location }) => ({
+		result: getSpeciesDetail({
 			data: {
 				comNameSlug: params.comName,
 				year: deps.year,
 				visitsPage: (location.search as { visits?: number }).visits,
 			},
-		});
-		// Thrown rather than rendered so the router's not-found path handles it,
-		// which is what lets this route keep its own masthead below.
-		if (result.status === "unknown") throw notFound();
-		return result;
-	},
-	// The bird's own name once the loader has resolved the slug -- for an
-	// undetected bird too, since the catalog gave us the name even though the
-	// station has never heard it. Until then the section name stands in.
-	head: ({ loaderData }) => ({
-		meta: [
-			{
-				title: pageTitle(
-					loaderData?.status === "detected"
-						? loaderData.detail.comName
-						: (loaderData?.comName ?? "Species"),
-				),
-			},
-		],
+		}),
 	}),
+	// The section name until the bird's own arrives with its detail; the page
+	// sets that itself (see useBirdTitle).
+	head: () => ({ meta: [{ title: pageTitle("Species") }] }),
 	component: BirdPage,
-	notFoundComponent: SpeciesNotFound,
 });
 
 type HeatMapWeek = {
@@ -165,18 +164,236 @@ function buildHeatMap(history: TrendPoint[]): {
 }
 
 function BirdPage() {
-	const result = Route.useLoaderData();
+	const { result } = Route.useLoaderData();
+	const { year } = Route.useSearch();
+
+	// Keyed on the year, the one search the loader reruns for, so a new year
+	// drops the page to its shell at once rather than holding the old one.
+	return (
+		<Deferred
+			key={year}
+			promise={result}
+			shell={<SpeciesDetailShell year={year} />}
+		>
+			{(loaded) => <BirdResult result={loaded} />}
+		</Deferred>
+	);
+}
+
+function BirdResult({
+	result,
+}: {
+	result: Awaited<ReturnType<typeof getSpeciesDetail>>;
+}) {
+	// The bird's own name once the slug has resolved -- for an undetected bird
+	// too, since the catalog gave us the name even though the station has never
+	// heard it.
+	useBirdTitle(
+		result.status === "detected"
+			? result.detail.comName
+			: result.status === "undetected"
+				? result.comName
+				: null,
+	);
 
 	if (result.status === "undetected") {
 		return (
 			<UndetectedSpecies comName={result.comName} sciName={result.sciName} />
 		);
 	}
-	// `unknown` never reaches the component: the loader throws `notFound()` for
-	// it, and `SpeciesNotFound` renders instead.
-	if (result.status !== "detected") return null;
+	if (result.status !== "detected") return <SpeciesNotFound />;
 
 	return <SpeciesDetailView detail={result.detail} />;
+}
+
+/** Names the tab after the bird once its detail is in. The route's own head
+    can't: it renders before the deferred detail settles. */
+function useBirdTitle(comName: string | null) {
+	useEffect(() => {
+		if (comName) document.title = pageTitle(comName);
+	}, [comName]);
+}
+
+/**
+ * The whole page before the bird arrives, laid out as the page lays it out,
+ * every card its own skeleton of the loaded card's shape: the profile, the
+ * year's heat map (its weekday labels and legend as themselves), Best
+ * recording, the two charts and the visit log.
+ */
+function SpeciesDetailShell({ year }: { year: number }) {
+	return (
+		<div className="@container/species page-wrap pb-4">
+			<section
+				aria-busy="true"
+				aria-label="Species profile"
+				className={PROFILE_CARD_CLASS}
+			>
+				<div className="flex h-36 items-center justify-center overflow-hidden p-4 pb-0 sm:h-44 sm:pb-4">
+					<ShellBar className="h-full w-36 rounded-md" />
+				</div>
+				<div
+					aria-hidden="true"
+					className="flex min-w-0 flex-col justify-center gap-3 p-4"
+				>
+					<div className="min-w-0">
+						<ShellText
+							className="display-title font-bold text-2xl sm:text-3xl"
+							barClassName="w-64 max-w-full"
+						/>
+						<ShellText className="text-xs" barClassName="w-32" />
+					</div>
+					<ShellText className="text-sm" barClassName="w-80 max-w-full" />
+					<div className="relative z-10 flex flex-wrap items-center gap-2">
+						<ShellSized className="rounded-md">
+							<Button variant="outline" icon={ExternalLink}>
+								eBird
+							</Button>
+						</ShellSized>
+					</div>
+				</div>
+			</section>
+
+			<div className={COLUMNS_CLASS}>
+				<section
+					aria-busy="true"
+					aria-label="Detection history"
+					className="feature-card overflow-hidden rounded-md p-4"
+				>
+					<CardHeader title="Detection history" className="flex-wrap">
+						<div className="-my-1">
+							<ShellSized className="rounded-md">
+								<YearSelector
+									year={year}
+									years={[year - 1, year]}
+									onChange={() => {}}
+								/>
+							</ShellSized>
+						</div>
+					</CardHeader>
+					<div aria-hidden="true" className="mt-(--page-gap) flex gap-2">
+						<WeekdayLabels />
+						<div className="min-w-0 flex-1 overflow-hidden pb-1">
+							<div className="w-max">
+								<div className="mb-1 h-3" />
+								<div className="flex w-max gap-1">
+									{Array.from({ length: weeksInYear(year) }, (_, week) => (
+										<div
+											// biome-ignore lint/suspicious/noArrayIndexKey: one column per week
+											key={week}
+											className="flex shrink-0 flex-col gap-1"
+										>
+											{Array.from({ length: 7 }, (_, day) => (
+												<span
+													// biome-ignore lint/suspicious/noArrayIndexKey: one square per day
+													key={day}
+													className="size-3 animate-pulse rounded-[3px] bg-muted"
+												/>
+											))}
+										</div>
+									))}
+								</div>
+							</div>
+						</div>
+					</div>
+					<div className="mt-3 flex flex-wrap items-center justify-between gap-x-4 gap-y-2 max-[400px]:mt-2">
+						{/* The real line carries count figures, which set its height. */}
+						<ShellText
+							className="w-56 text-xs"
+							barClassName="w-full"
+							strut={<span className="count-figure">&nbsp;</span>}
+						/>
+						<HeatLegend />
+					</div>
+				</section>
+
+				<BestRecordingCardSkeleton />
+
+				<div className="grid min-w-0 @min-[80rem]/species:grid-rows-2 gap-(--page-gap)">
+					<DetectionsByHourCardSkeleton className="@min-[80rem]/species:min-h-0" />
+					<DetectionsByMonthCardSkeleton className="@min-[80rem]/species:min-h-0" />
+				</div>
+
+				<VisitLogSkeleton />
+			</div>
+		</div>
+	);
+}
+
+/** Weeks the heat map draws for a year: Sunday-aligned columns across Jan 1
+    to Dec 31, or, for the year under way, across the 365 days to today (the
+    rolling year getYearTrend returns for it). */
+function weeksInYear(year: number): number {
+	// Midnights, as buildHeatMap's buckets are: measuring to the current time
+	// of day counted an extra day, and now and then an extra week column --
+	// which widened the heat map's column and shifted the page on load.
+	const today = new Date();
+	const end =
+		year === CURRENT_YEAR
+			? new Date(today.getFullYear(), today.getMonth(), today.getDate())
+			: new Date(year, 11, 31);
+	const start =
+		year === CURRENT_YEAR
+			? new Date(end.getFullYear(), end.getMonth(), end.getDate() - 364)
+			: new Date(year, 0, 1);
+	// Columns from the Sunday on or before `start` through the week holding `end`.
+	const sunday = new Date(start);
+	sunday.setDate(sunday.getDate() - sunday.getDay());
+	const span = Math.round((end.getTime() - sunday.getTime()) / 86_400_000);
+	return Math.floor(span / 7) + 1;
+}
+
+/** The visit log's rows, as the loaded log draws them (see VisitLogCard). */
+function VisitLogSkeleton() {
+	return (
+		<section
+			aria-busy="true"
+			aria-label="Visit log"
+			className={VISIT_LOG_CLASS}
+		>
+			<div className={VISIT_LOG_HEADER_CLASS}>
+				<div className="island-kicker">Visit log</div>
+				<ShellText
+					className="w-16 text-xs"
+					barClassName="right-0 left-auto w-full"
+				/>
+			</div>
+			<ul aria-hidden="true" className="-mx-(--page-gap) divide-y">
+				{Array.from({ length: VISITS_PAGE_SIZE }, (_, index) => (
+					// biome-ignore lint/suspicious/noArrayIndexKey: static decoration
+					<li key={index} className={VISIT_ROW_CLASS}>
+						<ShellBar className="h-6 w-7 shrink-0 rounded-full" />
+						<div className="min-w-0 flex-1 text-sm">
+							<ShellText
+								className="font-medium"
+								barClassName="w-48 max-w-full"
+							/>
+							<ShellText className="text-xs" barClassName="w-20" />
+						</div>
+						<ShellSized className="rounded-full">
+							<ConfidencePill confidence={0.9} className="shrink-0" />
+						</ShellSized>
+						<ShellSized className="rounded-md">
+							<RecordingButton audioUrl={null} {...VISIT_ROW_BUTTON} />
+						</ShellSized>
+					</li>
+				))}
+			</ul>
+			<div className={VISIT_LOG_FOOTER_CLASS}>
+				<span className="ml-auto">
+					<ShellSized className="rounded-md">
+						<PageStepper
+							label="Visit log pages"
+							page={1}
+							// A heard bird's log runs to many pages, which is what
+							// sets the stepper's width.
+							pageCount={100}
+							onPageChange={() => {}}
+						/>
+					</ShellSized>
+				</span>
+			</div>
+		</section>
+	);
 }
 
 /**
@@ -303,7 +520,7 @@ function SpeciesDetailView({ detail }: { detail: SpeciesDetail }) {
 				    rather than the implicit `auto` track: an auto track sizes to the
 				    heat map's min-content, which pushed every card off a phone
 				    screen instead of letting the heat map scroll inside its card. */}
-				<div className="mt-(--page-gap) grid @min-[80rem]/species:grid-cols-[minmax(0,max-content)_minmax(20rem,1fr)] grid-cols-[minmax(0,1fr)] items-stretch gap-(--page-gap)">
+				<div className={COLUMNS_CLASS}>
 					<section
 						aria-label="Detection history"
 						className="feature-card overflow-hidden rounded-md p-4"
@@ -323,15 +540,7 @@ function SpeciesDetailView({ detail }: { detail: SpeciesDetail }) {
 						    fixed 12px (plus its 4px margin) so the labels' pt-4 lines Sun
 						    up with the first row of squares. */}
 						<div className="mt-(--page-gap) flex gap-2">
-							<div className="flex w-7 shrink-0 flex-col gap-1 pt-4 text-[9px] text-muted-foreground leading-3">
-								<span>Sun</span>
-								<span>Mon</span>
-								<span>Tue</span>
-								<span>Wed</span>
-								<span>Thu</span>
-								<span>Fri</span>
-								<span>Sat</span>
-							</div>
+							<WeekdayLabels />
 							<div
 								ref={heatScrollRef}
 								className="min-w-0 flex-1 overflow-x-auto pb-1"
@@ -374,17 +583,7 @@ function SpeciesDetailView({ detail }: { detail: SpeciesDetail }) {
 						    the tally wraps above the legend when they can't share a line. */}
 						<div className="mt-3 flex flex-wrap items-center justify-between gap-x-4 gap-y-2 max-[400px]:mt-2">
 							<StationRecord detail={detail} />
-							<div className="ml-auto flex items-center gap-1 text-[10px] text-muted-foreground">
-								<span>Less</span>
-								{LEGEND_SHARES.map((share) => (
-									<span
-										key={share}
-										className="size-3 rounded-[3px] border border-[var(--line)]"
-										style={{ backgroundColor: heatColorAt(share) }}
-									/>
-								))}
-								<span>More</span>
-							</div>
+							<HeatLegend />
 						</div>
 					</section>
 
@@ -430,6 +629,57 @@ function SpeciesDetailView({ detail }: { detail: SpeciesDetail }) {
 
 /** Samples of the continuous ramp for the "Less … More" key. */
 const LEGEND_SHARES = [0, 0.25, 0.5, 0.75, 1] as const;
+
+/** The "Less … More" key. Needs no data, so the skeleton draws it as itself. */
+function HeatLegend() {
+	return (
+		<div className="ml-auto flex items-center gap-1 text-[10px] text-muted-foreground">
+			<span>Less</span>
+			{LEGEND_SHARES.map((share) => (
+				<span
+					key={share}
+					className="size-3 rounded-[3px] border border-[var(--line)]"
+					style={{ backgroundColor: heatColorAt(share) }}
+				/>
+			))}
+			<span>More</span>
+		</div>
+	);
+}
+
+/** The heat map's row labels, outside its scroller. Drawn as themselves by
+    the skeleton too. */
+function WeekdayLabels() {
+	return (
+		<div className="flex w-7 shrink-0 flex-col gap-1 pt-4 text-[9px] text-muted-foreground leading-3">
+			<span>Sun</span>
+			<span>Mon</span>
+			<span>Tue</span>
+			<span>Wed</span>
+			<span>Thu</span>
+			<span>Fri</span>
+			<span>Sat</span>
+		</div>
+	);
+}
+
+// Shared by the loaded page and its skeleton, so the two are one shape.
+const PROFILE_CARD_CLASS =
+	"feature-card mt-(--page-gap) grid overflow-hidden rounded-md sm:grid-cols-[12rem_minmax(0,1fr)]";
+const COLUMNS_CLASS =
+	"mt-(--page-gap) grid @min-[80rem]/species:grid-cols-[minmax(0,max-content)_minmax(20rem,1fr)] grid-cols-[minmax(0,1fr)] items-stretch gap-(--page-gap)";
+const VISIT_LOG_CLASS =
+	"@container feature-card flex min-h-[420px] flex-col rounded-md p-4";
+const VISIT_LOG_HEADER_CLASS =
+	"-mx-(--page-gap) -mt-(--page-gap) flex min-h-[45px] flex-wrap items-center justify-between gap-2 border-b px-(--page-gap)";
+const VISIT_ROW_CLASS =
+	"flex items-center @min-[26rem]:gap-3 gap-2 px-(--page-gap) py-1.75";
+const VISIT_ROW_BUTTON = {
+	labelClassName: "@min-[26rem]:inline hidden",
+	className: "@min-[26rem]:w-auto w-6 @min-[26rem]:px-2.5 px-0",
+};
+const VISIT_LOG_FOOTER_CLASS =
+	"-mx-(--page-gap) mt-auto -mb-(--page-gap) flex shrink-0 items-center border-t px-(--page-gap) py-2";
 
 const SWATCH =
 	"size-3 rounded-[3px] border border-[var(--line)] transition-[outline] hover:z-10 hover:outline hover:outline-2 hover:outline-[var(--hover-line)] hover:outline-offset-1";
@@ -500,10 +750,7 @@ function SummaryCard({
 		? formatTimeAgo(lastVisit.ageMs + offsetMs)
 		: formatHeardDate(detail.lastDetected.date);
 	return (
-		<section
-			aria-label="Species profile"
-			className="feature-card mt-(--page-gap) grid overflow-hidden rounded-md sm:grid-cols-[12rem_minmax(0,1fr)]"
-		>
+		<section aria-label="Species profile" className={PROFILE_CARD_CLASS}>
 			{/* The portrait's own column -- above the text on a phone, where the
 			    column becomes a band, and beside it from sm up. Either way the
 			    bird is centred in its column, so a narrow painting doesn't sit
@@ -666,11 +913,11 @@ function VisitLogCard({
 			// A container, because the log's width depends on the grid track it
 			// lands in more than on the screen: it gets ~18rem both on a phone and
 			// in the right-hand column at lg, and the whole content width between.
-			className="@container feature-card flex min-h-[420px] flex-col rounded-md p-4"
+			className={VISIT_LOG_CLASS}
 		>
 			{/* The footer's twin: the same full-width hairline and the same 45px
 			    band, rule included, so the log is bookended evenly. */}
-			<div className="-mx-(--page-gap) -mt-(--page-gap) flex min-h-[45px] flex-wrap items-center justify-between gap-2 border-b px-(--page-gap)">
+			<div className={VISIT_LOG_HEADER_CLASS}>
 				<div className="island-kicker">Visit log</div>
 				{totalVisits > 0 ? (
 					<div className="tabular-data text-muted-foreground text-xs">
@@ -706,7 +953,7 @@ function VisitLogCard({
 								// padding hands that page gap back (the card's own padding, which
 								// halves on the smallest phones) so the content lines up with
 								// the header and footer and never pokes past the card's border.
-								className="flex items-center @min-[26rem]:gap-3 gap-2 px-(--page-gap) py-1.75"
+								className={VISIT_ROW_CLASS}
 							>
 								<IndexDot index={firstIndex + i} widest={lastIndex} />
 								<div className="min-w-0 flex-1 text-sm">
@@ -732,8 +979,7 @@ function VisitLogCard({
 								/>
 								<RecordingButton
 									audioUrl={visit.audioUrl ?? null}
-									labelClassName="@min-[26rem]:inline hidden"
-									className="@min-[26rem]:w-auto w-6 @min-[26rem]:px-2.5 px-0"
+									{...VISIT_ROW_BUTTON}
 								/>
 							</li>
 						);
@@ -745,7 +991,7 @@ function VisitLogCard({
 			    hairline across the card's full width, the stepper held right, and
 			    `mt-auto` pinning it to the card's bottom on a short last page. */}
 			{pageCount > 1 ? (
-				<div className="-mx-(--page-gap) mt-auto -mb-(--page-gap) flex shrink-0 items-center border-t px-(--page-gap) py-2">
+				<div className={VISIT_LOG_FOOTER_CLASS}>
 					<PageStepper
 						className="ml-auto"
 						label="Visit log pages"

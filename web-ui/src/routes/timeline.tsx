@@ -6,18 +6,27 @@ import {
 	Rows3,
 } from "lucide-react";
 import { z } from "zod";
-import { DetectionsByHourCard } from "~/components/detections-by-hour-card.tsx";
+import { Deferred } from "~/components/deferred.tsx";
+import {
+	DetectionsByHourCard,
+	DetectionsByHourCardSkeleton,
+} from "~/components/detections-by-hour-card.tsx";
 import { EmptyState } from "~/components/empty-state.tsx";
 import { HighlightsCard } from "~/components/highlights-card.tsx";
 import { PageHeaderCard } from "~/components/page-header-card.tsx";
-import { SpeciesByHourCard } from "~/components/species-by-hour-card.tsx";
+import {
+	SpeciesByHourCard,
+	SpeciesByHourCardSkeleton,
+} from "~/components/species-by-hour-card.tsx";
 import {
 	SpeciesGrid,
 	type SpeciesGridItem,
+	SpeciesGridSkeleton,
 } from "~/components/species-grid.tsx";
 import { StatusPage } from "~/components/status-page.tsx";
 import { PeriodToolbar } from "~/components/timeline/period-toolbar.tsx";
 import { ButtonLink } from "~/components/ui/button-link.tsx";
+import { ShellFigure } from "~/components/ui/shell.tsx";
 import { TooltipProvider } from "~/components/ui/tooltip.tsx";
 import { useShareCard } from "~/components/use-share-card.tsx";
 import { formatDate } from "~/lib/date-format.ts";
@@ -43,6 +52,7 @@ import {
 	isValidAnchor,
 	windowFor,
 } from "~/lib/timeline-window.ts";
+import { useSettled } from "~/lib/use-settled.ts";
 import { cn } from "~/lib/utils.ts";
 
 const DEFAULT_PERIOD: TimelinePeriod = "day";
@@ -104,7 +114,9 @@ export const Route = createFileRoute("/timeline")({
 		period: search.period,
 		anchor: resolveAnchor(search.period, search.date),
 	}),
-	loader: ({ deps }) => getTimelinePage({ data: deps }),
+	// Deferred: the page renders at once (see Deferred), and its cards fill in
+	// as the window's data arrives.
+	loader: ({ deps }) => ({ page: getTimelinePage({ data: deps }) }),
 	component: Timeline,
 });
 
@@ -121,7 +133,8 @@ const DAY_TITLE = new Intl.DateTimeFormat("en-US", {
 });
 
 function Timeline() {
-	const data = Route.useLoaderData();
+	const { page } = Route.useLoaderData();
+	const settled = useSettled(page);
 	const search = Route.useSearch();
 	const { period, view } = search;
 	const anchor = resolveAnchor(period, search.date);
@@ -141,43 +154,106 @@ function Timeline() {
 	// A date the station could never have recorded is the one case with nothing
 	// to say at all -- no figures, no window, no grid -- so it replaces the page
 	// rather than sitting inside it.
-	if (data.body.kind === "day-out-of-range") {
-		return <OutOfRangeDay result={data.body.result} date={anchor} />;
+	if (settled?.current && settled.value.body.kind === "day-out-of-range") {
+		return <OutOfRangeDay result={settled.value.body.result} date={anchor} />;
 	}
 
 	return (
 		<TooltipProvider>
 			<div className="page-wrap space-y-(--page-gap) py-4">
 				<TimelineHeader
-					data={data}
+					data={settled?.current ? settled.value : null}
+					staleData={settled?.value ?? null}
 					period={period}
 					anchor={anchor}
 					onChange={show}
 				/>
 
-				{/* A station with nothing recorded has no window picker and no
-				    figures, so every card below would be an empty shell with one
-				    line in it. The page-level treatment replaces them outright
-				    rather than nesting a card inside a card. */}
-				{data.hasAnyDetections ? (
-					<TimelineCards
-						rows={data.body.rows}
-						highlights={data.body.highlights}
-						period={period}
-						jumpTo={jumpTarget(period, data)}
-						windowLabel={data.window?.label ?? null}
-						view={view}
-						onViewChange={(next) => show({ view: next })}
-					/>
-				) : (
-					<EmptyState title="Timeline">
-						No detections recorded yet. Once the station hears something, its
-						rhythm will show up here -- hour by hour, day by day, and across the
-						whole of its history.
-					</EmptyState>
-				)}
+				{/* Keyed on the window, so a new period or date mounts a fresh
+				    boundary: the cards drop to their shells at once, instead of the
+				    old window holding the screen until the new one is in. */}
+				<Deferred
+					key={`${period}:${anchor}`}
+					promise={page}
+					shell={
+						<TimelineCardsShell
+							period={period}
+							view={view}
+							onViewChange={(next) => show({ view: next })}
+						/>
+					}
+				>
+					{(data) =>
+						data.body.kind ===
+						"day-out-of-range" ? null : data.hasAnyDetections ? (
+							// A station with nothing recorded has no window picker and no
+							// figures, so every card below would be an empty shell with one
+							// line in it. The page-level treatment replaces them outright
+							// rather than nesting a card inside a card.
+							<TimelineCards
+								rows={data.body.rows}
+								highlights={data.body.highlights}
+								period={period}
+								jumpTo={jumpTarget(period, data)}
+								windowLabel={data.window?.label ?? null}
+								view={view}
+								onViewChange={(next) => show({ view: next })}
+							/>
+						) : (
+							<EmptyState title="Timeline">
+								No detections recorded yet. Once the station hears something,
+								its rhythm will show up here -- hour by hour, day by day, and
+								across the whole of its history.
+							</EmptyState>
+						)
+					}
+				</Deferred>
 			</div>
 		</TooltipProvider>
+	);
+}
+
+/**
+ * The cards as TimelineCards lays them out, each its own skeleton: the body
+ * in the view the URL asks for, with the real view toggle and the window's
+ * figures blurred in its header, then the hour chart and the Highlights.
+ */
+function TimelineCardsShell({
+	period,
+	view,
+	onViewChange,
+}: {
+	period: TimelinePeriod;
+	view: TimelineView;
+	onViewChange: (next: TimelineView) => void;
+}) {
+	const toggle = <ViewToggle view={view} onViewChange={onViewChange} />;
+	const summary = <WindowSummary rows={null} />;
+	return (
+		<div className="min-[1800px]:flex min-[1800px]:items-start min-[1800px]:gap-4">
+			{view === "hours" ? (
+				<SpeciesByHourCardSkeleton
+					summary={summary}
+					action={toggle}
+					className={BODY_CARD_WIDTH}
+				/>
+			) : (
+				<SpeciesGridSkeleton
+					summary={summary}
+					action={toggle}
+					className={BODY_CARD_WIDTH}
+				/>
+			)}
+			<div className="mt-(--page-gap) grid min-w-0 gap-(--page-gap) md:max-[1799px]:grid-cols-2 min-[1800px]:mt-0 min-[1800px]:flex-1">
+				<DetectionsByHourCardSkeleton />
+				<HighlightsCard
+					highlights={null}
+					period={period}
+					emptyMessage=""
+					className="self-start"
+				/>
+			</div>
+		</div>
 	);
 }
 
@@ -230,17 +306,23 @@ function jumpTarget(
  */
 function TimelineHeader({
 	data,
+	staleData,
 	period,
 	anchor,
 	onChange,
 }: {
-	data: TimelinePageData;
+	/** This window's page, once it has arrived. */
+	data: TimelinePageData | null;
+	/** The latest page to arrive, perhaps for the window before this one --
+	    enough to keep the toolbar drawn while this window loads. */
+	staleData: TimelinePageData | null;
 	period: TimelinePeriod;
 	anchor: string;
 	onChange: (next: { period?: TimelinePeriod; date?: string }) => void;
 }) {
-	const rows = data.body.kind === "rows" ? data.body.rows : [];
-	const highlights = data.body.kind === "rows" ? data.body.highlights : [];
+	const rows = data?.body.kind === "rows" ? data.body.rows : [];
+	const highlights = data?.body.kind === "rows" ? data.body.highlights : [];
+	const toolbarData = data ?? staleData;
 
 	// Both cards carry the window's Highlights, which the page has already
 	// loaded for its own Highlights card, so the share says what the page says.
@@ -254,7 +336,7 @@ function TimelineHeader({
 					})
 				: formatTimelineShareCard({
 						period,
-						windowLabel: data.window?.label ?? null,
+						windowLabel: data?.window?.label ?? null,
 						rows,
 						highlights,
 					}),
@@ -263,26 +345,32 @@ function TimelineHeader({
 	return (
 		<PageHeaderCard
 			icon={CalendarRange}
-			title={headerTitle(data, period, anchor)}
+			title={headerTitle(period, anchor)}
 			description={TIMELINE_DESCRIPTION}
-			action={data.hasAnyDetections ? share.trigger : undefined}
+			action={data?.hasAnyDetections ? share.trigger : undefined}
 			// Between the title and the body card, so the window it picks reads as
 			// steering the figures and body beneath it. Gated on the station rather
 			// than the window: an empty week still needs the switcher to reach a
 			// window with something in it.
+			//
+			// Drawn at once: the period and the window come from the URL. While
+			// this window's page is on its way it draws from the last one to
+			// arrive (or from nothing, on the first), and what it can't know yet
+			// -- where the arrows lead, the station's first and last days -- waits
+			// for the data. Only a station known to have recorded nothing drops it.
 			afterHeader={
-				data.hasAnyDetections ? (
+				toolbarData && !toolbarData.hasAnyDetections ? undefined : (
 					<PeriodToolbar
 						period={period}
 						anchor={anchor}
-						window={data.window}
-						prevAnchor={data.prevAnchor}
-						nextAnchor={data.nextAnchor}
-						lastActiveDay={data.lastActiveDay}
-						stationRange={data.stationRange}
+						window={data ? data.window : safeWindow(period, anchor)}
+						prevAnchor={data?.prevAnchor ?? null}
+						nextAnchor={data?.nextAnchor ?? null}
+						lastActiveDay={data?.lastActiveDay ?? null}
+						stationRange={toolbarData?.stationRange ?? null}
 						onChange={onChange}
 					/>
-				) : undefined
+				)
 			}
 		>
 			{share.summary}
@@ -299,18 +387,25 @@ function TimelineHeader({
  * hyphen so it reads as subordinate to the em dash that splits scope from
  * window, rather than a second separator of the same weight sitting beside it.
  */
-function headerTitle(
-	data: TimelinePageData,
-	period: TimelinePeriod,
-	anchor: string,
-): string {
+function headerTitle(period: TimelinePeriod, anchor: string): string {
 	const scope = TIMELINE_PERIOD_LABELS[period];
 	if (period === "all") return scope;
-	const window =
-		period === "day"
-			? DAY_TITLE.format(new Date(`${anchor}T00:00:00Z`))
-			: (data.window?.label ?? anchor);
+	// Worked out here from the URL rather than waiting on the server's window,
+	// so the title is right the moment the period or date changes. A Daily
+	// anchor that isn't a date at all is shown as typed; the page beneath
+	// explains it once the server has judged it.
+	if (period === "day") {
+		return isValidAnchor("day", anchor)
+			? `${scope} — ${DAY_TITLE.format(new Date(`${anchor}T00:00:00Z`))}`
+			: `${scope} — ${anchor}`;
+	}
+	const window = safeWindow(period, anchor)?.label ?? anchor;
 	return `${scope} — ${window.replace(/–/g, "-")}`;
+}
+
+/** The window an anchor names, or null for one that names none. */
+function safeWindow(period: TimelinePeriod, anchor: string) {
+	return isValidAnchor(period, anchor) ? windowFor(period, anchor) : null;
 }
 
 /**
@@ -322,8 +417,10 @@ function headerTitle(
  * the view toggle never drops it. Derived from the already period-scoped rows,
  * so it moves with the period toggle without a second round trip.
  */
-function WindowSummary({ rows }: { rows: TimelineRow[] }) {
-	const detections = rows.reduce((sum, row) => sum + row.totalDetections, 0);
+function WindowSummary({ rows }: { rows: TimelineRow[] | null }) {
+	// Null while the window loads: the words are there at once, and only the
+	// two figures wait, blurred.
+	const detections = rows?.reduce((sum, row) => sum + row.totalDetections, 0);
 
 	return (
 		// Under 400px there's no room beside the kicker and the view switcher, so
@@ -339,7 +436,11 @@ function WindowSummary({ rows }: { rows: TimelineRow[] }) {
 			    next to the kicker's all-caps, so box-centred reads as dropped. */}
 			<div className="flex -translate-y-[1.5px] items-center gap-2 truncate text-[13px] text-muted-foreground">
 				<span className="whitespace-nowrap">
-					<span className="count-figure">{detections.toLocaleString()}</span>{" "}
+					{detections === undefined ? (
+						<ShellFigure placeholder="0,000" />
+					) : (
+						<span className="count-figure">{detections.toLocaleString()}</span>
+					)}{" "}
 					detections
 				</span>
 				<span
@@ -347,7 +448,11 @@ function WindowSummary({ rows }: { rows: TimelineRow[] }) {
 					aria-hidden="true"
 				/>
 				<span className="whitespace-nowrap">
-					<span className="count-figure">{rows.length.toLocaleString()}</span>{" "}
+					{rows ? (
+						<span className="count-figure">{rows.length.toLocaleString()}</span>
+					) : (
+						<ShellFigure placeholder="00" />
+					)}{" "}
 					species
 				</span>
 			</div>

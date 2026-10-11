@@ -4,6 +4,7 @@ import { CARD_HEADER_CLASS } from "~/components/card-header.tsx";
 import { EmptyNote } from "~/components/empty-state.tsx";
 import { SpeciesFlagPills } from "~/components/species-flag-pills.tsx";
 import { SpeciesImage } from "~/components/species-image.tsx";
+import { ShellBar, ShellText } from "~/components/ui/shell.tsx";
 import { TooltipProvider } from "~/components/ui/tooltip.tsx";
 import { heatColor, heatInk, heatMaximum } from "~/lib/heatmap.ts";
 import type { VocalJump } from "~/lib/highlights-data.ts";
@@ -156,24 +157,7 @@ export function SpeciesByHourCard({
 						    header band, its labels centred in a strip as tall as a bird row
 						    (py-2 around the 16px ticks, 32px), so it reads as the table's
 						    header row between two hairlines. */}
-						<div className={`${ROW_LAYOUT} py-2`}>
-							<div className={`h-4 ${LABEL_LAYOUT}`}>
-								<span />
-								<span className="text-right font-semibold text-[10px] text-foreground leading-none">
-									Total
-								</span>
-							</div>
-							<div className={HOURS_LAYOUT}>
-								<div
-									className="grid h-4 items-center"
-									style={{ gridTemplateColumns: HOUR_GRID_COLUMNS }}
-								>
-									{HOURS.map((hour) => (
-										<HourTick key={`tick-${hour}`} hour={hour} />
-									))}
-								</div>
-							</div>
-						</div>
+						<HeaderRow />
 
 						{/* Hairlines run wall to wall across the card, one above every
 						    bird -- the first included, so the header is ruled off from the
@@ -200,6 +184,31 @@ export function SpeciesByHourCard({
 				)}
 			</section>
 		</TooltipProvider>
+	);
+}
+
+/** The table's header row: the count column's label beside the hour ticks.
+    Needs no data, so the skeleton draws it as itself. */
+function HeaderRow() {
+	return (
+		<div className={`${ROW_LAYOUT} py-2`}>
+			<div className={`h-4 ${LABEL_LAYOUT}`}>
+				<span />
+				<span className="text-right font-semibold text-[10px] text-foreground leading-none">
+					Total
+				</span>
+			</div>
+			<div className={HOURS_LAYOUT}>
+				<div
+					className="grid h-4 items-center"
+					style={{ gridTemplateColumns: HOUR_GRID_COLUMNS }}
+				>
+					{HOURS.map((hour) => (
+						<HourTick key={`tick-${hour}`} hour={hour} />
+					))}
+				</div>
+			</div>
+		</div>
 	);
 }
 
@@ -321,5 +330,84 @@ function HeatRow({
 				);
 			})}
 		</div>
+	);
+}
+
+const NAME_WIDTHS = ["w-40", "w-28", "w-36", "w-32", "w-44", "w-24"];
+
+/**
+ * The card before its rows arrive, built from the card's own pieces: the
+ * header band (with whatever the caller sets in it), the header row as
+ * itself, then rows of the real height -- the bird's square, bars for the
+ * name and the count, and the 24 hour cells as soft tiles.
+ */
+export function SpeciesByHourCardSkeleton({
+	summary,
+	action,
+	rows = 15,
+	className = "",
+}: {
+	summary?: ReactNode;
+	action?: ReactNode;
+	rows?: number;
+	className?: string;
+}) {
+	return (
+		<section
+			aria-busy="true"
+			aria-label="Species by hour"
+			className={`feature-card @container/card rounded-md p-4 pb-1! ${className}`}
+		>
+			<div
+				className={`${CARD_HEADER_CLASS} gap-3 py-2 max-[400px]:flex-wrap max-[400px]:gap-y-2`}
+			>
+				<div className="flex h-[calc(0.69rem*1.5)] min-w-0 items-center gap-3 max-[400px]:contents">
+					<div className="island-kicker shrink-0">Activity</div>
+					{summary}
+				</div>
+				{action ? <div className="shrink-0">{action}</div> : null}
+			</div>
+			<div aria-hidden="true" className="-mx-1 px-1">
+				<HeaderRow />
+				<div className="-mx-(--page-gap) [&>*]:px-(--page-gap)">
+					{Array.from({ length: rows }, (_, index) => (
+						<div
+							// biome-ignore lint/suspicious/noArrayIndexKey: static decoration
+							key={index}
+							className={`${ROW_LAYOUT} border-[var(--line)] border-t`}
+						>
+							<div className={`h-8 ${LABEL_LAYOUT}`}>
+								<div className="flex min-w-0 items-center gap-2">
+									<div className="flex size-6 shrink-0 items-center justify-center">
+										<ShellBar className="size-5 rounded" />
+									</div>
+									<ShellText
+										className="min-w-0 flex-1 font-semibold text-sm"
+										barClassName={NAME_WIDTHS[index % NAME_WIDTHS.length]}
+									/>
+								</div>
+								<ShellText
+									className="count-figure w-10"
+									barClassName="right-0 left-auto w-8"
+								/>
+							</div>
+							<div className={HOURS_LAYOUT}>
+								<div
+									className="grid items-center"
+									style={{ gridTemplateColumns: HOUR_GRID_COLUMNS }}
+								>
+									{HOURS.map((hour) => (
+										<ShellBar
+											key={`hour-${hour}`}
+											className="mx-0.5 my-1 h-6 rounded-[3px] opacity-60"
+										/>
+									))}
+								</div>
+							</div>
+						</div>
+					))}
+				</div>
+			</div>
+		</section>
 	);
 }

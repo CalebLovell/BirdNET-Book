@@ -8,6 +8,7 @@ import { EmptyNote } from "~/components/empty-state.tsx";
 import { RecordingButton } from "~/components/recording-button.tsx";
 import { SpeciesThumbnail } from "~/components/species-row.tsx";
 import { PageStepper } from "~/components/ui/page-stepper.tsx";
+import { ShellBar, ShellSized, ShellText } from "~/components/ui/shell.tsx";
 import {
 	getRecentPage,
 	RECENT_PAGE_SIZE,
@@ -22,6 +23,106 @@ import { useAgeOffset } from "~/lib/use-age-offset.ts";
     list holds a full page's height, so a short last page never pulls the
     pager up from under the cursor. */
 const ROW_HEIGHT_PX = 54;
+
+// Shared with the skeleton below, which is built from the same pieces so the
+// card is the same shape loading and loaded.
+const CARD_CLASS = "@container feature-card flex flex-col rounded-md p-4";
+const ROW_CLASS =
+	"flex items-center @min-[26rem]:gap-3 gap-2 px-(--page-gap) py-1.75";
+const TIME_COLUMN_CLASS = "@min-[26rem]:block hidden shrink-0 text-right";
+const ROW_BUTTON = {
+	labelClassName: "@min-[26rem]:inline hidden",
+	className: "@min-[26rem]:w-auto w-6 @min-[26rem]:px-2.5 px-0",
+};
+const FOOTER_CLASS =
+	"-mx-(--page-gap) mt-auto -mb-(--page-gap) flex shrink-0 items-center border-t px-(--page-gap) py-2";
+
+/** The visit log's header band: a full-width hairline under a 45px strip,
+    the link held right. Needs no data, so the skeleton draws it as itself. */
+function RecentLogHeader() {
+	return (
+		<div className="-mx-(--page-gap) -mt-(--page-gap) flex min-h-[45px] flex-wrap items-center justify-between gap-2 border-b px-(--page-gap)">
+			<div className="island-kicker">Recent activity</div>
+			{/* The log is a rolling 24 hours; the calendar day, hour by hour, is
+			    the Timeline's Daily view, which opens on today. */}
+			<Link
+				to="/timeline"
+				className="inline-flex items-center gap-1 text-muted-foreground text-xs no-underline hover:text-foreground hover:underline"
+			>
+				All of today
+				<ArrowRight aria-hidden className="size-3" />
+			</Link>
+		</div>
+	);
+}
+
+/**
+ * The card before its first snapshot: the header as itself, then ten rows
+ * built from the real row's pieces -- a thumbnail-sized square, a bar on each
+ * of the name's two lines, the time column, and shells the exact size of the
+ * pill and the play button -- over the pager.
+ */
+const SKELETON_ROWS = 10;
+
+export function RecentLogCardSkeleton() {
+	return (
+		<section
+			aria-busy="true"
+			aria-label="Recent detections"
+			className={CARD_CLASS}
+		>
+			<RecentLogHeader />
+			<ul aria-hidden="true" className="-mx-(--page-gap) divide-y">
+				{Array.from({ length: SKELETON_ROWS }, (_, index) => (
+					// biome-ignore lint/suspicious/noArrayIndexKey: static decoration
+					<li key={index} className={ROW_CLASS}>
+						<div className="flex size-10 shrink-0 items-center justify-center">
+							<ShellBar className="size-9 rounded-md" />
+						</div>
+						<div className="min-w-0 flex-1">
+							<ShellText
+								className="font-medium"
+								barClassName={NAME_WIDTHS[index % NAME_WIDTHS.length]}
+							/>
+							<ShellText className="text-xs" barClassName="w-24" />
+						</div>
+						<div className={TIME_COLUMN_CLASS}>
+							<ShellText
+								className="w-20 text-sm"
+								barClassName="right-0 left-auto w-16"
+							/>
+							<ShellText
+								className="w-20 text-xs"
+								barClassName="right-0 left-auto w-20"
+							/>
+						</div>
+						<ShellSized className="rounded-full">
+							<ConfidencePill confidence={0.9} className="shrink-0" />
+						</ShellSized>
+						<ShellSized className="rounded-md">
+							<RecordingButton audioUrl={null} {...ROW_BUTTON} />
+						</ShellSized>
+					</li>
+				))}
+			</ul>
+			<div className={FOOTER_CLASS}>
+				<span className="ml-auto">
+					<ShellSized className="rounded-md">
+						<PageStepper
+							label="Recent activity pages"
+							page={1}
+							pageCount={2}
+							onPageChange={() => {}}
+						/>
+					</ShellSized>
+				</span>
+			</div>
+		</section>
+	);
+}
+
+/** Names come in all lengths; so do their bars. */
+const NAME_WIDTHS = ["w-36", "w-28", "w-44", "w-32", "w-40"];
 
 /**
  * The window's visits, most recently heard first, set like the species page's visit
@@ -95,24 +196,8 @@ export function RecentLogCard({
 	const paged = pageCount > 1;
 
 	return (
-		<section
-			aria-label="Recent detections"
-			className="@container feature-card flex flex-col rounded-md p-4"
-		>
-			{/* The visit log's header band: a full-width hairline under a 45px
-			    strip, the count held right. */}
-			<div className="-mx-(--page-gap) -mt-(--page-gap) flex min-h-[45px] flex-wrap items-center justify-between gap-2 border-b px-(--page-gap)">
-				<div className="island-kicker">Recent activity</div>
-				{/* The log is a rolling 24 hours; the calendar day, hour by hour,
-				    is the Timeline's Daily view, which opens on today. */}
-				<Link
-					to="/timeline"
-					className="inline-flex items-center gap-1 text-muted-foreground text-xs no-underline hover:text-foreground hover:underline"
-				>
-					All of today
-					<ArrowRight aria-hidden className="size-3" />
-				</Link>
-			</div>
+		<section aria-label="Recent detections" className={CARD_CLASS}>
+			<RecentLogHeader />
 
 			{shown.recent.length === 0 ? (
 				<EmptyNote>No detections recorded in the last 24 hours.</EmptyNote>
@@ -139,7 +224,7 @@ export function RecentLogCard({
 								// The dividers run out to the card's edges and the row's own
 								// padding hands the page gap back, so the content lines up
 								// with the header's.
-								className={`flex items-center @min-[26rem]:gap-3 gap-2 px-(--page-gap) py-1.75 ${shown.page === 1 && freshKeys.has(visit.key) ? "flash-in" : ""}`}
+								className={`${ROW_CLASS} ${shown.page === 1 && freshKeys.has(visit.key) ? "flash-in" : ""}`}
 							>
 								<SpeciesThumbnail
 									imageUrl={visit.imageUrl}
@@ -172,7 +257,7 @@ export function RecentLogCard({
 									</div>
 								</div>
 
-								<div className="@min-[26rem]:block hidden shrink-0 text-right">
+								<div className={TIME_COLUMN_CLASS}>
 									<div className="tabular-data text-sm">{age}</div>
 									<time
 										dateTime={visit.lastAt.replace(" ", "T")}
@@ -186,11 +271,7 @@ export function RecentLogCard({
 									confidence={visit.confidence}
 									className="shrink-0"
 								/>
-								<RecordingButton
-									audioUrl={visit.audioUrl}
-									labelClassName="@min-[26rem]:inline hidden"
-									className="@min-[26rem]:w-auto w-6 @min-[26rem]:px-2.5 px-0"
-								/>
+								<RecordingButton audioUrl={visit.audioUrl} {...ROW_BUTTON} />
 							</li>
 						);
 					})}
@@ -200,7 +281,7 @@ export function RecentLogCard({
 			{/* The visit log's footer: a hairline across the card's full width,
 			    the stepper held right. */}
 			{paged ? (
-				<div className="-mx-(--page-gap) mt-auto -mb-(--page-gap) flex shrink-0 items-center border-t px-(--page-gap) py-2">
+				<div className={FOOTER_CLASS}>
 					<PageStepper
 						className="ml-auto"
 						label="Recent activity pages"

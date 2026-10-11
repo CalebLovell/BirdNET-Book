@@ -41,6 +41,18 @@ test("a quiet window gets an empty Highlights card, not a missing one", () => {
 	assert.doesNotMatch(markup, /NaN|Busiest|Down/);
 });
 
+test("highlights still being judged hold their place, not claim a quiet window", () => {
+	const markup = renderToStaticMarkup(
+		<HighlightsCard
+			highlights={null}
+			emptyMessage="No detections recorded in the last 24 hours."
+		/>,
+	);
+	assert.match(markup, /Highlights/);
+	assert.match(markup, /aria-busy="true"/);
+	assert.doesNotMatch(markup, /No detections recorded/);
+});
+
 test("each highlight reads as one sentence", async () => {
 	const markup = await renderCard({
 		emptyMessage: "",

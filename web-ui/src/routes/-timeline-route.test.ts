@@ -16,7 +16,7 @@ test("one loader serves every period", async () => {
 	assert.match(source, /createFileRoute\("\/timeline"\)/);
 	assert.match(
 		source,
-		/loader: \(\{ deps \}\) => getTimelinePage\(\{ data: deps \}\)/,
+		/loader: \(\{ deps \}\) => \(\{ page: getTimelinePage\(\{ data: deps \}\) \}\)/,
 	);
 	// Period and window both live in the URL, so any scope is a link someone
 	// can keep -- which is what makes the redirects below able to carry the old

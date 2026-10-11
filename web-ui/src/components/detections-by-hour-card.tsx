@@ -13,6 +13,7 @@ import { CardHeader } from "~/components/card-header.tsx";
 import { ChartDataTable } from "~/components/chart-data-table.tsx";
 import { ChartValueTooltip } from "~/components/chart-tooltip.tsx";
 import { EmptyNote } from "~/components/empty-state.tsx";
+import { ShellChartCard } from "~/components/ui/shell.tsx";
 import {
 	CHART_ANIMATION_MS,
 	CHART_MARGIN,
@@ -144,5 +145,20 @@ export function DetectionsByHourCard({
 				/>
 			</div>
 		</section>
+	);
+}
+
+/** The chart card before its counts arrive (see ShellChartCard). */
+export function DetectionsByHourCardSkeleton({
+	className = "",
+}: {
+	className?: string;
+}) {
+	return (
+		<ShellChartCard
+			title="Detections by hour"
+			ariaLabel="Detections by hour"
+			className={className}
+		/>
 	);
 }

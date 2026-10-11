@@ -2,6 +2,7 @@ import type { LucideIcon } from "lucide-react";
 import { Database, HardDrive, Radio } from "lucide-react";
 
 import type { PageHeaderStat } from "~/components/page-header-card.tsx";
+import { ShellFigure } from "~/components/ui/shell.tsx";
 import type { HealthMetricId, StationHealth } from "~/lib/health-data.ts";
 
 const ICONS: Record<HealthMetricId, LucideIcon> = {
@@ -22,4 +23,27 @@ export function healthStats(health: StationHealth): PageHeaderStat[] {
 		value: metric.value,
 		icon: ICONS[metric.id],
 	}));
+}
+
+/** The same figures before the first reading: their labels and icons as
+    themselves, each value blurred, so the masthead is its loaded height from
+    the first frame. */
+export function healthStatsSkeleton(): PageHeaderStat[] {
+	return [
+		{
+			label: "Disk used",
+			value: <ShellFigure placeholder="00%" />,
+			icon: ICONS.disk,
+		},
+		{
+			label: "Database",
+			value: <ShellFigure placeholder="00 MB" />,
+			icon: ICONS.database,
+		},
+		{
+			label: "Last detection",
+			value: <ShellFigure placeholder="0 min ago" />,
+			icon: ICONS["last-detection"],
+		},
+	];
 }

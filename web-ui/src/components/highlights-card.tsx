@@ -17,6 +17,7 @@ import { CardHeader } from "~/components/card-header.tsx";
 import { EmptyNote } from "~/components/empty-state.tsx";
 import { BADGE_STYLES } from "~/components/species-flag-pills.tsx";
 import { InfoTip } from "~/components/ui/info-tip.tsx";
+import { ShellBar, ShellText } from "~/components/ui/shell.tsx";
 import {
 	type HighlightPeriod,
 	highlightGuide,
@@ -48,8 +49,10 @@ export function HighlightsCard({
 	period,
 	className = "",
 }: {
-	/** Empty for a window with no detections, which gets the empty note. */
-	highlights: Highlight[];
+	/** Empty for a window with no detections, which gets the empty note; null
+	    while they are still being judged, which holds their place with soft
+	    bars until they arrive. */
+	highlights: Highlight[] | null;
 	/** What a quiet window's card says -- the same line the page's other cards
 	    show, so they all report an empty window alike. */
 	emptyMessage: string;
@@ -67,7 +70,9 @@ export function HighlightsCard({
 				{period ? <HighlightsInfo period={period} /> : null}
 			</CardHeader>
 
-			{highlights.length === 0 ? (
+			{highlights === null ? (
+				<PendingNotes />
+			) : highlights.length === 0 ? (
 				<EmptyNote>{emptyMessage}</EmptyNote>
 			) : (
 				<ul className="mt-2">
@@ -77,6 +82,36 @@ export function HighlightsCard({
 				</ul>
 			)}
 		</section>
+	);
+}
+
+/**
+ * Where the lines will land, built from the lines' own markup: the glyph's
+ * circle and a bar on the line of text, in the notes' type. Four one-line
+ * notes.
+ */
+const PENDING_NOTES = [["w-4/5"], ["w-1/3"], ["w-3/4"], ["w-3/5"]];
+
+function PendingNotes() {
+	return (
+		<ul aria-busy="true" aria-label="Loading highlights" className="mt-2">
+			{PENDING_NOTES.map((lines, index) => (
+				// biome-ignore lint/suspicious/noArrayIndexKey: static decoration
+				<li key={index} className={NOTE_CLASS}>
+					<ShellBar className="size-5 shrink-0 rounded-full" />
+					<span className="min-w-0 flex-1 pt-px">
+						{lines.map((width, line) => (
+							<ShellText
+								// biome-ignore lint/suspicious/noArrayIndexKey: static decoration
+								key={line}
+								className="text-[13px] leading-normal"
+								barClassName={width}
+							/>
+						))}
+					</span>
+				</li>
+			))}
+		</ul>
 	);
 }
 
@@ -212,6 +247,10 @@ function ActivityNote({
 }
 
 /** One highlight: its glyph, then the sentence, hairlines between notes. */
+/** A note's row, shared with the pending shell so the two are one shape. */
+const NOTE_CLASS =
+	"flex items-start gap-2.5 border-[var(--line)] border-t py-2.5 text-[13px] leading-normal first:border-t-0 first:pt-1.5 last:pb-0 max-[400px]:gap-2";
+
 function Note({
 	icon: Icon,
 	badge,
@@ -224,7 +263,7 @@ function Note({
 	children: ReactNode;
 }) {
 	return (
-		<li className="flex items-start gap-2.5 border-[var(--line)] border-t py-2.5 text-[13px] leading-normal first:border-t-0 first:pt-1.5 last:pb-0 max-[400px]:gap-2">
+		<li className={NOTE_CLASS}>
 			<span
 				className="grid size-5 shrink-0 place-items-center rounded-full bg-[var(--icon-well)] text-muted-foreground"
 				style={badge}

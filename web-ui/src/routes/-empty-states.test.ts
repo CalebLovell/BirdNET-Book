@@ -51,7 +51,7 @@ test("a page-level empty replaces its card rather than nesting inside one", asyn
 	const timeline = await read("./timeline.tsx");
 	assert.ok(
 		timeline.indexOf("data.hasAnyDetections ? (") <
-			timeline.indexOf("<TimelineCards"),
+			timeline.search(/<TimelineCards\s/),
 		"the timeline cards must sit inside the has-detections branch",
 	);
 });

@@ -4,6 +4,7 @@ import { EmptyNote } from "~/components/empty-state.tsx";
 import { IndexDot, TABLE_INDEX_FLOOR } from "~/components/index-dot.tsx";
 import { Badge } from "~/components/ui/badge.tsx";
 import { PageStepper } from "~/components/ui/page-stepper.tsx";
+import { ShellBar, ShellSized, ShellText } from "~/components/ui/shell.tsx";
 import {
 	SELECT_COLUMN_WIDTH,
 	Table,
@@ -145,7 +146,10 @@ export function SpeciesControlTable({
 	onPageChange,
 	actions,
 }: {
-	rows: SpeciesControlViewRow[];
+	/** The page's rows, or null while the catalog loads: the table then draws
+	    itself as its own skeleton -- the real header, a page of rows whose
+	    cells are shells of what each column holds, and the pager. */
+	rows: SpeciesControlViewRow[] | null;
 	page: number;
 	pageCount: number;
 	selected: Set<string>;
@@ -158,15 +162,16 @@ export function SpeciesControlTable({
 	 *  table keeps its selection bar. */
 	actions?: ReactNode;
 }) {
-	if (rows.length === 0) {
+	if (rows?.length === 0) {
 		return <EmptyNote>No installed species match that search.</EmptyNote>;
 	}
 
-	const allSelected = rows.every((row) => selected.has(row.sciName));
+	const allSelected = rows?.every((row) => selected.has(row.sciName));
 	// Row numbers count on across pages rather than restarting at 1, as on the
 	// detections table.
 	const firstIndex = (page - 1) * SPECIES_CONTROL_PAGE_SIZE + 1;
-	const lastIndex = firstIndex + rows.length - 1;
+	const lastIndex =
+		firstIndex + (rows?.length ?? SPECIES_CONTROL_PAGE_SIZE) - 1;
 
 	function toggle(sciName: string, checked: boolean) {
 		const next = new Set(selected);
@@ -235,7 +240,7 @@ export function SpeciesControlTable({
 								type="checkbox"
 								onChange={(event) => {
 									const next = new Set(selected);
-									for (const row of rows)
+									for (const row of rows ?? [])
 										event.target.checked
 											? next.add(row.sciName)
 											: next.delete(row.sciName);
@@ -283,10 +288,21 @@ export function SpeciesControlTable({
 				</TableHeader>
 				<TableBody
 					role="rowgroup"
+					aria-busy={rows === null || undefined}
 					data-scroll-reset=""
 					className="col-span-full grid min-h-0 grid-cols-subgrid content-start overflow-y-auto [scrollbar-gutter:stable]"
 				>
-					{rows.map((row, index) => {
+					{rows === null
+						? Array.from({ length: SPECIES_CONTROL_PAGE_SIZE }, (_, index) => (
+								<SkeletonRow
+									// biome-ignore lint/suspicious/noArrayIndexKey: static decoration
+									key={index}
+									index={index}
+									widestIndex={Math.max(lastIndex, TABLE_INDEX_FLOOR)}
+								/>
+							))
+						: null}
+					{(rows ?? []).map((row, index) => {
 						const isSelected = selected.has(row.sciName);
 						const presentation = STATUS_PRESENTATION[row.status];
 						return (
@@ -372,14 +388,83 @@ export function SpeciesControlTable({
 			    it. */}
 			<div className="-mr-(--card-edge) -ml-(--page-gap) flex shrink-0 flex-wrap items-center gap-2 border-t pt-[calc(var(--page-gap)/2)] pr-(--card-edge) pb-[calc(var(--page-gap)/2+1px)] pl-(--page-gap) text-sm">
 				{actions}
-				<PageStepper
-					className="ml-auto"
-					label="Species pages"
-					page={page}
-					pageCount={pageCount}
-					onPageChange={onPageChange}
-				/>
+				{rows === null ? (
+					<span className="ml-auto">
+						<ShellSized className="rounded-md">
+							<PageStepper
+								label="Species pages"
+								page={page}
+								pageCount={pageCount}
+								onPageChange={() => {}}
+							/>
+						</ShellSized>
+					</span>
+				) : (
+					<PageStepper
+						className="ml-auto"
+						label="Species pages"
+						page={page}
+						pageCount={pageCount}
+						onPageChange={onPageChange}
+					/>
+				)}
 			</div>
 		</div>
+	);
+}
+
+const NAME_WIDTHS = ["w-36", "w-28", "w-40", "w-32", "w-24"];
+const SCIENTIFIC_WIDTHS = ["w-40", "w-32", "w-44", "w-36", "w-28"];
+
+/** A loading row: a shell of what each column holds, in its own cell -- the
+    checkbox's square, the index dot, the two names, the count and the status
+    badge -- so the rows are the loaded rows' height and the columns their
+    widths. */
+function SkeletonRow({
+	index,
+	widestIndex,
+}: {
+	index: number;
+	widestIndex: number;
+}) {
+	return (
+		<TableRow role="row" aria-hidden="true" className={cn(GRID_ROW, "bg-card")}>
+			<TableCell role="cell" className={cn(CELL_GAP, FIRST_COLUMN_CLASSES)}>
+				<ShellBar className="size-3.5 rounded-sm" />
+			</TableCell>
+			<TableCell role="cell" className={cn(CELL_GAP, "text-center")}>
+				<ShellSized className="rounded-full">
+					<IndexDot index={widestIndex} widest={widestIndex} />
+				</ShellSized>
+			</TableCell>
+			<TableCell role="cell" className={cn(CELL_GAP, "min-w-0")}>
+				<ShellText
+					className="font-medium"
+					barClassName={NAME_WIDTHS[index % NAME_WIDTHS.length]}
+				/>
+			</TableCell>
+			<TableCell
+				role="cell"
+				className={cn(CELL_GAP, COLUMN_VISIBILITY.scientific)}
+			>
+				<ShellText
+					barClassName={SCIENTIFIC_WIDTHS[index % SCIENTIFIC_WIDTHS.length]}
+				/>
+			</TableCell>
+			<TableCell
+				role="cell"
+				className={cn(CELL_GAP, COLUMN_VISIBILITY.count, "text-right")}
+			>
+				<ShellText barClassName="right-0 left-auto w-10" />
+			</TableCell>
+			<TableCell
+				role="cell"
+				className={cn(CELL_GAP, STATUS_EDGE, "text-right")}
+			>
+				<ShellSized className="rounded-full">
+					<Badge variant="ghost">Automatic</Badge>
+				</ShellSized>
+			</TableCell>
+		</TableRow>
 	);
 }

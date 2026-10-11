@@ -3,6 +3,7 @@ import {
 	parseSearchWith,
 	stringifySearchWith,
 } from "@tanstack/react-router";
+import { registerUnlockStatusRouter } from "./lib/unlock-status.ts";
 import { routeTree } from "./routeTree.gen";
 
 export function getRouter() {
@@ -29,7 +30,15 @@ export function getRouter() {
 		scrollToTopSelectors: ["#app-scroll", "[data-scroll-reset]"],
 		defaultPreload: "intent",
 		defaultPreloadStaleTime: 0,
+		// A click switches pages at once, always. Loaders return deferred data
+		// and parts of the page fill in from their shells (see Deferred), so in
+		// practice nothing is awaited here -- but should a route ever await
+		// something, it shows its pending view straight away rather than the
+		// router holding the old page until it lands (the default waits 1s).
+		defaultPendingMs: 0,
+		defaultPendingMinMs: 0,
 	});
+	registerUnlockStatusRouter(router);
 
 	return router;
 }

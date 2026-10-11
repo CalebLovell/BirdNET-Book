@@ -96,4 +96,18 @@ the full figure (a heat-map cell) shortens past three digits: 1k, 1.2k, 300k,
   `/account`), with Settings and Species control at the foot. The Live pill lives in the Live page's hero, not the chrome.
 - **Empty states**: `EmptyNote` inside a populated page; `EmptyState` only
   when the whole page is empty.
+- **Loading shells**: navigation is instant. Route loaders return their
+  server calls as deferred promises (never `await` them), and each part that
+  needs the data renders through `Deferred` (`components/deferred.tsx`) or
+  `useSettled` -- state, not Suspense, so hydration can't strand a shell.
+  Anything that doesn't depend on the data (titles, labels, controls driven
+  by the URL) renders as itself at once. Every card that fetches has a
+  `…Skeleton` beside it, built from the card's own markup and shared class
+  constants so the two can't drift: `ShellText` for each line of text (an
+  empty line in the real type, bar drawn over it), `ShellSized` around a real
+  control for its exact box, `ShellFigure` (a small rectangle) for a figure
+  in running text, and one plain rectangle for a chart. Loading and loaded
+  must measure the same; only row counts that depend on the data may differ.
+  No animation between the two: shells show from the first frame and content
+  replaces them in place.
 - **Chart tooltip**: one line, "6 AM — 1,284 detections", only the bucket bold.

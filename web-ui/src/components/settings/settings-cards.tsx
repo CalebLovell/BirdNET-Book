@@ -7,21 +7,23 @@ import {
 	SlidersHorizontal,
 } from "lucide-react";
 import type { ChangeEvent, ReactNode } from "react";
-import { useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useState } from "react";
 
 import { InfoTip } from "~/components/ui/info-tip.tsx";
 import { Input } from "~/components/ui/input.tsx";
 import { toast } from "~/components/ui/toaster.tsx";
-import type {
-	AudioSettings,
-	DetectionSettings,
-	PrivacySettings,
-	RecordingSettings,
-	SettingsCardKind,
-	SettingsPageData,
-	SettingsSaveResult,
-	StationSettings,
-	StorageSettings,
+import {
+	type AudioSettings,
+	type DetectionSettings,
+	type PrivacySettings,
+	type RecordingSettings,
+	SETTINGS_DEFAULTS,
+	type SettingsCardKind,
+	type SettingsPageData,
+	type SettingsSaveResult,
+	type StationSettings,
+	type StorageSettings,
+	SUPPORTED_MODELS,
 } from "~/lib/settings-data.ts";
 import { modernTimezone } from "~/lib/timezones.ts";
 import { RestartButton } from "./restart-button.tsx";
@@ -378,6 +380,7 @@ function BrowserTimezoneHint({
 	timezone: string;
 	onUse: (timezone: string) => void;
 }) {
+	const skeleton = useContext(SkeletonContext);
 	const [browserTimezone, setBrowserTimezone] = useState<string | null>(null);
 	useEffect(() => {
 		setBrowserTimezone(
@@ -385,7 +388,13 @@ function BrowserTimezoneHint({
 		);
 	}, []);
 
-	if (!browserTimezone || modernTimezone(timezone) === browserTimezone) {
+	// The skeleton's timezone is a placeholder, so it has nothing to compare;
+	// a loaded station on the browser's own zone shows no hint either.
+	if (
+		skeleton ||
+		!browserTimezone ||
+		modernTimezone(timezone) === browserTimezone
+	) {
 		return null;
 	}
 	return (
@@ -918,5 +927,36 @@ function StorageCard({
 				</>,
 			)}
 		</SettingsCard>
+	);
+}
+
+/** True inside SettingsCardsSkeleton, for the odd piece that has to know. */
+const SkeletonContext = createContext(false);
+
+/** Laid out against, never shown: every value is blanked by the skeleton's
+    styles. Station has no static default, so it gets a stand-in -- placed
+    somewhere real, since 0, 0 is the one location the card warns about, and
+    the warning would make the skeleton taller than any loaded card. */
+const SKELETON_DATA: SettingsPageData = {
+	...SETTINGS_DEFAULTS,
+	station: { siteName: "", latitude: 45, longitude: -75, timezone: "UTC" },
+	supportedModels: [...SUPPORTED_MODELS],
+	supportedTimezones: ["UTC"],
+};
+
+/**
+ * The six cards before the configuration arrives -- the real cards, so every
+ * header, label and hint is itself and in place, laid out on placeholder
+ * values that the wrapper's styles blank: each field is a soft shell of its
+ * own size with nothing showing through it. Inert, so none of it can be
+ * focused or saved.
+ */
+export function SettingsCardsSkeleton() {
+	return (
+		<div inert aria-busy="true" className="settings-skeleton">
+			<SkeletonContext.Provider value={true}>
+				<SettingsCards data={SKELETON_DATA} savers={{}} />
+			</SkeletonContext.Provider>
+		</div>
 	);
 }

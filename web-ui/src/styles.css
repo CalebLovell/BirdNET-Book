@@ -368,6 +368,21 @@ a {
   }
 }
 
+/* The settings cards' skeleton is the real cards on placeholder values (see
+   SettingsCardsSkeleton): every field becomes a soft shell of its own size,
+   with nothing of the placeholder showing through it. */
+.settings-skeleton :is(input, select, textarea) {
+  color: transparent;
+  background: var(--muted);
+  background-image: none;
+  border-color: transparent;
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+.settings-skeleton :is(input, textarea)::placeholder {
+  color: transparent;
+}
+
 /* Plays once when a freshly-arrived row/card mounts (or remounts via a
    changed `key`) -- a brief highlight that fades back to nothing. */
 .flash-in {

@@ -7,6 +7,7 @@ import { Button } from "~/components/ui/button.tsx";
 import { ConfirmDialog } from "~/components/ui/confirm-dialog.tsx";
 import { destructiveToast, toast } from "~/components/ui/toaster.tsx";
 import { lockFn, signOutAllDevicesFn } from "~/lib/auth.ts";
+import { forgetUnlockStatus } from "~/lib/unlock-status.ts";
 
 /**
  * The Account page's card under the masthead while this browser is signed in.
@@ -30,6 +31,7 @@ export function SessionCard({
 		setLockPending(true);
 		try {
 			await lock({ data: undefined });
+			forgetUnlockStatus();
 			await router.invalidate();
 		} catch (cause) {
 			console.error(cause);
@@ -43,6 +45,7 @@ export function SessionCard({
 		setSignOutPending(true);
 		try {
 			await signOutAll({ data: undefined });
+			forgetUnlockStatus();
 			await router.invalidate();
 			destructiveToast("Signed out every device.");
 		} catch (cause) {

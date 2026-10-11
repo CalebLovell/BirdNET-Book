@@ -7,13 +7,16 @@ import { ClipPlayer } from "~/components/learn/clip-player.tsx";
 import { RecordingButton } from "~/components/recording-button.tsx";
 import { SpeciesImage } from "~/components/species-image.tsx";
 import { Button } from "~/components/ui/button.tsx";
+import { ShellBar, ShellText } from "~/components/ui/shell.tsx";
 import { formatDateTime } from "~/lib/date-format.ts";
 import {
+	CHOICES_PER_QUESTION,
 	type LearnChoice,
 	type LearnQuestion,
 	type LearnRound,
 	POINTS_BY_ATTEMPT,
 	pointsForAttempt,
+	QUESTIONS_PER_ROUND,
 	type QuestionResult,
 	roundVerdict,
 	scoreRound,
@@ -24,6 +27,149 @@ import {
  * done. All of the round's state lives here and nowhere else, so the page
  * starts a fresh round simply by giving this component a new `key`.
  */
+// Shared by the game and its skeleton, so the two are one shape.
+const QUIZ_GRID_CLASS =
+	"grid @3xl/quiz:grid-cols-[minmax(0,1fr)_24rem] @7xl/quiz:grid-cols-[minmax(914px,1fr)_minmax(20rem,38rem)] items-start gap-(--page-gap)";
+const GAME_CARD_CLASS =
+	"@container/game feature-card flex min-w-0 flex-col gap-(--page-gap) rounded-md p-4";
+const GAME_HEADER_CLASS =
+	"-mx-(--page-gap) -mt-(--page-gap) flex min-h-[45px] flex-wrap items-center justify-between gap-x-2 border-b px-(--page-gap) py-2";
+const CHOICES_CLASS =
+	"grid min-w-0 @xl/game:grid-cols-2 grid-cols-1 gap-4 max-[400px]:gap-2";
+const CHOICE_CLASS =
+	"@container/choice flex items-center gap-4 rounded-md border px-4 py-2 text-left max-[400px]:gap-2 max-[400px]:px-2";
+const RAIL_CLASS = "feature-card @3xl/quiz:flex hidden flex-col rounded-md p-4";
+const RAIL_HEADER_CLASS =
+	"-mx-(--page-gap) -mt-(--page-gap) flex min-h-[45px] items-center justify-between gap-2 border-b px-(--page-gap)";
+const RAIL_ROW_CLASS =
+	"flex min-h-[54px] items-center gap-3 px-(--page-gap) py-1.75";
+const RAIL_FOOTER_CLASS =
+	"-mx-(--page-gap) mt-auto -mb-(--page-gap) flex items-baseline justify-between gap-2 border-t px-(--page-gap) py-3";
+
+/** The line under the choices before a guess. Needs no data, so the skeleton
+    draws it as itself. */
+function Instructions() {
+	return (
+		<p className="text-center text-muted-foreground text-sm">
+			Listen, then pick the bird. {POINTS_BY_ATTEMPT[0]} points first try,{" "}
+			{POINTS_BY_ATTEMPT[1]} on the second
+			{/* No keyboard to speak of on a touch screen. */}
+			<span className="pointer-coarse:hidden"> — keys 1–4 work too</span>.
+		</p>
+	);
+}
+
+/**
+ * The game before its round arrives, built from the game's own pieces: the
+ * quiz card -- its header, the pip track a narrow card shows, the clip's
+ * spectrogram slot with the play button's circle, four choices at their real
+ * size, and the instructions as themselves -- beside the round's rail of
+ * numbered rows and its score.
+ */
+export function LearnGameSkeleton() {
+	return (
+		<div className="@container/quiz">
+			<div className={QUIZ_GRID_CLASS}>
+				<section
+					aria-busy="true"
+					aria-label="Bird call quiz"
+					className={GAME_CARD_CLASS}
+				>
+					<header className={GAME_HEADER_CLASS}>
+						<h2 className="island-kicker">Mystery call</h2>
+						<ShellText
+							className="w-36 text-xs"
+							barClassName="right-0 left-auto w-full"
+						/>
+					</header>
+
+					<div
+						aria-hidden="true"
+						className="flex @3xl/quiz:hidden flex-col gap-2"
+					>
+						<div className="flex justify-between">
+							<ShellText className="w-20 text-xs" barClassName="w-full" />
+							<ShellText className="w-10 text-xs" barClassName="w-full" />
+						</div>
+						<div className="flex gap-1">
+							{Array.from({ length: QUESTIONS_PER_ROUND }, (_, pip) => (
+								<ShellBar
+									// biome-ignore lint/suspicious/noArrayIndexKey: one pip per bird
+									key={pip}
+									className="h-1.5 flex-1 rounded-full"
+								/>
+							))}
+						</div>
+					</div>
+
+					<div aria-hidden="true">
+						<div className="relative flex h-36 items-center justify-center max-[400px]:h-28">
+							<ShellBar className="absolute inset-0 rounded-md opacity-60" />
+							<ShellBar className="relative size-16 rounded-full max-[400px]:size-12" />
+						</div>
+					</div>
+
+					<div aria-hidden="true" className={CHOICES_CLASS}>
+						{Array.from({ length: CHOICES_PER_QUESTION }, (_, choice) => (
+							<div
+								// biome-ignore lint/suspicious/noArrayIndexKey: one per choice
+								key={choice}
+								className={`${CHOICE_CLASS} border-[var(--line)]`}
+							>
+								<span className="tabular-data w-4 shrink-0 text-center text-muted-foreground text-xs">
+									{choice + 1}
+								</span>
+								<span
+									className={`flex shrink-0 items-center justify-center ${THUMBNAIL_SIZES.lg}`}
+								>
+									<ShellBar className="size-full rounded-md" />
+								</span>
+								<span className="min-w-0 flex-1">
+									<ShellText
+										className="font-medium @max-[20rem]/choice:text-sm leading-snug"
+										barClassName={choice % 2 ? "w-28" : "w-36"}
+									/>
+									<ShellText className="text-xs" barClassName="w-24" />
+								</span>
+							</div>
+						))}
+					</div>
+
+					<div className="border-[var(--line)] border-t pt-(--page-gap)">
+						<Instructions />
+					</div>
+				</section>
+
+				<aside aria-busy="true" aria-label="This round" className={RAIL_CLASS}>
+					<div className={RAIL_HEADER_CLASS}>
+						<div className="island-kicker">This round</div>
+						<ShellText
+							className="w-20 text-xs"
+							barClassName="right-0 left-auto w-full"
+						/>
+					</div>
+					<ol aria-hidden="true" className="-mx-(--page-gap) divide-y">
+						{Array.from({ length: QUESTIONS_PER_ROUND }, (_, position) => (
+							// biome-ignore lint/suspicious/noArrayIndexKey: one row per bird
+							<li key={position} className={RAIL_ROW_CLASS}>
+								<ShellBar className="size-5 shrink-0 rounded-full" />
+								<ShellText className="flex-1 text-sm" barClassName="w-full" />
+							</li>
+						))}
+					</ol>
+					<div className={RAIL_FOOTER_CLASS}>
+						<span className="text-muted-foreground text-sm">Score</span>
+						<ShellText
+							className="w-24 font-semibold text-xl leading-none"
+							barClassName="right-0 left-auto w-full"
+						/>
+					</div>
+				</aside>
+			</div>
+		</div>
+	);
+}
+
 export function LearnGame({
 	round,
 	onPlayAgain,
@@ -121,12 +267,9 @@ export function LearnGame({
 		// rail at the visit log's, and the two pages read as one system. Past
 		// 38rem the rail stops growing and the game takes the extra instead.
 		<div className="@container/quiz">
-			<div className="grid @3xl/quiz:grid-cols-[minmax(0,1fr)_24rem] @7xl/quiz:grid-cols-[minmax(914px,1fr)_minmax(20rem,38rem)] items-start gap-(--page-gap)">
-				<section
-					aria-label="Bird call quiz"
-					className="@container/game feature-card flex min-w-0 flex-col gap-(--page-gap) rounded-md p-4"
-				>
-					<header className="-mx-(--page-gap) -mt-(--page-gap) flex min-h-[45px] flex-wrap items-center justify-between gap-x-2 border-b px-(--page-gap) py-2">
+			<div className={QUIZ_GRID_CLASS}>
+				<section aria-label="Bird call quiz" className={GAME_CARD_CLASS}>
+					<header className={GAME_HEADER_CLASS}>
 						<h2 className="island-kicker">Mystery call</h2>
 						<div className="tabular-data text-muted-foreground text-xs">
 							Heard {formatDateTime(question.detectedAt)}
@@ -152,7 +295,7 @@ export function LearnGame({
 						<ClipPlayer key={question.id} audioUrl={question.audioUrl} />
 					</fieldset>
 
-					<fieldset className="grid min-w-0 @xl/game:grid-cols-2 grid-cols-1 gap-4 max-[400px]:gap-2">
+					<fieldset className={CHOICES_CLASS}>
 						<legend className="sr-only">Bird choices</legend>
 						{question.choices.map((choice, choiceIndex) => (
 							<ChoiceButton
@@ -221,16 +364,7 @@ export function LearnGame({
 								</Button>
 							</div>
 						) : (
-							<p className="text-center text-muted-foreground text-sm">
-								Listen, then pick the bird. {POINTS_BY_ATTEMPT[0]} points first
-								try, {POINTS_BY_ATTEMPT[1]} on the second
-								{/* No keyboard to speak of on a touch screen. */}
-								<span className="pointer-coarse:hidden">
-									{" "}
-									— keys 1–4 work too
-								</span>
-								.
-							</p>
+							<Instructions />
 						)}
 					</div>
 				</section>
@@ -270,11 +404,8 @@ function RoundRail({
 	maxScore: number;
 }) {
 	return (
-		<aside
-			aria-label="This round"
-			className="feature-card @3xl/quiz:flex hidden flex-col rounded-md p-4"
-		>
-			<div className="-mx-(--page-gap) -mt-(--page-gap) flex min-h-[45px] items-center justify-between gap-2 border-b px-(--page-gap)">
+		<aside aria-label="This round" className={RAIL_CLASS}>
+			<div className={RAIL_HEADER_CLASS}>
 				<div className="island-kicker">This round</div>
 				<div className="tabular-data text-muted-foreground text-xs">
 					Bird {current + 1} of {questions.length}
@@ -296,7 +427,7 @@ function RoundRail({
 							// 54px like the recent-activity rows: the 40px thumbnail and
 							// 7px either side. Blank rows hold the same height, so the
 							// card doesn't grow as the round fills in.
-							className={`flex min-h-[54px] items-center gap-3 px-(--page-gap) py-1.75 ${isCurrent ? "bg-[var(--row-selected)]" : ""}`}
+							className={`${RAIL_ROW_CLASS} ${isCurrent ? "bg-[var(--row-selected)]" : ""}`}
 						>
 							<RailDot
 								position={position}
@@ -320,7 +451,7 @@ function RoundRail({
 				})}
 			</ol>
 
-			<div className="-mx-(--page-gap) mt-auto -mb-(--page-gap) flex items-baseline justify-between gap-2 border-t px-(--page-gap) py-3">
+			<div className={RAIL_FOOTER_CLASS}>
 				<span className="text-muted-foreground text-sm">Score</span>
 				<span className="tabular-data font-semibold text-xl leading-none">
 					{score}
@@ -483,7 +614,7 @@ function ChoiceButton({
 			disabled={state !== "open"}
 			// A container so the art can give way to the name when two choices
 			// share a row on a mid-sized screen, instead of the name truncating.
-			className={`@container/choice flex items-center gap-4 rounded-md border px-4 py-2 text-left max-[400px]:gap-2 max-[400px]:px-2 ${CHOICE_STYLES[state]}`}
+			className={`${CHOICE_CLASS} ${CHOICE_STYLES[state]}`}
 		>
 			<span className="tabular-data w-4 shrink-0 text-center text-muted-foreground text-xs">
 				{shortcut}

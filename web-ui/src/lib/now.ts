@@ -18,7 +18,11 @@ import {
 // than the calendar day, so no two cards can disagree -- and so the page still
 // shows a full night of activity when someone checks it at 1am.
 export const detectedAt = sql<string>`datetime(${detections.Date} || ' ' || ${detections.Time})`;
-export const isLast24h = sql`datetime(${detections.Date} || ' ' || ${detections.Time}) >= datetime('now', '-24 hours', 'localtime')`;
+// The bare Date bound comes first and is what the Date/Time index can seek on:
+// wrapped in datetime() the columns hide from it, and every "24-hour" query
+// would read the station's whole history. It keeps yesterday whole; the
+// exact cutoff then trims it.
+export const isLast24h = sql`${detections.Date} >= date('now', '-1 day', 'localtime') and datetime(${detections.Date} || ' ' || ${detections.Time}) >= datetime('now', '-24 hours', 'localtime')`;
 
 export type NowSummary = {
 	detections: number;
@@ -122,6 +126,13 @@ async function buildCurrentBird(
 	generatedAtMs: number,
 ): Promise<CurrentBird> {
 	const isSameSpecies = sql`${detections.Com_Name} = ${latest.comName}`;
+	// The same test with the unary + that keeps SQLite off the Com_Name index:
+	// inside the window, the Date/Time index narrows to a day's rows, where the
+	// species index would read every detection of a common bird ever made.
+	const inWindowSameSpecies = and(
+		isLast24h,
+		sql`+${detections.Com_Name} = ${latest.comName}`,
+	);
 
 	const [[totals], [allTime], moments, imageUrl] = await Promise.all([
 		db
@@ -132,7 +143,7 @@ async function buildCurrentBird(
 				>`min(datetime(${detections.Date} || ' ' || ${detections.Time}))`,
 			})
 			.from(detections)
-			.where(and(isLast24h, isSameSpecies)),
+			.where(inWindowSameSpecies),
 		// Confidence is averaged over the species' whole history rather than the
 		// window, so one lone detection today doesn't stand in for the species.
 		db
@@ -145,7 +156,7 @@ async function buildCurrentBird(
 		db
 			.select({ timestamp: detectedAt })
 			.from(detections)
-			.where(and(isLast24h, isSameSpecies)),
+			.where(inWindowSameSpecies),
 		illustrationUrlFor(latest.sciName, "flight"),
 	]);
 

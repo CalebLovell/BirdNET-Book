@@ -1,6 +1,5 @@
 import type { ReactNode } from "react";
 
-import { LivePill } from "~/components/now/live-pill.tsx";
 import {
 	HERO_CARD_SHELL,
 	HeroCardShell,
@@ -21,13 +20,16 @@ export function CurrentBirdCard({
 	hasAnyDetections,
 	offsetMs,
 	flash,
+	pill,
 }: {
 	current: CurrentBird | null;
 	hasAnyDetections: boolean;
 	offsetMs: number;
 	flash: boolean;
+	/** The station's status pill (or its shell), set beside the title. */
+	pill: ReactNode;
 }) {
-	const live = <LivePill />;
+	const live = pill;
 
 	if (!current && hasAnyDetections) {
 		return (

@@ -344,65 +344,60 @@ export type LifeListCard = {
 
 export const getLifeListCards = createServerFn({ method: "GET" }).handler(
 	async (): Promise<LifeListCard[]> => {
-		const totals = await db
+		// One pass over the table, grouped down to species-and-hour: the hour
+		// groups add up to the species' total, and the latest one holds its most
+		// recent detection. Every pass over a years-deep table is costly, and the
+		// alternative -- every row sent here to be folded -- costs more still.
+		//
+		// File_Name is a bare column beside a single max(): SQLite takes it from
+		// the row the max came from, so it is the clip of that latest detection.
+		const groups = await db
 			.select({
 				comName: detections.Com_Name,
 				sciName: detections.Sci_Name,
-				allTimeCount: count(),
-			})
-			.from(detections)
-			.groupBy(detections.Com_Name, detections.Sci_Name);
-
-		// Most-recent detection per species, ordered so the first occurrence
-		// of each Com_Name we see is the latest one.
-		const recent = await db
-			.select({
-				comName: detections.Com_Name,
-				date: detections.Date,
-				time: detections.Time,
+				hour: sql<string>`substr(${detections.Time}, 1, 2)`,
+				count: count(),
+				latestAt: sql<string>`max(${detections.Date} || ' ' || ${detections.Time})`,
 				fileName: detections.File_Name,
 			})
 			.from(detections)
-			.orderBy(desc(detections.Date), desc(detections.Time));
-		const latestByName = new Map<
-			string,
-			{ date: string; time: string; fileName: string }
-		>();
-		// The same pass that finds each species' latest detection also tallies its
-		// detections by hour of day, so the hourly histogram is a pure fold over
-		// the rows we already hold rather than a second query.
-		const hourCountsByName = new Map<string, number[]>();
-		for (const row of recent) {
-			if (!latestByName.has(row.comName)) {
-				latestByName.set(row.comName, row);
+			.groupBy(
+				detections.Com_Name,
+				detections.Sci_Name,
+				sql`substr(${detections.Time}, 1, 2)`,
+			);
+
+		const cards = new Map<string, LifeListCard & { fileName: string }>();
+		for (const group of groups) {
+			let card = cards.get(group.comName);
+			if (!card) {
+				card = {
+					comName: group.comName,
+					sciName: group.sciName,
+					allTimeCount: 0,
+					hourCounts: new Array(24).fill(0),
+					lastDetected: "",
+					audioUrl: null,
+					imageUrl: illustrationUrlFor(group.sciName),
+					ebirdUrl: ebirdUrlFor(group.sciName, group.comName),
+					fileName: "",
+				};
+				cards.set(group.comName, card);
 			}
-			const hour = Number.parseInt(row.time.slice(0, 2), 10);
-			if (Number.isNaN(hour) || hour < 0 || hour > 23) continue;
-			let counts = hourCountsByName.get(row.comName);
-			if (!counts) {
-				counts = new Array(24).fill(0);
-				hourCountsByName.set(row.comName, counts);
+			card.allTimeCount += group.count;
+			const hour = Number.parseInt(group.hour, 10);
+			if (hour >= 0 && hour <= 23) card.hourCounts[hour] += group.count;
+			if (group.latestAt > card.lastDetected) {
+				card.lastDetected = group.latestAt;
+				card.fileName = group.fileName;
 			}
-			counts[hour] += 1;
 		}
 
-		return Promise.all(
-			totals.map(async (row) => {
-				const latest = latestByName.get(row.comName);
-				return {
-					comName: row.comName,
-					sciName: row.sciName,
-					allTimeCount: row.allTimeCount,
-					hourCounts:
-						hourCountsByName.get(row.comName) ?? new Array(24).fill(0),
-					lastDetected: latest ? `${latest.date} ${latest.time}` : "",
-					audioUrl: latest
-						? audioUrlFor(latest.date, row.comName, latest.fileName)
-						: null,
-					imageUrl: illustrationUrlFor(row.sciName),
-					ebirdUrl: ebirdUrlFor(row.sciName, row.comName),
-				};
-			}),
-		);
+		return [...cards.values()].map(({ fileName, ...card }) => ({
+			...card,
+			audioUrl: card.lastDetected
+				? audioUrlFor(card.lastDetected.slice(0, 10), card.comName, fileName)
+				: null,
+		}));
 	},
 );

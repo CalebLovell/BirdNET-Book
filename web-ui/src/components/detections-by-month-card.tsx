@@ -12,6 +12,7 @@ import { CardHeader } from "~/components/card-header.tsx";
 import { ChartDataTable } from "~/components/chart-data-table.tsx";
 import { ChartValueTooltip } from "~/components/chart-tooltip.tsx";
 import { EmptyNote } from "~/components/empty-state.tsx";
+import { ShellChartCard } from "~/components/ui/shell.tsx";
 import { CHART_MARGIN, X_AXIS_HEIGHT } from "~/lib/chart-style.ts";
 import type { TrendPoint } from "~/lib/stats-data.ts";
 
@@ -132,5 +133,20 @@ export function DetectionsByMonthCard({
 				</div>
 			)}
 		</section>
+	);
+}
+
+/** The chart card before its counts arrive (see ShellChartCard). */
+export function DetectionsByMonthCardSkeleton({
+	className = "",
+}: {
+	className?: string;
+}) {
+	return (
+		<ShellChartCard
+			title="Detections by month"
+			ariaLabel="Detections by month"
+			className={className}
+		/>
 	);
 }

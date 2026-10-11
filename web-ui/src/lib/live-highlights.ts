@@ -92,7 +92,7 @@ export const getLiveHighlights = createServerFn({ method: "GET" }).handler(
 					})
 					.from(detections)
 					.where(
-						sql`${detectedAt} >= datetime('now', ${`-${longest + 1} days`}, 'localtime')`,
+						sql`${detections.Date} >= date('now', ${`-${longest + 1} days`}, 'localtime') and ${detectedAt} >= datetime('now', ${`-${longest + 1} days`}, 'localtime')`,
 					)
 					.groupBy(daySlice, detections.Com_Name),
 				// Every 24-hour slice before the window each species was heard in,

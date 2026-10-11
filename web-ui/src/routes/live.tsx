@@ -1,19 +1,31 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useRef, useState } from "react";
+import { type ReactNode, useEffect, useRef, useState } from "react";
 
+import { Deferred, ShellReveal } from "~/components/deferred.tsx";
 import { HighlightsCard } from "~/components/highlights-card.tsx";
 import { CurrentBirdCard } from "~/components/now/current-bird-card.tsx";
 import { LiveAudioCard } from "~/components/now/live-audio-card.tsx";
-import { RecentLogCard } from "~/components/now/recent-log-card.tsx";
-import { getLiveHighlights } from "~/lib/live-highlights.ts";
-import { getNowSnapshot } from "~/lib/now.ts";
+import { LivePill, LivePillSkeleton } from "~/components/now/live-pill.tsx";
+import {
+	RecentLogCard,
+	RecentLogCardSkeleton,
+} from "~/components/now/recent-log-card.tsx";
+import { SpeciesHeroCardShell } from "~/components/species-hero-card.tsx";
+import {
+	getLiveHighlights,
+	type LiveHighlights,
+} from "~/lib/live-highlights.ts";
+import { getNowSnapshot, type NowSnapshot } from "~/lib/now.ts";
 import { pageTitle } from "~/lib/page-title.ts";
+import { getStationStatus } from "~/lib/station-status.ts";
 import { useAgeOffset } from "~/lib/use-age-offset.ts";
 import { useFavicon } from "~/lib/use-favicon.ts";
 import { usePolledData } from "~/lib/use-polled-data.ts";
 
 const POLL_INTERVAL_MS = 10_000;
+const STATUS_INTERVAL_MS = 30_000;
 const FLASH_DURATION_MS = 2_400;
+const HIGHLIGHTS_EMPTY = "No detections recorded in the last 24 hours.";
 
 export const Route = createFileRoute("/live")({
 	head: () => ({ meta: [{ title: pageTitle("Live") }] }),
@@ -21,13 +33,17 @@ export const Route = createFileRoute("/live")({
 	// The highlights ride the loader alone. They are judged against a fortnight
 	// of history and cannot change inside a ten-second poll, so pulling them
 	// here keeps their full-table scans off the polling path.
-	loader: async ({ context }) => {
-		const [snapshot, highlights] = await Promise.all([
-			getNowSnapshot(),
-			getLiveHighlights(),
-		]);
-		return { snapshot, highlights, unlocked: context.auth.unlocked };
-	},
+	//
+	// Both are deferred -- returned as promises, not awaited -- so the page
+	// renders the moment it is opened and each card fills in as its data lands:
+	// the 24-hour snapshot quickly, the Highlights (which read the station's
+	// whole history) after it.
+	loader: ({ context }) => ({
+		snapshot: getNowSnapshot(),
+		status: getStationStatus(),
+		highlights: getLiveHighlights(),
+		unlocked: context.auth.unlocked,
+	}),
 });
 
 /**
@@ -60,6 +76,7 @@ function useFreshKeys(keys: string[]): Set<string> {
 function Live() {
 	const {
 		snapshot: initialSnapshot,
+		status: initialStatus,
 		highlights,
 		unlocked,
 	} = Route.useLoaderData();
@@ -68,6 +85,65 @@ function Live() {
 		initialSnapshot,
 		POLL_INTERVAL_MS,
 	);
+	// Its own call and its own pace: whether the station is running changes
+	// rarely, and asking systemd is the one costly part of it.
+	const { data: status } = usePolledData(
+		() => getStationStatus(),
+		initialStatus,
+		STATUS_INTERVAL_MS,
+	);
+	const pill = status ? <LivePill status={status} /> : <LivePillSkeleton />;
+
+	if (!snapshot) return <LiveShell unlocked={unlocked} pill={pill} />;
+	return (
+		<LiveBody
+			snapshot={snapshot}
+			highlights={highlights}
+			unlocked={unlocked}
+			pill={pill}
+		/>
+	);
+}
+
+/**
+ * The page before its first snapshot: the hero and the log as shells in their
+ * real places, and the Listen card -- which needs no data -- as itself.
+ */
+function LiveShell({ unlocked, pill }: { unlocked: boolean; pill: ReactNode }) {
+	return (
+		<div className="page-wrap py-4">
+			<SpeciesHeroCardShell label="Last 24 hours" actions={pill} />
+
+			<div className="mt-(--page-gap) grid grid-cols-1 items-start gap-(--page-gap) lg:grid-cols-[minmax(0,5fr)_minmax(0,3fr)]">
+				<RecentLogCardSkeleton />
+
+				<div className="grid grid-cols-1 gap-(--page-gap)">
+					<LiveAudioCard unlocked={unlocked} />
+					<ShellReveal>
+						<HighlightsCard
+							highlights={null}
+							period="live"
+							emptyMessage={HIGHLIGHTS_EMPTY}
+						/>
+					</ShellReveal>
+				</div>
+			</div>
+		</div>
+	);
+}
+
+function LiveBody({
+	snapshot,
+	highlights,
+	unlocked,
+	pill,
+}: {
+	snapshot: NowSnapshot;
+	highlights: Promise<LiveHighlights>;
+	unlocked: boolean;
+	/** The station's status pill, or its shell until that arrives. */
+	pill: ReactNode;
+}) {
 	const offsetMs = useAgeOffset(snapshot.generatedAt);
 	const freshKeys = useFreshKeys(snapshot.recent.map((row) => row.key));
 	// Follows the poll rather than the loader, so the tab keeps pace with the hero
@@ -91,6 +167,7 @@ function Live() {
 				hasAnyDetections={snapshot.hasAnyDetections}
 				offsetMs={offsetMs}
 				flash={heroIsNew}
+				pill={pill}
 			/>
 
 			{/* `grid-cols-1` rather than a bare `grid`: the implicit track it would
@@ -111,12 +188,27 @@ function Live() {
 					{/* A station that has never recorded anything has nothing to
 					    highlight, and the hero card above already says so, far more
 					    plainly. */}
-					{highlights.hasAnyDetections ? (
-						<HighlightsCard
-							highlights={highlights.highlights}
-							period="live"
-							emptyMessage="No detections recorded in the last 24 hours."
-						/>
+					{snapshot.hasAnyDetections ? (
+						<Deferred
+							promise={highlights}
+							shell={
+								<HighlightsCard
+									highlights={null}
+									period="live"
+									emptyMessage={HIGHLIGHTS_EMPTY}
+								/>
+							}
+						>
+							{(judged) =>
+								judged.hasAnyDetections ? (
+									<HighlightsCard
+										highlights={judged.highlights}
+										period="live"
+										emptyMessage={HIGHLIGHTS_EMPTY}
+									/>
+								) : null
+							}
+						</Deferred>
 					) : null}
 				</div>
 			</div>

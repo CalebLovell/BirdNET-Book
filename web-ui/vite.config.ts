@@ -15,7 +15,15 @@ const config = defineConfig({
 	plugins: [
 		nitro({ rollupConfig: { external: [/^@sentry\//] } }),
 		tailwindcss(),
-		tanstackStart(),
+		tanstackStart({
+			// Every page's code ships in the first download rather than one
+			// lazily-fetched chunk per route. A route's chunk was requested on the
+			// first click into it, from the same Node process that runs the
+			// (synchronous) SQLite queries -- so a click during a slow query waited
+			// on it before the page could switch. The app is small enough that
+			// loading it whole is cheaper than that wait.
+			router: { codeSplittingOptions: { defaultBehavior: [] } },
+		}),
 		viteReact(),
 	],
 });

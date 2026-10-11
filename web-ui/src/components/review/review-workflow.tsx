@@ -20,13 +20,170 @@ import { SpeciesThumbnail } from "~/components/species-row.tsx";
 import { Button } from "~/components/ui/button.tsx";
 import { Input } from "~/components/ui/input.tsx";
 import { PageStepper } from "~/components/ui/page-stepper.tsx";
+import { ShellBar, ShellSized, ShellText } from "~/components/ui/shell.tsx";
 import { formatConfidence } from "~/lib/confidence.ts";
 import { formatDate, formatDateTime } from "~/lib/date-format.ts";
 import type { ReviewCandidate, ReviewPage } from "~/lib/review.server.ts";
-import type { SpeciesOption } from "~/lib/review-data.ts";
+import { REVIEW_PAGE_SIZE, type SpeciesOption } from "~/lib/review-data.ts";
 
 /** A queue row's height: the 40px thumbnail and 7px above and below it. */
 const ROW_HEIGHT_PX = 54;
+
+// Shared by the workflow and its skeleton, so the two are one shape.
+const REVIEW_GRID_CLASS =
+	"grid @3xl/review:grid-cols-[minmax(0,1fr)_24rem] @7xl/review:grid-cols-[minmax(914px,1fr)_minmax(20rem,38rem)] items-start gap-(--page-gap)";
+const UNDER_REVIEW_CLASS = "feature-card flex flex-col gap-4 rounded-md p-4";
+const IDENTITY_ROW_CLASS = "flex items-center gap-4 max-[400px]:gap-3";
+const PORTRAIT_CLASS =
+	"flex size-20 shrink-0 items-center justify-center overflow-hidden max-[400px]:size-14";
+const EVIDENCE_LINE_CLASS =
+	"tabular-data flex flex-wrap items-center gap-x-3 gap-y-1 text-muted-foreground text-sm";
+const QUEUE_CARD_CLASS = "@container feature-card flex flex-col rounded-md p-4";
+const QUEUE_HEADER_CLASS =
+	"-mx-(--page-gap) -mt-(--page-gap) flex min-h-[45px] items-center justify-between gap-2 border-b px-(--page-gap)";
+const QUEUE_ROW_CLASS =
+	"flex min-h-[54px] w-full items-center @min-[26rem]:gap-3 gap-2 px-(--page-gap) py-1.75";
+const QUEUE_TIME_CLASS = "@min-[26rem]:block hidden shrink-0 text-right";
+const QUEUE_FOOTER_CLASS =
+	"-mx-(--page-gap) mt-auto -mb-(--page-gap) flex shrink-0 items-center border-t px-(--page-gap) py-2";
+
+const NAME_WIDTHS = ["w-36", "w-28", "w-40", "w-32"];
+
+/**
+ * The workflow before its queue arrives, built from its own pieces: the
+ * recording under review -- the portrait's square, bars for its kicker, name
+ * and binomial, shells the size of the eBird link and the pill, the clip's
+ * slot with the play button's circle, and its four action buttons as
+ * themselves, disabled -- beside a full page of queue rows and the pager.
+ */
+export function ReviewWorkflowSkeleton() {
+	return (
+		<div className="@container/review">
+			<div className={REVIEW_GRID_CLASS}>
+				<section
+					aria-busy="true"
+					aria-label="Detection under review"
+					className={UNDER_REVIEW_CLASS}
+				>
+					<div aria-hidden="true" className={IDENTITY_ROW_CLASS}>
+						<div className={PORTRAIT_CLASS}>
+							<ShellBar className="size-full rounded-md" />
+						</div>
+						<div className="min-w-0 flex-1">
+							<ShellText className="island-kicker" barClassName="w-32" />
+							<ShellText
+								className="display-title mt-1 font-bold text-2xl sm:text-3xl"
+								barClassName="w-56 max-w-full"
+							/>
+							<ShellText className="text-sm" barClassName="w-36" />
+						</div>
+						<ShellSized className="self-start rounded-md">
+							<Button variant="outline" size="xs">
+								<ExternalLink />
+								<span className="max-sm:hidden">eBird reference</span>
+							</Button>
+						</ShellSized>
+					</div>
+					<div aria-hidden="true" className={EVIDENCE_LINE_CLASS}>
+						<ShellSized className="rounded-full">
+							<ConfidencePill confidence={0.5} />
+						</ShellSized>
+						<ShellText className="w-28" barClassName="w-full" />
+						<ShellText className="w-40" barClassName="w-full" />
+					</div>
+					<div
+						aria-hidden="true"
+						className="relative flex h-56 items-center justify-center max-sm:h-40"
+					>
+						<ShellBar className="absolute inset-0 rounded-md opacity-60" />
+						<ShellBar className="relative size-16 rounded-full max-[400px]:size-12" />
+					</div>
+					<div className="flex flex-wrap items-center gap-2">
+						<Button size="xs" disabled>
+							<ShieldCheck />
+							Correct
+						</Button>
+						<Button variant="outline" size="xs" disabled>
+							<Shuffle />
+							Recategorize
+						</Button>
+						<div className="ml-auto flex items-center gap-2">
+							<Button variant="ghost" size="xs" disabled>
+								<SkipForward />
+								Skip
+							</Button>
+							<Button variant="destructive" size="xs" disabled>
+								<Trash2 />
+								Delete
+							</Button>
+						</div>
+					</div>
+				</section>
+
+				<section
+					aria-busy="true"
+					aria-label="Review queue"
+					className={QUEUE_CARD_CLASS}
+				>
+					<div className={QUEUE_HEADER_CLASS}>
+						<div className="island-kicker">In the queue</div>
+						<ShellText
+							className="count-figure w-10"
+							barClassName="right-0 left-auto w-full"
+						/>
+					</div>
+					<ol aria-hidden="true" className="-mx-(--page-gap) divide-y">
+						{Array.from({ length: REVIEW_PAGE_SIZE }, (_, index) => (
+							// biome-ignore lint/suspicious/noArrayIndexKey: static decoration
+							<li key={index}>
+								<div className={QUEUE_ROW_CLASS}>
+									<ShellSized className="rounded-full">
+										<IndexDot index={88} widest={88} />
+									</ShellSized>
+									<div className="flex size-10 shrink-0 items-center justify-center">
+										<ShellBar className="size-9 rounded-md" />
+									</div>
+									<span className="min-w-0 flex-1">
+										<ShellText
+											className="font-medium"
+											barClassName={NAME_WIDTHS[index % NAME_WIDTHS.length]}
+										/>
+										<ShellText className="text-xs" barClassName="w-24" />
+									</span>
+									<span className={QUEUE_TIME_CLASS}>
+										<ShellText
+											className="w-14 text-sm"
+											barClassName="right-0 left-auto w-full"
+										/>
+										<ShellText
+											className="w-14 text-xs"
+											barClassName="right-0 left-auto w-full"
+										/>
+									</span>
+									<ShellSized className="rounded-full">
+										<ConfidencePill confidence={0.5} className="shrink-0" />
+									</ShellSized>
+								</div>
+							</li>
+						))}
+					</ol>
+					<div className={QUEUE_FOOTER_CLASS}>
+						<span className="ml-auto">
+							<ShellSized className="rounded-md">
+								<PageStepper
+									label="Review queue pages"
+									page={1}
+									pageCount={20}
+									onPageChange={() => {}}
+								/>
+							</ShellSized>
+						</span>
+					</div>
+				</section>
+			</div>
+		</div>
+	);
+}
 
 type Action =
 	| { kind: "correct"; row: ReviewCandidate }
@@ -132,13 +289,13 @@ export function ReviewWorkflow({
 			{/* Same tracks as the Learn page's game and round rail, so the queue
 			    card sits at the round card's width at every page size. */}
 			<div className="@container/review">
-				<div className="grid @3xl/review:grid-cols-[minmax(0,1fr)_24rem] @7xl/review:grid-cols-[minmax(914px,1fr)_minmax(20rem,38rem)] items-start gap-(--page-gap)">
+				<div className={REVIEW_GRID_CLASS}>
 					<section
 						aria-label="Detection under review"
-						className="feature-card flex flex-col gap-4 rounded-md p-4"
+						className={UNDER_REVIEW_CLASS}
 					>
-						<div className="flex items-center gap-4 max-[400px]:gap-3">
-							<div className="flex size-20 shrink-0 items-center justify-center overflow-hidden max-[400px]:size-14">
+						<div className={IDENTITY_ROW_CLASS}>
+							<div className={PORTRAIT_CLASS}>
 								<SpeciesImage
 									imageUrl={row.imageUrl}
 									alt={row.comName}
@@ -176,7 +333,7 @@ export function ReviewWorkflow({
 
 						{/* What the verdict rests on, in one line rather than a row of stat
 					    tiles: the score, how new the bird is here, and when it was heard. */}
-						<div className="tabular-data flex flex-wrap items-center gap-x-3 gap-y-1 text-muted-foreground text-sm">
+						<div className={EVIDENCE_LINE_CLASS}>
 							<ConfidencePill confidence={row.confidence} />
 							<span>{describeLifetime(row.lifetimeCount)}</span>
 							<span>{formatDateTime(row.date, row.time)}</span>
@@ -245,11 +402,8 @@ export function ReviewWorkflow({
 					{/* Set like Today's Recent activity log: a header band, hairline-
 					    divided rows bled to the card's edges, and a footer band for
 					    the pager. */}
-					<section
-						aria-label="Review queue"
-						className="@container feature-card flex flex-col rounded-md p-4"
-					>
-						<div className="-mx-(--page-gap) -mt-(--page-gap) flex min-h-[45px] items-center justify-between gap-2 border-b px-(--page-gap)">
+					<section aria-label="Review queue" className={QUEUE_CARD_CLASS}>
+						<div className={QUEUE_HEADER_CLASS}>
 							<div className="island-kicker">In the queue</div>
 							<span className="count-figure">{page.total}</span>
 						</div>
@@ -273,7 +427,7 @@ export function ReviewWorkflow({
 											type="button"
 											aria-current={current ? "true" : undefined}
 											onClick={() => setIndex(i)}
-											className={`flex min-h-[54px] w-full items-center @min-[26rem]:gap-3 gap-2 px-(--page-gap) py-1.75 text-left transition-colors duration-[180ms] ${current ? "bg-[var(--row-selected)]" : "hover:bg-[var(--meadow)]"}`}
+											className={`${QUEUE_ROW_CLASS} text-left transition-colors duration-[180ms] ${current ? "bg-[var(--row-selected)]" : "hover:bg-[var(--meadow)]"}`}
 										>
 											<IndexDot index={queueNumber(item)} widest={widest} />
 											<SpeciesThumbnail
@@ -291,7 +445,7 @@ export function ReviewWorkflow({
 													{formatDateTime(item.date, item.time)}
 												</span>
 											</span>
-											<span className="@min-[26rem]:block hidden shrink-0 text-right">
+											<span className={QUEUE_TIME_CLASS}>
 												<span className="tabular-data block text-sm">
 													{when.day}
 												</span>
@@ -310,7 +464,7 @@ export function ReviewWorkflow({
 						</ol>
 						{/* Shown even on a single page, so the card keeps one shape as
 						    the queue grows and shrinks. */}
-						<div className="-mx-(--page-gap) mt-auto -mb-(--page-gap) flex shrink-0 items-center border-t px-(--page-gap) py-2">
+						<div className={QUEUE_FOOTER_CLASS}>
 							<PageStepper
 								className="ml-auto"
 								label="Review queue pages"

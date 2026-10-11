@@ -7,6 +7,7 @@ import { Button } from "~/components/ui/button.tsx";
 import { Input } from "~/components/ui/input.tsx";
 import { unlockFn } from "~/lib/auth.ts";
 import { SITE_NAME } from "~/lib/page-title.ts";
+import { forgetUnlockStatus } from "~/lib/unlock-status.ts";
 
 const MESSAGES = {
 	invalid: "That password is not right.",
@@ -49,6 +50,7 @@ export function UnlockGate({
 			const result = await unlock({ data: { password } });
 			if (result.ok) {
 				setPassword("");
+				forgetUnlockStatus();
 				await router.invalidate();
 				onUnlock?.();
 				return;

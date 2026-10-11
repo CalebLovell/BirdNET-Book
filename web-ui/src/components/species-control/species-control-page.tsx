@@ -35,9 +35,74 @@ import {
 } from "./species-control-table.tsx";
 import { SpeciesControlTools } from "./species-control-tools.tsx";
 
-const SPECIES_CONTROL_PAGE_TITLE = "Species Control";
-const SPECIES_CONTROL_PAGE_DESCRIPTION =
+export const SPECIES_CONTROL_PAGE_TITLE = "Species Control";
+export const SPECIES_CONTROL_PAGE_DESCRIPTION =
 	"Decide which installed species BirdNET may detect. Every change is confirmed before it takes effect.";
+
+// Shared by the page and its skeleton, so the two are one shape.
+const TOOLBAR_CLASS =
+	"flex @min-[38rem]:flex-row flex-col @min-[38rem]:flex-wrap @min-[38rem]:items-center gap-(--page-gap)";
+const SEARCH_CLASS = "@min-[38rem]:min-w-64 @min-[38rem]:flex-[1_1_20rem]";
+const TABLE_CARD_CLASS =
+	"@container feature-card flex min-h-0 flex-col overflow-hidden rounded-md p-(--page-gap) [--card-edge:min(var(--page-gap),0.75rem)]";
+
+/**
+ * The page before the catalog arrives: the masthead and toolbar as
+ * themselves (inert until there is something to act on), and the table as
+ * its own skeleton -- the real header over a page of loading rows and the
+ * pager.
+ */
+export function SpeciesControlPageSkeleton({
+	search,
+}: {
+	search: SpeciesControlWorkspaceSearch;
+}) {
+	return (
+		<div className="page-wrap flex h-full min-h-0 flex-col gap-(--page-gap) py-4">
+			<div className="@container shrink-0 space-y-(--page-gap)">
+				<PageHeaderCard
+					icon={SlidersHorizontal}
+					title={SPECIES_CONTROL_PAGE_TITLE}
+					description={SPECIES_CONTROL_PAGE_DESCRIPTION}
+				/>
+				<div inert className={TOOLBAR_CLASS}>
+					<SearchInput
+						aria-label="Search installed species"
+						className={SEARCH_CLASS}
+						placeholder="Search species control..."
+						value={search.query ?? ""}
+						onChange={() => {}}
+						onClear={() => {}}
+					/>
+					<SpeciesControlTools
+						onImport={() => {}}
+						onExport={() => {}}
+						onReset={() => {}}
+					/>
+				</div>
+			</div>
+			<section
+				aria-busy="true"
+				aria-label="Installed species"
+				className={`${TABLE_CARD_CLASS} flex-1 pr-(--card-edge) pb-0`}
+			>
+				<SpeciesControlTable
+					rows={null}
+					page={search.page}
+					// The installed catalog runs to thousands of species, which is
+					// what sets the pager's width.
+					pageCount={130}
+					selected={new Set()}
+					sort={search.sort}
+					direction={search.direction}
+					onSortChange={() => {}}
+					onSelectedChange={() => {}}
+					onPageChange={() => {}}
+				/>
+			</section>
+		</div>
+	);
+}
 
 type PageAdapters = {
 	search: SpeciesControlWorkspaceSearch;
@@ -389,13 +454,10 @@ export function SpeciesControlPage({
 					description={SPECIES_CONTROL_PAGE_DESCRIPTION}
 				/>
 
-				<div
-					data-layout="species-control-toolbar"
-					className="flex @min-[38rem]:flex-row flex-col @min-[38rem]:flex-wrap @min-[38rem]:items-center gap-(--page-gap)"
-				>
+				<div data-layout="species-control-toolbar" className={TOOLBAR_CLASS}>
 					<SearchInput
 						aria-label="Search installed species"
-						className="@min-[38rem]:min-w-64 @min-[38rem]:flex-[1_1_20rem]"
+						className={SEARCH_CLASS}
 						placeholder="Search species control..."
 						value={queryInput}
 						onChange={(event) => {
@@ -423,7 +485,7 @@ export function SpeciesControlPage({
 			    bottom. With nothing to list, it keeps its natural size. */}
 			<section
 				aria-label="Installed species"
-				className={`@container feature-card flex min-h-0 flex-col overflow-hidden rounded-md p-(--page-gap) [--card-edge:min(var(--page-gap),0.75rem)] ${pagedRows.length ? "flex-1 pr-(--card-edge) pb-0" : "shrink-0"}`}
+				className={`${TABLE_CARD_CLASS} ${pagedRows.length ? "flex-1 pr-(--card-edge) pb-0" : "shrink-0"}`}
 			>
 				<SpeciesControlTable
 					rows={pagedRows}

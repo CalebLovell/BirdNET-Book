@@ -11,7 +11,11 @@ test("species control route loads data, adapts mutations, and invalidates commit
 	// A locked visitor is sent to /account before the loader runs, so the
 	// loader only ever loads.
 	assert.match(source, /requireUnlocked\(context\.auth, location\)/);
-	assert.match(source, /loader:\s*\(\)\s*=>\s*getSpeciesControlPage\(\)/);
+	// Deferred, so the page renders before the species arrive.
+	assert.match(
+		source,
+		/loader:\s*\(\)\s*=>\s*\(\{\s*page:\s*getSpeciesControlPage\(\)\s*\}\)/,
+	);
 	assert.match(
 		source,
 		/validateSearch:\s*normalizeSpeciesControlWorkspaceSearch/,

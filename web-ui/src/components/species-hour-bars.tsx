@@ -82,29 +82,66 @@ export function SpeciesHourBars({
 				})}
 			</div>
 
-			<div className="mt-1 flex">
-				{HOURS.map((hour) => {
-					const label = TICK_HOURS.includes(hour as (typeof TICK_HOURS)[number])
-						? tickParts(hour)
-						: null;
-					return (
-						<div
-							key={`tick-${hour}`}
-							className="flex flex-1 justify-center leading-none"
-						>
-							{label ? (
-								<span
-									data-hour-tick=""
-									className="flex items-baseline gap-px text-muted-foreground"
-								>
-									<span className="text-[9px]">{label.number}</span>
-									<span className="text-[7px]">{label.meridiem}</span>
-								</span>
-							) : null}
-						</div>
-					);
-				})}
+			<HourBarTicks />
+		</div>
+	);
+}
+
+/** The bars' a/p tick row. Needs no data, so the skeleton draws it as itself. */
+function HourBarTicks() {
+	return (
+		<div className="mt-1 flex">
+			{HOURS.map((hour) => {
+				const label = TICK_HOURS.includes(hour as (typeof TICK_HOURS)[number])
+					? tickParts(hour)
+					: null;
+				return (
+					<div
+						key={`tick-${hour}`}
+						className="flex flex-1 justify-center leading-none"
+					>
+						{label ? (
+							<span
+								data-hour-tick=""
+								className="flex items-baseline gap-px text-muted-foreground"
+							>
+								<span className="text-[9px]">{label.number}</span>
+								<span className="text-[7px]">{label.meridiem}</span>
+							</span>
+						) : null}
+					</div>
+				);
+			})}
+		</div>
+	);
+}
+
+/** Soft bars in a rough day's shape, rising from dawn and easing off after
+    dusk, over the real tick row: the chart's exact footprint while its counts
+    are on their way. */
+const SKELETON_BAR_HEIGHTS = [
+	8, 8, 8, 8, 12, 40, 80, 100, 90, 70, 60, 55, 50, 45, 45, 50, 60, 70, 55, 30,
+	12, 8, 8, 8,
+];
+
+export function SpeciesHourBarsSkeleton({
+	className = "",
+}: {
+	className?: string;
+}) {
+	return (
+		<div aria-hidden="true" className={className}>
+			<div className="flex h-9 items-end gap-px">
+				{SKELETON_BAR_HEIGHTS.map((percent, hour) => (
+					<div
+						// biome-ignore lint/suspicious/noArrayIndexKey: one bar per hour
+						key={hour}
+						className="flex-1 animate-pulse rounded-t-[1px] bg-muted"
+						style={{ height: `${percent}%` }}
+					/>
+				))}
 			</div>
+			<HourBarTicks />
 		</div>
 	);
 }

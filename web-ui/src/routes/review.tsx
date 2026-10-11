@@ -2,12 +2,15 @@ import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { CircleAlert, RotateCcw, SearchCheck } from "lucide-react";
 import { useState } from "react";
+import { Deferred } from "~/components/deferred.tsx";
 import { PageHeaderCard } from "~/components/page-header-card.tsx";
 import { PageStatus } from "~/components/page-status.tsx";
 import { ReviewQueueSettings } from "~/components/review/review-queue-settings.tsx";
-import { ReviewWorkflow } from "~/components/review/review-workflow.tsx";
+import {
+	ReviewWorkflow,
+	ReviewWorkflowSkeleton,
+} from "~/components/review/review-workflow.tsx";
 import { Button } from "~/components/ui/button.tsx";
-import { CONFIDENT_MIN, formatConfidence } from "~/lib/confidence.ts";
 import { pageTitle } from "~/lib/page-title.ts";
 import { requireUnlocked } from "~/lib/require-unlocked.ts";
 import {
@@ -22,6 +25,7 @@ import {
 	type SpeciesOption,
 } from "~/lib/review-data.ts";
 import { saveReviewSettingsFn } from "~/lib/settings.ts";
+import { useSettled } from "~/lib/use-settled.ts";
 
 const REVIEW_PAGE_TITLE = "Review detections";
 
@@ -31,9 +35,13 @@ export const Route = createFileRoute("/review")({
 	beforeLoad: ({ context, location }) =>
 		requireUnlocked(context.auth, location),
 	loaderDeps: ({ search }) => search,
-	loader: async ({ deps }) => ({
-		page: await getReviewPage({ data: deps }),
-		species: await getReviewSpecies(),
+	// Deferred: the page renders at once (see Deferred), and the queue fills
+	// in when it arrives.
+	loader: ({ deps }) => ({
+		queue: Promise.all([
+			getReviewPage({ data: deps }),
+			getReviewSpecies(),
+		]).then(([page, species]) => ({ page, species })),
 	}),
 	component: Review,
 	// Gating this route gave its loader a second way to fail: the unlock status
@@ -45,8 +53,10 @@ export const Route = createFileRoute("/review")({
 });
 
 function Review() {
-	const loaded = Route.useLoaderData();
-	const { page, species } = loaded;
+	const { queue } = Route.useLoaderData();
+	// The masthead's threshold, from the latest queue to arrive.
+	const settled = useSettled(queue);
+	const page = settled?.value.page ?? null;
 	const search = Route.useSearch();
 	const navigate = Route.useNavigate();
 	const router = useRouter();
@@ -75,17 +85,21 @@ function Review() {
 			<PageHeaderCard
 				icon={SearchCheck}
 				title={REVIEW_PAGE_TITLE}
-				description={`Species the station has heard fewer than ${page.rareSpeciesMax} times, on recordings BirdNET scored below ${formatConfidence(CONFIDENT_MIN)}.`}
+				// Fixed, so it is there from the first frame: the threshold that
+				// makes a species "rare" lives in the queue settings beside it.
+				description="Low-confidence recordings of the station's rarest species, to confirm, correct or delete."
 				action={
-					<ReviewQueueSettings
-						rareSpeciesMax={page.rareSpeciesMax}
-						onSave={async (rareSpeciesMax) => {
-							await saveQueueSettings({ data: { rareSpeciesMax } });
-							// The threshold decides the queue, so the page has to be
-							// refetched before the new number means anything on screen.
-							await router.invalidate();
-						}}
-					/>
+					page ? (
+						<ReviewQueueSettings
+							rareSpeciesMax={page.rareSpeciesMax}
+							onSave={async (rareSpeciesMax) => {
+								await saveQueueSettings({ data: { rareSpeciesMax } });
+								// The threshold decides the queue, so the page has to be
+								// refetched before the new number means anything on screen.
+								await router.invalidate();
+							}}
+						/>
+					) : undefined
 				}
 			/>
 			{error ? (
@@ -94,20 +108,34 @@ function Review() {
 					{error}
 				</p>
 			) : null}
-			{/* Keyed by page so a new page starts on its first bird with nothing
-			    skipped. */}
-			<ReviewWorkflow
-				key={page.page}
-				page={page}
-				species={species}
-				busy={busy}
-				onCorrect={(rowId) => run(() => correct({ data: { rowId } }))}
-				onRecategorize={(rowId: number, item: SpeciesOption) =>
-					run(() => recategorize({ data: { rowId, ...item } }))
-				}
-				onDelete={(rowId) => run(() => remove({ data: { rowId } }))}
-				onPageChange={(next) => navigate({ search: { ...search, page: next } })}
-			/>
+			{/* Keyed on the search, so a new page of the queue drops to its shell
+			    at once. An action's refetch keeps the same key: the router runs it
+			    in a transition, which holds the queue on screen until the new one
+			    is in -- and holds the buttons busy until then too. */}
+			<Deferred
+				key={JSON.stringify(search)}
+				promise={queue}
+				shell={<ReviewWorkflowSkeleton />}
+			>
+				{(loaded) => (
+					// Keyed by page so a new page starts on its first bird with
+					// nothing skipped.
+					<ReviewWorkflow
+						key={loaded.page.page}
+						page={loaded.page}
+						species={loaded.species}
+						busy={busy || !settled?.current}
+						onCorrect={(rowId) => run(() => correct({ data: { rowId } }))}
+						onRecategorize={(rowId: number, item: SpeciesOption) =>
+							run(() => recategorize({ data: { rowId, ...item } }))
+						}
+						onDelete={(rowId) => run(() => remove({ data: { rowId } }))}
+						onPageChange={(next) =>
+							navigate({ search: { ...search, page: next } })
+						}
+					/>
+				)}
+			</Deferred>
 		</div>
 	);
 }

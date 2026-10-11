@@ -3,8 +3,12 @@ import type { ReactNode } from "react";
 import { CARD_HEADER_CLASS } from "~/components/card-header.tsx";
 import { EmptyNote } from "~/components/empty-state.tsx";
 import { SpeciesFlagPills } from "~/components/species-flag-pills.tsx";
-import { SpeciesHourBars } from "~/components/species-hour-bars.tsx";
+import {
+	SpeciesHourBars,
+	SpeciesHourBarsSkeleton,
+} from "~/components/species-hour-bars.tsx";
 import { SpeciesThumbnail } from "~/components/species-row.tsx";
+import { ShellBar, ShellText } from "~/components/ui/shell.tsx";
 import { TooltipProvider } from "~/components/ui/tooltip.tsx";
 import { heatMaximum } from "~/lib/heatmap.ts";
 import type { VocalJump } from "~/lib/highlights-data.ts";
@@ -41,6 +45,12 @@ export type SpeciesGridItem = {
  * (first arrival here, rare visitor). One feature-card holding meadow-tinted
  * rows -- not a grid of nested cards.
  */
+// Shared by the grid and its skeleton, so the two are one shape.
+const LIST_CLASS =
+	"grid grid-cols-1 gap-2 sm:grid-cols-2 sm:gap-4 xl:grid-cols-3";
+const TILE_CLASS =
+	"flex min-h-16 min-w-0 flex-col gap-2 rounded-md bg-[var(--meadow)] px-3 py-2 max-[400px]:px-2";
+
 export function SpeciesGrid({
 	species,
 	emptyMessage,
@@ -100,7 +110,7 @@ export function SpeciesGrid({
 						{emptyAction ? <div className="mt-3">{emptyAction}</div> : null}
 					</>
 				) : (
-					<ul className="grid grid-cols-1 gap-2 sm:grid-cols-2 sm:gap-4 xl:grid-cols-3">
+					<ul className={LIST_CLASS}>
 						{species.map((item) => (
 							<SpeciesGridRow
 								key={item.comName}
@@ -123,7 +133,7 @@ function SpeciesGridRow({
 	heatMax: number;
 }) {
 	return (
-		<li className="flex min-h-16 min-w-0 flex-col gap-2 rounded-md bg-[var(--meadow)] px-3 py-2 max-[400px]:px-2">
+		<li className={TILE_CLASS}>
 			<div className="flex min-w-0 items-center gap-3 max-[400px]:gap-2">
 				<SpeciesThumbnail imageUrl={item.imageUrl} comName={item.comName} />
 
@@ -170,5 +180,69 @@ function SpeciesGridRow({
 				/>
 			) : null}
 		</li>
+	);
+}
+
+const NAME_WIDTHS = ["w-32", "w-24", "w-36", "w-28"];
+
+/**
+ * The grid before its species arrive: the header band (with whatever the
+ * caller sets in it) and tiles built from the real tile's pieces -- the
+ * thumbnail's square, bars on the two name lines and the count, and the
+ * hour chart's skeleton under a hairline.
+ */
+export function SpeciesGridSkeleton({
+	summary,
+	action,
+	tiles = 9,
+	className = "",
+}: {
+	summary?: ReactNode;
+	action?: ReactNode;
+	tiles?: number;
+	className?: string;
+}) {
+	return (
+		<section
+			aria-busy="true"
+			aria-label="Species"
+			className={`feature-card rounded-md p-4 ${className}`}
+		>
+			<div
+				className={`${CARD_HEADER_CLASS} mb-(--page-gap) gap-3 py-2 max-[400px]:flex-wrap max-[400px]:gap-y-2`}
+			>
+				<div className="flex h-[calc(0.69rem*1.5)] min-w-0 items-center gap-3 max-[400px]:contents">
+					<div className="island-kicker shrink-0">Activity</div>
+					{summary}
+				</div>
+				{action ? <div className="shrink-0">{action}</div> : null}
+			</div>
+			<ul aria-hidden="true" className={LIST_CLASS}>
+				{Array.from({ length: tiles }, (_, index) => (
+					// biome-ignore lint/suspicious/noArrayIndexKey: static decoration
+					<li key={index} className={TILE_CLASS}>
+						<div className="flex min-w-0 items-center gap-3 max-[400px]:gap-2">
+							<div className="flex size-10 shrink-0 items-center justify-center">
+								<ShellBar className="size-9 rounded-md" />
+							</div>
+							<div className="min-w-0 flex-1">
+								<ShellText
+									className="font-medium"
+									barClassName={NAME_WIDTHS[index % NAME_WIDTHS.length]}
+								/>
+								<ShellText className="text-xs" barClassName="w-24" />
+							</div>
+							<div className="flex shrink-0 flex-col items-end gap-1.5">
+								<ShellText
+									className="count-figure w-10"
+									barClassName="right-0 left-auto w-8"
+								/>
+							</div>
+						</div>
+						<SpeciesHourBarsSkeleton className="border-[var(--line)] border-t pt-2" />
+					</li>
+				))}
+			</ul>
+		</section>
 	);
 }
