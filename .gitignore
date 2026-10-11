@@ -42,6 +42,7 @@ birdnet/
 templates/*.service
 scripts/*.txt
 scripts/*.db
+scripts/*.db.bak
 analyzing_now.txt
 apprise.txt
 body.txt

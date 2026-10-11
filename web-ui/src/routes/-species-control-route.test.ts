@@ -30,20 +30,22 @@ test("species control route loads data, adapts mutations, and invalidates commit
 	assert.match(source, /Species control is unavailable/);
 });
 
-test("navigation puts Species Control under Manage", async () => {
+test("navigation puts Species Control in the Station foot group", async () => {
 	const source = await readFile(
 		new URL("../components/sidebar/sidebar-nav.tsx", import.meta.url),
 		"utf8",
 	);
-	// Manage holds Detections, Review, then Species Control; Account and
-	// Settings sit together at the foot, after everything else.
+	// Manage holds Detections, then Review; the Station group at the foot runs
+	// Account, Species Control, then Settings, after everything else.
 	const explore = source.indexOf(">Explore<");
 	const manage = source.indexOf(">Manage<");
+	const station = source.indexOf(">Station<");
 	const review = source.indexOf('to="/review"');
 	const control = source.indexOf('to="/species-control"');
 	const settings = source.indexOf('to="/settings"');
 	const species = source.indexOf('to="/birds"');
 	const detections = source.indexOf('to="/detections"');
+	const account = source.indexOf('to="/account"');
 
 	assert.ok(explore >= 0 && manage > explore, "both group labels are present");
 	assert.ok(
@@ -51,15 +53,13 @@ test("navigation puts Species Control under Manage", async () => {
 		"the browsing pages stay in the first group",
 	);
 	assert.ok(
-		detections > manage && detections < review,
-		"Detections leads the second group",
+		detections > manage && review > detections && station > review,
+		"Manage runs Detections, then Review",
 	);
-	const account = source.indexOf('to="/account"');
 	assert.ok(
-		review > manage && control > review && account > control,
-		"Manage runs Detections, Review, Species Control",
+		account > station && control > account && settings > control,
+		"Station runs Account, Species Control, then Settings",
 	);
-	assert.ok(settings > account, "the foot runs Account, then Settings");
 	assert.match(source, />\s*Species Control\s*</);
 	// A visitor never sees the gated group: it renders only once unlocked.
 	assert.match(source.slice(explore, manage), /auth\.unlocked \?/);
