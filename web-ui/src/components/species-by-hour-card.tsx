@@ -59,6 +59,11 @@ const ROW_LAYOUT = "flex items-center";
 const LABEL_LAYOUT =
 	"grid min-w-0 flex-1 grid-cols-[minmax(0,1fr)_auto] items-center gap-4 max-[400px]:gap-2 @min-[56rem]/card:pr-6";
 
+// The bird's slot. Its right margin tops the row's gap-2 up to --page-gap, so
+// the space after the bird matches the row's inset before it.
+const BIRD_BOX_CLASS =
+	"me-[calc(var(--page-gap)-0.5rem)] flex size-6 shrink-0 items-center justify-center";
+
 const HOURS_LAYOUT = "hidden flex-none @min-[56rem]/card:block";
 
 const HOUR_GRID_COLUMNS = "repeat(24, 1.75rem)";
@@ -248,7 +253,7 @@ function SpeciesHourRowView({
 				className={`group h-8 no-underline ${LABEL_LAYOUT}`}
 			>
 				<div className="flex min-w-0 items-center gap-2">
-					<div className="flex size-6 shrink-0 items-center justify-center">
+					<div className={BIRD_BOX_CLASS}>
 						<SpeciesImage
 							imageUrl={row.imageUrl}
 							alt={row.comName}
@@ -378,7 +383,7 @@ export function SpeciesByHourCardSkeleton({
 						>
 							<div className={`h-8 ${LABEL_LAYOUT}`}>
 								<div className="flex min-w-0 items-center gap-2">
-									<div className="flex size-6 shrink-0 items-center justify-center">
+									<div className={BIRD_BOX_CLASS}>
 										<ShellBar className="size-5 rounded" />
 									</div>
 									<ShellText

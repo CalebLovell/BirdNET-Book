@@ -3,7 +3,7 @@ import {
 	ArrowRight,
 	CalendarRange,
 	LayoutDashboard,
-	Rows3,
+	List,
 } from "lucide-react";
 import { z } from "zod";
 import { Deferred } from "~/components/deferred.tsx";
@@ -614,15 +614,15 @@ const VIEW_META: Record<
 	TimelineView,
 	{
 		label: string;
-		/** Stacked rows for the one-bird-per-row view, uneven panels for the
+		/** A bulleted list for the one-bird-per-row view, uneven panels for the
 		    species tiles. Both glyphs fill the same 18 of lucide's 24 units, so
 		    they share one size. */
 		icon: React.ComponentType<{ className?: string }>;
 	}
 > = {
 	hours: {
-		label: "Rows",
-		icon: Rows3,
+		label: "List",
+		icon: List,
 	},
 	grid: {
 		label: "Grid",
