@@ -1,4 +1,4 @@
-import { heatColor } from "~/lib/heatmap.ts";
+import { heatColorAt } from "~/lib/heatmap.ts";
 import { hourLabel } from "~/lib/time-ago.ts";
 
 const HOURS = Array.from({ length: 24 }, (_, hour) => hour);
@@ -22,23 +22,23 @@ function tickParts(hour: number): { number: string; meridiem: string } {
  * One bird's day as a compact 24-hour column chart: midnight at the left,
  * 11pm at the right. Each bar's height is its share of *this bird's* busiest
  * hour, so the shape of the day reads regardless of how loud the bird is
- * overall. Its colour is the heat map's, on the heat map's shared scale
- * (`heatMax`, the busiest hour of any species in the window), so a quiet bird's
- * bars stay pale however tall its own peak draws. A
- * non-zero hour always shows at least a sliver; a silent hour is a faint
+ * overall. Its colour is the heat map's ramp on that same linear per-bird
+ * share, so colour tracks height: the bird's own peak is full moss and an hour
+ * at half the peak is half-way along the ramp. (The heat map's log share would
+ * push nearly every bar of a loud bird to full moss.) Each
+ * tile only compares a bird with itself, so a shared scale would just leave
+ * quiet birds uniformly pale. (The list view's heat map, which sets every bird
+ * side by side, keeps the shared scale.) A non-zero hour always shows at least a sliver; a silent hour is a faint
  * baseline stub. Plots the same series as the page's species-by-hour heatmap,
  * offered here beside each bird's portrait rather than in a ranked grid.
  */
 export function SpeciesHourBars({
 	comName,
 	hourCounts,
-	heatMax,
 	className = "",
 }: {
 	comName: string;
 	hourCounts: number[];
-	/** The top of the shared colour scale -- see heatShare. */
-	heatMax: number;
 	className?: string;
 }) {
 	const max = Math.max(...hourCounts, 0);
@@ -74,7 +74,7 @@ export function SpeciesHourBars({
 									? { height: "2px", backgroundColor: "var(--line)" }
 									: {
 											height: `${percent}%`,
-											backgroundColor: heatColor(count, heatMax),
+											backgroundColor: heatColorAt(count / max),
 										}
 							}
 						/>
