@@ -9,15 +9,31 @@ import type { Highlight, SpeciesHighlightKind } from "~/lib/highlights-data.ts";
     names, since a share is read in a chat bubble, not a card. */
 const MAX_SHARED_NAMES = 3;
 
-// The badges' own names, as the card leads with them.
-const SPECIES_LEADS: Record<SpeciesHighlightKind, string> = {
-	new: "🐣 New",
-	rare: "💎 Rare",
-	consistent: "📅 Regulars",
-	routine: "🤐 Gone quiet",
-	returned: "🔁 Returned",
-	vocal: "📣 Vocal",
+// The badges' own names, as the card leads with them. The line's count goes
+// between the emoji and the name: "🔁 12 Returned". Only "Regulars" is a noun
+// that changes with the count; the rest read the same for one bird or many.
+const SPECIES_LEADS: Record<
+	SpeciesHighlightKind,
+	{ emoji: string; name: string; one?: string }
+> = {
+	new: { emoji: "🐣", name: "New" },
+	rare: { emoji: "💎", name: "Rare" },
+	consistent: { emoji: "📅", name: "Regulars", one: "Regular" },
+	routine: { emoji: "🤐", name: "Gone quiet" },
+	returned: { emoji: "🔁", name: "Returned" },
+	vocal: { emoji: "📣", name: "Vocal" },
 };
+
+/**
+ * The note as a pasted line reads it. The card's header already names the
+ * window, so a vocal bird's "99 this week, usually 10" (see formatVocal) loses
+ * its "this week": "99, usually 10".
+ */
+function sharedNote(kind: SpeciesHighlightKind, note: string): string {
+	return kind === "vocal"
+		? note.replace(/ (?:today|all time|this \w+), usually /, ", usually ")
+		: note;
+}
 
 function activityLine(
 	highlight: Extract<Highlight, { kind: "activity" }>,
@@ -43,14 +59,23 @@ export function formatHighlightLines(highlights: Highlight[]): string[] {
 			case "activity":
 				return [activityLine(highlight)];
 			default: {
+				// A regular's note only repeats what the label already says ("every
+				// day this week"), so the line names the birds and stops there.
+				const showNotes = highlight.kind !== "consistent";
 				const named = highlight.birds
 					.slice(0, MAX_SHARED_NAMES)
 					.map((bird) =>
-						bird.note ? `${bird.comName} (${bird.note})` : bird.comName,
+						showNotes && bird.note
+							? `${bird.comName} (${sharedNote(highlight.kind, bird.note)})`
+							: bird.comName,
 					);
 				const rest = highlight.total - named.length;
 				const more = rest > 0 ? ` +${rest} more` : "";
-				return [`${SPECIES_LEADS[highlight.kind]}: ${named.join(", ")}${more}`];
+				const { emoji, name, one } = SPECIES_LEADS[highlight.kind];
+				const label = highlight.total === 1 ? (one ?? name) : name;
+				return [
+					`${emoji} ${highlight.total.toLocaleString()} ${label}: ${named.join(", ")}${more}`,
+				];
 			}
 		}
 	});

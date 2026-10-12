@@ -52,8 +52,12 @@ export function useShareCard({
 	 * next keeps this hook mounted, so the summary it is holding belongs to
 	 * whichever subject it was fetched for -- naming it is what lets the panel
 	 * notice the page moved on and fetch again.
+	 *
+	 * Null while the page is still loading what `load` reads. The panel waits
+	 * rather than fetching early: a summary built from a page that hasn't
+	 * arrived yet would be cached under the new subject and never replaced.
 	 */
-	subject?: string;
+	subject?: string | null;
 	/**
 	 * The finished, pasteable text. Async because most callers fetch it; a page
 	 * that already holds the figures can resolve immediately.
@@ -85,7 +89,7 @@ export function useShareCard({
 	// Fetched on open rather than with the page: the card needs two all-time
 	// queries that nobody should pay for unless they want to share.
 	useEffect(() => {
-		if (!isOpen || card?.subject === subject) return;
+		if (!isOpen || subject === null || card?.subject === subject) return;
 
 		let cancelled = false;
 		setIsLoading(true);
@@ -141,7 +145,7 @@ export function useShareCard({
 	const summary = isOpen ? (
 		<div className="mt-4 border-[var(--line)] border-t pt-4">
 			{/* Only the very first open has nothing to show yet. */}
-			{isLoading && text === null && (
+			{(isLoading || subject === null) && text === null && (
 				<p className="text-muted-foreground text-sm">Building your summary…</p>
 			)}
 
@@ -151,7 +155,7 @@ export function useShareCard({
 						{text}
 					</pre>
 
-					<div className="mt-4 flex flex-wrap items-center gap-3">
+					<div className="mt-4 flex">
 						{/* Copying a summary that is about to be replaced would put the
 						    wrong day on the clipboard. */}
 						<Button
@@ -159,11 +163,8 @@ export function useShareCard({
 							onClick={copy}
 							disabled={isStale || isLoading}
 						>
-							{justCopied ? "Copied!" : "Copy text"}
+							{justCopied ? "Copied!" : "Copy"}
 						</Button>
-						<span className="text-muted-foreground text-xs">
-							Paste it anywhere — it's just text and emoji.
-						</span>
 					</div>
 				</>
 			)}

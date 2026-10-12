@@ -342,8 +342,8 @@ test("lines read in the card's order", () => {
 			"new",
 			"rare",
 			"vocal",
-			"returned",
 			"consistent",
+			"returned",
 			"routine",
 		],
 	);

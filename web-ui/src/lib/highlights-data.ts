@@ -227,7 +227,7 @@ function speciesLine<Row extends { comName: string }>(
 /**
  * The window's highlights and every heard species' tags, in the order the card
  * reads them: how the window compared with the period before, when it was
- * busiest, then the birds -- new, rare, vocal, returned, regular, and gone
+ * busiest, then the birds -- new, rare, vocal, regular, returned, and gone
  * quiet always last. Empty for a window with no detections, which the card reports with
  * its empty note instead: a silent window is almost always the station being
  * down, not every bird falling silent at once.
@@ -437,6 +437,17 @@ export function judgeHighlights(
 			formatVocal,
 		),
 		speciesLine(
+			"consistent",
+			tagged((f) => f.isConsistent)
+				.sort(
+					(a, b) =>
+						(regularShare.get(b) ?? 0) - (regularShare.get(a) ?? 0) ||
+						byCount(a, b),
+				)
+				.map((comName) => ({ comName })),
+			(row) => flags.get(row.comName)?.regularNote ?? null,
+		),
+		speciesLine(
 			"returned",
 			tagged((f) => f.isReturned)
 				.map((comName) => ({
@@ -448,17 +459,6 @@ export function judgeHighlights(
 				row.daysAway == null
 					? null
 					: `${formatAwayIn(row.daysAway, period)} missing`,
-		),
-		speciesLine(
-			"consistent",
-			tagged((f) => f.isConsistent)
-				.sort(
-					(a, b) =>
-						(regularShare.get(b) ?? 0) - (regularShare.get(a) ?? 0) ||
-						byCount(a, b),
-				)
-				.map((comName) => ({ comName })),
-			(row) => flags.get(row.comName)?.regularNote ?? null,
 		),
 		speciesLine("routine", goneQuiet, (row) =>
 			row.daysSilent == null
