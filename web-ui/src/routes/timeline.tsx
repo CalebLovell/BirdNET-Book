@@ -326,8 +326,10 @@ function TimelineHeader({
 
 	// Both cards carry the window's Highlights, which the page has already
 	// loaded for its own Highlights card, so the share says what the page says.
+	// Until this window's page is in, there is nothing true to share: the rows
+	// and window label below would still be empty.
 	const share = useShareCard({
-		subject: `${period}:${anchor}`,
+		subject: data ? `${period}:${anchor}` : null,
 		load: async () =>
 			period === "day"
 				? formatShareCard({
