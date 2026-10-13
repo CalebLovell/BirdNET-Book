@@ -18,6 +18,7 @@ import {
 } from "~/lib/timeline-periods.ts";
 import {
 	anchorForDay,
+	currentAnchor,
 	isValidAnchor,
 	shortAnchorLabel,
 	type TimelineAnchor,
@@ -216,9 +217,15 @@ function WindowStepper({
 	const min = stationRange
 		? anchorForDay(period, stationRange.first)
 		: undefined;
-	const max = stationRange
+	// The latest pickable window is today's, even when the station hasn't heard
+	// anything yet today (or has been quiet for a while) -- otherwise the
+	// browser greys out its own "Today" button. Anchors of one period compare
+	// as plain strings.
+	const lastDetected = stationRange
 		? anchorForDay(period, stationRange.last)
 		: undefined;
+	const today = currentAnchor(period);
+	const max = lastDetected && lastDetected > today ? lastDetected : today;
 
 	const overlay = "absolute inset-0 size-full cursor-pointer opacity-0";
 
