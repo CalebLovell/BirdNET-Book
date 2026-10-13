@@ -1,0 +1,55 @@
+name: Release
+
+# Every push to main is checked, then semantic-release reads the commit
+# messages since the last release and decides the version (.releaserc.json):
+#
+#   fix: ...                      -> patch  (1.4.0 -> 1.4.1)
+#   feat: ...                     -> minor  (1.4.0 -> 1.5.0)
+#   feat!: ... / BREAKING CHANGE: -> major  (1.4.0 -> 2.0.0)
+#   test:, docs:, chore:, refactor:, style: ... -> no release
+#
+# When there is one, it builds and signs the web UI bundle
+# (scripts/package_release.sh), tags the commit, and publishes the GitHub
+# release stations update from.
+
+on:
+  push:
+    branches: ["main"]
+
+permissions:
+  contents: write
+
+# One release at a time: two quick pushes must not race for the same version.
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # semantic-release needs every commit and tag since the last release.
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: web-ui/package-lock.json
+
+      - name: Check the web UI
+        working-directory: web-ui
+        run: |
+          npm ci
+          npx biome ci .
+          npx tsc --noEmit
+          npm test
+
+      - name: Release
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          RELEASE_SIGNING_KEY: ${{ secrets.RELEASE_SIGNING_KEY }}
+        run: npx --yes -p semantic-release@24 -p @semantic-release/exec@6 semantic-release

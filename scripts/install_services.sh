@@ -16,7 +16,7 @@ install_depends() {
   echo "icecast2 icecast2/icecast-setup boolean false" | debconf-set-selections
   apt install --no-install-recommends -qqy sqlite3 icecast2 \
     pulseaudio avahi-utils sox libsox-fmt-mp3 alsa-utils ffmpeg \
-    wget curl unzip bc \
+    wget curl unzip bc jq openssh-client xz-utils \
     python3-pip python3-venv lsof net-tools inotify-tools
 }
 
@@ -204,10 +204,6 @@ install_cleanup_cron() {
   sed "s/\$USER/$USER/g" $my_dir/templates/cleanup.cron >> /etc/crontab
 }
 
-install_automatic_update_cron() {
-  sed "s/\$USER/$USER/g" $my_dir/templates/automatic_update.cron >> /etc/crontab
-}
-
 chown_things() {
   chown -R $USER:$USER $HOME/Bird*
 }
@@ -228,12 +224,13 @@ install_services() {
   install_livestream_service
   install_birdnet_mount
   install_cleanup_cron
-  install_automatic_update_cron
 
   create_necessary_dirs
   generate_BirdDB
   config_icecast
   USER=$USER HOME=$HOME ${my_dir}/scripts/createdb.sh
+  # The web UI, its service and the nightly update timer.
+  ${my_dir}/scripts/install_web_ui.sh
 }
 
 if [ -f ${config_file} ];then

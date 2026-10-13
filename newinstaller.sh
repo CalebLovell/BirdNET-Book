@@ -33,7 +33,7 @@ export HOME=$HOME
 export USER=$USER
 
 PACKAGES_MISSING=
-for cmd in git jq ; do
+for cmd in git jq curl ; do
   if ! which $cmd &> /dev/null;then
       PACKAGES_MISSING="${PACKAGES_MISSING} $cmd"
   fi
@@ -43,8 +43,12 @@ if [[ ! -z $PACKAGES_MISSING ]] ; then
   sudo apt -y install $PACKAGES_MISSING
 fi
 
-branch=main
-git clone -b $branch --depth=1 https://github.com/Nachtzuster/BirdNET-Pi.git ${HOME}/BirdNET-Pi &&
+REPO=${BIRDNET_REPO:-CalebLovell/BirdNET-Book}
+# The newest release, so the station starts on the same version the updater
+# would bring it to; main only while the project has no releases yet.
+branch=$(curl -fsSL "https://api.github.com/repos/${REPO}/releases/latest" 2>/dev/null | jq -r '.tag_name // empty')
+branch=${branch:-main}
+git clone -b $branch --depth=1 https://github.com/${REPO}.git ${HOME}/BirdNET-Pi &&
 
 $HOME/BirdNET-Pi/scripts/install_birdnet.sh
 if [ ${PIPESTATUS[0]} -eq 0 ];then

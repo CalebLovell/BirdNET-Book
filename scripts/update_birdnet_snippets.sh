@@ -207,12 +207,25 @@ if [ -L /usr/local/bin/birdnet_analysis.sh ];then
   rm -f /usr/local/bin/birdnet_analysis.sh
 fi
 
-# Clean state and update cron if all scripts are not installed
-if [ "$(grep -o "#birdnet" /etc/crontab | wc -l)" -lt 6 ]; then
+# Clean state and update cron unless exactly the cleanup jobs are installed.
+# The weekly update cron job is gone: birdnet_update.timer (install_web_ui.sh)
+# checks nightly instead.
+if [ "$(grep -o "#birdnet" /etc/crontab | wc -l)" -ne 4 ] || grep -q update_birdnet /etc/crontab; then
   sudo sed -i '/birdnet/,+1d' /etc/crontab
   sed "s/\$USER/$USER/g" "$HOME"/BirdNET-Pi/templates/cleanup.cron >> /etc/crontab
-  sed "s/\$USER/$USER/g" "$HOME"/BirdNET-Pi/templates/automatic_update.cron >> /etc/crontab
 fi
+
+if ! which jq &>/dev/null || ! which ssh-keygen &>/dev/null || ! which xz &>/dev/null; then
+  ensure_apt_updated
+  apt-get -y install jq openssh-client xz-utils
+fi
+if ! grep -E '^UPDATE_REPO=' /etc/birdnet/birdnet.conf &>/dev/null;then
+  echo '## UPDATE_REPO is the GitHub repository this station takes its releases from' >> /etc/birdnet/birdnet.conf
+  echo "UPDATE_REPO=CalebLovell/BirdNET-Book" >> /etc/birdnet/birdnet.conf
+fi
+# The web UI, its service and the update timer. Run every update, so a release
+# that changes their unit files gets them rewritten.
+"$HOME/BirdNET-Pi/scripts/install_web_ui.sh"
 
 if [ -L $HOME/BirdNET-Pi/model/labels_flickr.txt ]; then
   rm $HOME/BirdNET-Pi/model/labels_flickr.txt

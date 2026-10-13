@@ -7,7 +7,7 @@ source /etc/birdnet/birdnet.conf &> /dev/null
 SCRIPTS=($(ls -1 ${my_dir}))
 set -x
 TMP_MOUNT=$(systemd-escape -p --suffix=mount "$RECS_DIR/StreamData")
-services=($(awk '/service/ && /systemctl/ && !/php/ {print $3}' ${my_dir}/install_services.sh | sort) custom_recording.service avahi-alias@.service $TMP_MOUNT)
+services=($(awk '/service/ && /systemctl/ && !/php/ {print $3}' ${my_dir}/install_services.sh | sort) custom_recording.service avahi-alias@.service birdnet_web_ui.service birdnet_update.timer birdnet_update.service birdnet_update_now.service birdnet_update_check.service $TMP_MOUNT)
 
 remove_services() {
   for i in "${services[@]}"; do
@@ -48,8 +48,10 @@ remove_scripts() {
   done
 }
 
+sudo systemctl disable --now birdnet_update.timer &> /dev/null
 remove_services
 remove_scripts
+sudo rm -rf /opt/birdnet-node "${HOME}/BirdNET-Pi-web"
 if [ -d /etc/birdnet ];then sudo rm -drf /etc/birdnet;fi
 if [ -f ${HOME}/BirdNET-Pi/birdnet.conf ];then sudo rm -f ${HOME}/BirdNET-Pi/birdnet.conf;fi
 echo "Uninstall finished. Remove this directory with 'rm -drfv' to finish."

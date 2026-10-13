@@ -1,0 +1,8 @@
+# Keys allowed to sign BirdNET-Book releases, in ssh-keygen's allowed_signers
+# format. A station copies this file to /etc/birdnet/release_signers when it is
+# installed and checks every release against that copy -- an update never
+# replaces it, so a release cannot vouch for itself with a key of its own.
+#
+# Add the public half of the release key as one line:
+#   release@birdnet-book namespaces="birdnet-book-release" ssh-ed25519 AAAA...
+# See README.md, "Releasing", for how the key is made.

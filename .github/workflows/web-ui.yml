@@ -1,0 +1,31 @@
+name: Web UI
+
+# Pull requests only: pushes to main are checked by release.yml, before it
+# decides whether to release.
+on:
+  pull_request:
+    branches: ["main"]
+    paths: ["web-ui/**", ".github/workflows/web-ui.yml"]
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: web-ui
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: web-ui/package-lock.json
+      - run: npm ci
+      - run: npx biome ci .
+      - run: npx tsc --noEmit
+      - run: npm test
+      - run: npm run build

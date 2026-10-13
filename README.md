@@ -86,7 +86,8 @@ The gate is built for it, but three things are required first:
    path, and hashing at rest does not help with that. This one cannot be skipped.
 2. **A real password set**, which clears the default. Until then, unlocking from outside your
    local network is refused.
-3. **`WEB_UI_TRUSTED_PROXY=1`** set for the web UI, so that failed-unlock throttling sees real
+3. **`WEB_UI_TRUSTED_PROXY=1`** set for the web UI (`sudo systemctl edit birdnet_web_ui`,
+   then `Environment=WEB_UI_TRUSTED_PROXY=1`), so that failed-unlock throttling sees real
    client addresses rather than your proxy's. Without it every request appears to come from
    one address; with it set but no proxy actually in front, addresses can be spoofed.
 
@@ -104,9 +105,12 @@ Please note that installing BirdNET-Pi on top of other servers is not supported.
 
 The system can be installed with:
 ```
-curl -s https://raw.githubusercontent.com/Nachtzuster/BirdNET-Pi/main/newinstaller.sh | bash
+curl -s https://raw.githubusercontent.com/CalebLovell/BirdNET-Book/main/newinstaller.sh | bash
 ```
 The installer takes care of any and all necessary updates, so you can run that as the very first command upon the first boot, if you'd like.
+
+It installs the newest release (or `main`, while there are none), Node 22 in
+`/opt/birdnet-node`, and the web UI as `birdnet_web_ui.service` on port 80.
 
 The installation creates a log in `$HOME/installation-$(date "+%F").txt`.
 ## Access
@@ -125,9 +129,69 @@ Please take a look at the [wiki](https://github.com/mcguirepr89/BirdNET-Pi/wiki)
 - [and more!](https://github.com/mcguirepr89/BirdNET-Pi/discussions)
 
 
-## Updating 
+## Updating
 
-Use the web interface and go to "Tools" > "System Controls" > "Update". If you encounter any issues with that, or suspect that the update did not work for some reason, please save its output and post it in an issue where we can help.
+Stations update from this repository's GitHub releases. Settings → Updates shows the
+installed version and the newest release, with **Check now** and **Update to …**, and an
+**Automatic updates** switch (on for new installs, `AUTOMATIC_UPDATE` in `birdnet.conf`).
+With it on, `birdnet_update.timer` checks nightly between 3 and 5 AM and installs a new
+release by itself -- but only one signed with a key the station trusts. Unsigned releases
+always wait for someone to press Update.
+
+From a shell:
+
+```
+update_birdnet.sh        # install the newest release now
+update_birdnet.sh -c     # only check
+```
+
+An update downloads the release's prebuilt web UI beside the running one, moves the code
+to the release's commit, and restarts. If the web UI doesn't answer afterwards, the station
+goes back to the version it had. Progress is in `~/BirdNET-Pi-web/update-status.json` and
+`journalctl -u birdnet_update_now`.
+
+### How releases are trusted
+
+Each release carries `release.json`, naming its commit and the sha256 of its web UI
+bundle, signed with an SSH key. A station checks that signature against
+`/etc/birdnet/release_signers`, copied from this repository's `release_signers` when the
+station was installed and never replaced by an update -- so a release can't vouch for
+itself, even from someone who gets into the GitHub account. The commit and the bundle must
+then match what the signed manifest says.
+
+### Releasing (for maintainers)
+
+Releases are automatic. Every push to `main` runs `.github/workflows/release.yml`, which
+checks the web UI and then lets [semantic-release](https://semantic-release.gitbook.io/)
+read the [Conventional Commits](https://www.conventionalcommits.org/) since the last
+release to pick the version:
+
+| Commit message | Release |
+| --- | --- |
+| `fix(ui): …`, `perf: …` | patch: 1.4.0 → 1.4.1 |
+| `feat(ui): …` | minor: 1.4.0 → 1.5.0 |
+| `feat(ui)!: …`, or a `BREAKING CHANGE:` footer | major: 1.4.0 → 2.0.0 |
+| `test:`, `docs:`, `chore:`, `refactor:`, `style:`, `ci:` | none |
+
+The highest one among the new commits wins. When there is a release, it builds and signs
+the web UI bundle (`scripts/package_release.sh`), tags the commit `vX.Y.Z`, and publishes
+the GitHub release with notes grouped from the commit messages. A message that doesn't
+follow the format simply doesn't count toward a release.
+
+Set up signing once:
+
+1. Make a key, without a passphrase, and keep the private half somewhere safe:
+   `ssh-keygen -t ed25519 -N "" -C release@birdnet-book -f birdnet-book-release`
+2. Add its public half to `release_signers` as
+   `release@birdnet-book namespaces="birdnet-book-release" ssh-ed25519 AAAA…`
+   (the first two fields of `birdnet-book-release.pub`), and commit it. Stations installed
+   from then on trust it; ones installed earlier need it copied to
+   `/etc/birdnet/release_signers` by hand.
+3. Add the private key's full text as the repository secret `RELEASE_SIGNING_KEY`
+   (Settings → Secrets and variables → Actions).
+
+Until the secret exists, releases are published unsigned and nothing installs them
+automatically.
 
 ## Backup and Restore
 Use the web interface and go to "Tools" > "System Controls" > "Backup" or "Restore". Backup/Restore is primary meant for migrating your data for one system to another. Since the time required to create or restore a backup depends on the size of the data set and the speed of the storage, this could take quite a while.

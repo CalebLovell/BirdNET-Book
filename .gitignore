@@ -56,3 +56,6 @@ whitelist_species_list.txt
 
 # Visual brainstorming companion sessions
 .superpowers/
+
+# Release bundles built by scripts/package_release.sh
+/dist/
