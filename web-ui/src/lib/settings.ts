@@ -7,20 +7,24 @@ import {
 	restartStation,
 	saveAudioSettings,
 	saveDetectionSettings,
+	saveHighlightSettings,
 	savePrivacySettings,
 	saveRecordingSettings,
 	saveReviewSettings,
 	saveStationSettings,
 	saveStorageSettings,
+	saveUpdateSettings,
 } from "./settings.server.ts";
 import {
 	audioSettingsSchema,
 	detectionSettingsSchema,
+	highlightSettingsSchema,
 	privacySettingsSchema,
 	recordingSettingsSchema,
 	reviewSettingsSchema,
 	stationSettingsSchema,
 	storageSettingsSchema,
+	updateSettingsSchema,
 } from "./settings-data.ts";
 
 export const getSettingsPage = createServerFn({ method: "GET" })
@@ -62,6 +66,16 @@ export const saveReviewSettingsFn = createServerFn({ method: "POST" })
 	.validator(reviewSettingsSchema)
 	.handler(({ data }) => saveReviewSettings(data));
 
+export const saveHighlightSettingsFn = createServerFn({ method: "POST" })
+	.middleware([requireUnlocked])
+	.validator(highlightSettingsSchema)
+	.handler(({ data }) => saveHighlightSettings(data));
+
+export const saveUpdateSettingsFn = createServerFn({ method: "POST" })
+	.middleware([requireUnlocked])
+	.validator(updateSettingsSchema)
+	.handler(({ data }) => saveUpdateSettings(data));
+
 export const resetSettingsFn = createServerFn({ method: "POST" })
 	.middleware([requireUnlocked])
 	.handler(() => resetSettings());
@@ -84,6 +98,8 @@ export const restartStationFn = createServerFn({ method: "POST" })
 					"recording",
 					"storage",
 					"review",
+					"highlights",
+					"updates",
 				])
 				.optional(),
 		}),

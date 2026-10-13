@@ -1,10 +1,5 @@
 import { createFileRoute, stripSearchParams } from "@tanstack/react-router";
-import {
-	ArrowRight,
-	CalendarRange,
-	LayoutDashboard,
-	List,
-} from "lucide-react";
+import { ArrowRight, CalendarRange, LayoutDashboard, List } from "lucide-react";
 import { z } from "zod";
 import { Deferred } from "~/components/deferred.tsx";
 import {
@@ -32,6 +27,7 @@ import { useShareCard } from "~/components/use-share-card.tsx";
 import { formatDate } from "~/lib/date-format.ts";
 import { getDayShareCard } from "~/lib/day-share.ts";
 import { formatDayTitle } from "~/lib/day-title.ts";
+import type { HighlightThresholds } from "~/lib/highlight-thresholds.ts";
 import { pageTitle } from "~/lib/page-title.ts";
 import { formatShareCard } from "~/lib/share-card.ts";
 import type { HourActivity } from "~/lib/stats-data.ts";
@@ -193,6 +189,7 @@ function Timeline() {
 							<TimelineCards
 								rows={data.body.rows}
 								highlights={data.body.highlights}
+								thresholds={data.body.thresholds}
 								period={period}
 								jumpTo={jumpTarget(period, data)}
 								windowLabel={data.window?.label ?? null}
@@ -471,6 +468,7 @@ function WindowSummary({ rows }: { rows: TimelineRow[] | null }) {
 function TimelineCards({
 	rows,
 	highlights,
+	thresholds,
 	period,
 	jumpTo,
 	windowLabel,
@@ -479,6 +477,7 @@ function TimelineCards({
 }: {
 	rows: TimelineRow[];
 	highlights: TimelineData["highlights"];
+	thresholds: HighlightThresholds;
 	period: TimelinePeriod;
 	/** The nearest window with detections, offered when this one has none. */
 	jumpTo: JumpTarget | null;
@@ -582,6 +581,7 @@ function TimelineCards({
 				/>
 				<HighlightsCard
 					highlights={highlights}
+					thresholds={thresholds}
 					period={period}
 					emptyMessage={emptyMessage}
 					className="self-start"

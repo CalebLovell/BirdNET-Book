@@ -14,6 +14,7 @@ import {
 import {
 	type AudioSettings,
 	type DetectionSettings,
+	type HighlightSettings,
 	type PrivacySettings,
 	parseSettingsCard,
 	RESETTABLE_CARDS,
@@ -27,6 +28,7 @@ import {
 	type StationSettings,
 	type StorageSettings,
 	SUPPORTED_MODELS,
+	type UpdateSettings,
 } from "./settings-data.ts";
 import {
 	restartServices,
@@ -218,6 +220,20 @@ export function saveReviewSettings(
 	dependencies: SettingsServerDependencies = {},
 ) {
 	return saveSettings("review", input, dependencies);
+}
+
+export function saveUpdateSettings(
+	input: UpdateSettings,
+	dependencies: SettingsServerDependencies = {},
+) {
+	return saveSettings("updates", input, dependencies);
+}
+
+export function saveHighlightSettings(
+	input: HighlightSettings,
+	dependencies: SettingsServerDependencies = {},
+) {
+	return saveSettings("highlights", input, dependencies);
 }
 
 export type SettingsResetResult = {

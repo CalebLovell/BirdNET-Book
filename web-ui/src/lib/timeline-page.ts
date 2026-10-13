@@ -5,7 +5,8 @@ import { db } from "~/db/index.ts";
 import { detections } from "~/db/schema.ts";
 import { dayIdFor } from "~/lib/day.ts";
 import { classifyDay } from "~/lib/day-range.ts";
-import { HIGHLIGHT_THRESHOLDS } from "~/lib/highlight-thresholds.ts";
+import type { HighlightThresholds } from "~/lib/highlight-thresholds.ts";
+import { readHighlightThresholds } from "~/lib/settings-config.server.ts";
 import {
 	loadTimelineData,
 	loadTimelineNav,
@@ -42,6 +43,8 @@ export type TimelineBody =
 			kind: "rows";
 			rows: TimelineRow[];
 			highlights: TimelineData["highlights"];
+			/** The rules they were judged by, for the card's info tip. */
+			thresholds: HighlightThresholds;
 	  }
 	| { kind: "day-out-of-range"; result: DayOutOfRange };
 
@@ -74,10 +77,11 @@ export const getTimelinePage = createServerFn({ method: "GET" })
 			}
 		}
 
+		const thresholds = await readHighlightThresholds();
 		const { rows, highlights, ...nav } = await loadTimelineData({
 			period,
 			anchor,
-			settings: HIGHLIGHT_THRESHOLDS,
+			settings: thresholds,
 		});
-		return { ...nav, body: { kind: "rows", rows, highlights } };
+		return { ...nav, body: { kind: "rows", rows, highlights, thresholds } };
 	});

@@ -34,6 +34,8 @@ const SERVICES = {
 	],
 	storage: [],
 	review: [],
+	highlights: [],
+	updates: [],
 } as const satisfies Record<SettingsCardKind, readonly string[]>;
 
 const defaultRunner: SettingsCommandRunner = (executable, args, stdin) =>

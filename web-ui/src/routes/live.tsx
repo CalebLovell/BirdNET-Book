@@ -203,6 +203,7 @@ function LiveBody({
 								judged.hasAnyDetections ? (
 									<HighlightsCard
 										highlights={judged.highlights}
+										thresholds={judged.thresholds}
 										period="live"
 										emptyMessage={HIGHLIGHTS_EMPTY}
 									/>

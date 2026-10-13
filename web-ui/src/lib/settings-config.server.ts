@@ -4,7 +4,13 @@ import { randomUUID } from "node:crypto";
 import { chmod, readFile, rename, rm, stat, writeFile } from "node:fs/promises";
 
 import {
+	HIGHLIGHT_THRESHOLDS,
+	type HighlightThresholds,
+	thresholdsFromSettings,
+} from "./highlight-thresholds.ts";
+import {
 	DEFAULT_REVIEW_RARE_SPECIES_MAX,
+	highlightSettingsSchema,
 	parseSettingsCard,
 	SETTINGS_DEFAULTS,
 	type SettingsByKind,
@@ -137,6 +143,36 @@ export async function readSettingsPageValues(
 				defaults.storage.maxFilesPerSpecies,
 			),
 		}),
+		highlights: parseSettingsCard("highlights", {
+			rareMax: integerValue(
+				values,
+				"HIGHLIGHT_RARE_MAX",
+				defaults.highlights.rareMax,
+			),
+			returnedDays: integerValue(
+				values,
+				"HIGHLIGHT_RETURNED_DAYS",
+				defaults.highlights.returnedDays,
+			),
+			goneQuietDays: integerValue(
+				values,
+				"HIGHLIGHT_GONE_QUIET_DAYS",
+				defaults.highlights.goneQuietDays,
+			),
+			regularDays: integerValue(
+				values,
+				"HIGHLIGHT_REGULAR_DAYS",
+				defaults.highlights.regularDays,
+			),
+			vocalRatio: numberValue(
+				values,
+				"HIGHLIGHT_VOCAL_RATIO",
+				defaults.highlights.vocalRatio,
+			),
+		}),
+		updates: parseSettingsCard("updates", {
+			automatic: values.AUTOMATIC_UPDATE?.trim() === "1",
+		}),
 		review: parseSettingsCard("review", {
 			rareSpeciesMax: integerValue(
 				values,
@@ -216,6 +252,20 @@ function assignmentsFor<K extends SettingsCardKind>(
 			const review = value as SettingsByKind["review"];
 			return { REVIEW_RARE_SPECIES_MAX: String(review.rareSpeciesMax) };
 		}
+		case "updates": {
+			const updates = value as SettingsByKind["updates"];
+			return { AUTOMATIC_UPDATE: updates.automatic ? "1" : "0" };
+		}
+		case "highlights": {
+			const highlights = value as SettingsByKind["highlights"];
+			return {
+				HIGHLIGHT_RARE_MAX: String(highlights.rareMax),
+				HIGHLIGHT_RETURNED_DAYS: String(highlights.returnedDays),
+				HIGHLIGHT_GONE_QUIET_DAYS: String(highlights.goneQuietDays),
+				HIGHLIGHT_REGULAR_DAYS: String(highlights.regularDays),
+				HIGHLIGHT_VOCAL_RATIO: String(highlights.vocalRatio),
+			};
+		}
 	}
 }
 
@@ -278,6 +328,48 @@ export async function readReviewRareSpeciesMax(
 		if ((error as NodeJS.ErrnoException).code === "ENOENT")
 			return DEFAULT_REVIEW_RARE_SPECIES_MAX;
 		throw error;
+	}
+}
+
+/**
+ * The Highlights card's rules as this station has tuned them. A missing or
+ * unreadable config -- or a value out of range -- falls back to the defaults
+ * rather than failing the Live page or the timeline over a judgement call.
+ */
+export async function readHighlightThresholds(
+	settingsPath = resolveSettingsPath(),
+): Promise<HighlightThresholds> {
+	try {
+		const values = parseBirdnetConfig(await readFile(settingsPath, "utf8"));
+		const defaults = SETTINGS_DEFAULTS.highlights;
+		const parsed = highlightSettingsSchema.safeParse({
+			rareMax: integerValue(values, "HIGHLIGHT_RARE_MAX", defaults.rareMax),
+			returnedDays: integerValue(
+				values,
+				"HIGHLIGHT_RETURNED_DAYS",
+				defaults.returnedDays,
+			),
+			goneQuietDays: integerValue(
+				values,
+				"HIGHLIGHT_GONE_QUIET_DAYS",
+				defaults.goneQuietDays,
+			),
+			regularDays: integerValue(
+				values,
+				"HIGHLIGHT_REGULAR_DAYS",
+				defaults.regularDays,
+			),
+			vocalRatio: numberValue(
+				values,
+				"HIGHLIGHT_VOCAL_RATIO",
+				defaults.vocalRatio,
+			),
+		});
+		return parsed.success
+			? thresholdsFromSettings(parsed.data)
+			: HIGHLIGHT_THRESHOLDS;
+	} catch {
+		return HIGHLIGHT_THRESHOLDS;
 	}
 }
 

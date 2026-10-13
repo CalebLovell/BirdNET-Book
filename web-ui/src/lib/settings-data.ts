@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { HIGHLIGHT_THRESHOLDS } from "~/lib/highlight-thresholds.ts";
 import { isKnownTimezone } from "~/lib/timezones.ts";
 
 export const DEFAULT_REVIEW_RARE_SPECIES_MAX = 10;
@@ -164,6 +165,25 @@ export const reviewSettingsSchema = z.object({
 		.default(DEFAULT_REVIEW_RARE_SPECIES_MAX),
 });
 
+/**
+ * The Highlights card's rules, as the station owner tunes them: the day-scale
+ * knobs only. The week, month and year lookbacks stay fixed (see
+ * `thresholdsFromSettings`), since a "10 weeks" setting would read as nonsense
+ * beside "10 days".
+ */
+export const highlightSettingsSchema = z.object({
+	rareMax: z.number().int().min(1).max(1000),
+	returnedDays: z.number().int().min(2).max(90),
+	goneQuietDays: z.number().int().min(2).max(90),
+	regularDays: z.number().int().min(2).max(90),
+	vocalRatio: z.number().finite().min(1.5).max(20),
+});
+
+/** Whether the nightly timer installs new signed releases by itself
+    (AUTOMATIC_UPDATE). Not part of a reset: it is a choice about the station,
+    not a tuning value with a right answer. */
+export const updateSettingsSchema = z.object({ automatic: z.boolean() });
+
 export type StationSettings = z.infer<typeof stationSettingsSchema>;
 export type DetectionSettings = z.infer<typeof detectionSettingsSchema>;
 export type PrivacySettings = z.infer<typeof privacySettingsSchema>;
@@ -171,6 +191,8 @@ export type AudioSettings = z.infer<typeof audioSettingsSchema>;
 export type RecordingSettings = z.infer<typeof recordingSettingsSchema>;
 export type StorageSettings = z.infer<typeof storageSettingsSchema>;
 export type ReviewSettings = z.infer<typeof reviewSettingsSchema>;
+export type HighlightSettings = z.infer<typeof highlightSettingsSchema>;
+export type UpdateSettings = z.infer<typeof updateSettingsSchema>;
 
 export type SettingsCardKind =
 	| "station"
@@ -179,7 +201,9 @@ export type SettingsCardKind =
 	| "audio"
 	| "recording"
 	| "storage"
-	| "review";
+	| "review"
+	| "highlights"
+	| "updates";
 
 export type SettingsByKind = {
 	station: StationSettings;
@@ -189,6 +213,8 @@ export type SettingsByKind = {
 	recording: RecordingSettings;
 	storage: StorageSettings;
 	review: ReviewSettings;
+	highlights: HighlightSettings;
+	updates: UpdateSettings;
 };
 
 export type SettingsPageData = SettingsByKind & {
@@ -235,7 +261,14 @@ export const SETTINGS_DEFAULTS = {
 		maxFilesPerSpecies: 0,
 	},
 	review: { rareSpeciesMax: DEFAULT_REVIEW_RARE_SPECIES_MAX },
-} satisfies Omit<SettingsByKind, "station">;
+	highlights: {
+		rareMax: HIGHLIGHT_THRESHOLDS.rareMax,
+		returnedDays: HIGHLIGHT_THRESHOLDS.returned.days,
+		goneQuietDays: HIGHLIGHT_THRESHOLDS.goneQuiet.days,
+		regularDays: HIGHLIGHT_THRESHOLDS.consistent.streakDays,
+		vocalRatio: HIGHLIGHT_THRESHOLDS.vocal.ratio,
+	},
+} satisfies Omit<SettingsByKind, "station" | "updates">;
 
 /** The cards a reset covers, in the order they appear on the page. */
 export const RESETTABLE_CARDS = [
@@ -245,7 +278,11 @@ export const RESETTABLE_CARDS = [
 	"recording",
 	"storage",
 	"review",
-] as const satisfies readonly Exclude<SettingsCardKind, "station">[];
+	"highlights",
+] as const satisfies readonly Exclude<
+	SettingsCardKind,
+	"station" | "updates"
+>[];
 
 export type ResettableCard = (typeof RESETTABLE_CARDS)[number];
 
@@ -263,6 +300,8 @@ const schemas = {
 	recording: recordingSettingsSchema,
 	storage: storageSettingsSchema,
 	review: reviewSettingsSchema,
+	highlights: highlightSettingsSchema,
+	updates: updateSettingsSchema,
 } as const;
 
 export function parseSettingsCard<K extends SettingsCardKind>(

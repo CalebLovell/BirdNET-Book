@@ -1,7 +1,7 @@
-import type { LucideIcon } from "lucide-react";
 import { Save } from "lucide-react";
 import { type ReactNode, useState } from "react";
 
+import { CardHeader } from "~/components/card-header.tsx";
 import { Button } from "~/components/ui/button.tsx";
 import { ConfirmDialog } from "~/components/ui/confirm-dialog.tsx";
 import { settingsCardId } from "./settings-index.ts";
@@ -18,7 +18,6 @@ const DEFAULT_CONFIRM_DESCRIPTION =
 export function SettingsCard({
 	title,
 	description,
-	icon: Icon,
 	onSave,
 	confirmDescription = DEFAULT_CONFIRM_DESCRIPTION,
 	action,
@@ -28,7 +27,6 @@ export function SettingsCard({
 }: {
 	title: string;
 	description: string;
-	icon: LucideIcon;
 	/**
 	 * Runs once the reader has confirmed. The card owns the form's submit event
 	 * and the dialog in front of it, so this is only ever called for a save that
@@ -64,7 +62,7 @@ export function SettingsCard({
 			// A plain card. How a save went is reported in a toast; a coloured
 			// stripe down the edge said the same thing again, in a shape no other
 			// card on the site has.
-			className="feature-card scroll-mt-4 overflow-hidden rounded-md"
+			className="feature-card scroll-mt-4 rounded-md p-4"
 		>
 			<form
 				className="flex h-full flex-col"
@@ -75,47 +73,26 @@ export function SettingsCard({
 					setConfirming(true);
 				}}
 			>
-				{/* Centred, not top-aligned: the disc reads against the whole title
-				    block, and hanging it off the first line left it sitting a few
-				    pixels high of the space it occupies. */}
-				<header className="flex items-center gap-3 border-b p-(--page-gap) max-[400px]:gap-2">
-					<div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-[var(--icon-well)]">
-						<Icon aria-hidden="true" className="size-4 text-[var(--moss)]" />
-					</div>
-					<div className="min-w-0">
-						<h2
-							id={headingId}
-							className="display-title font-semibold text-lg leading-tight"
-						>
-							{title}
-						</h2>
-						<p className="mt-1 text-muted-foreground text-sm leading-relaxed">
-							{description}
-						</p>
-					</div>
-					{/* `self-start` against the header's `items-center`: the disc wants
-					    centring because it reads against the whole title block, but the
-					    action is a corner control and centring it on a two-line title
-					    left it floating in the middle of the header. */}
-					{action ? (
-						<div className="ml-auto shrink-0 self-start">{action}</div>
-					) : null}
-				</header>
+				{/* The band every card on the site is titled with, the card's own
+				    control held against its right edge. */}
+				<CardHeader as="h2" titleId={headingId} title={title}>
+					{action}
+				</CardHeader>
 
-				{/* One padded box, not a body and a footer. Save sits at the bottom
-				    right of the content it saves, with no rule between them -- the
-				    card is a single thought, and the divider was cutting it in two. */}
-				<div className="flex flex-1 flex-col gap-(--page-gap) p-(--page-gap)">
-					<div className="flex-1 space-y-(--page-gap)">{children}</div>
+				<p className="py-(--page-gap) text-muted-foreground text-sm leading-relaxed">
+					{description}
+				</p>
 
-					{/* No status line beside Save: how the save went arrives as a
-					    toast, so the row holds only the controls. */}
-					<div className="flex flex-wrap items-center justify-end gap-2">
-						{restart}
-						<Button type="submit" icon={Save} disabled={saveDisabled}>
-							Save
-						</Button>
-					</div>
+				{/* The settings, one hairline-parted row each (see Field). */}
+				<div className="flex-1">{children}</div>
+
+				{/* No status line beside Save: how the save went arrives as a
+				    toast, so the row holds only the controls. */}
+				<div className="flex flex-wrap items-center justify-end gap-2 border-t pt-(--page-gap)">
+					{restart}
+					<Button type="submit" icon={Save} disabled={saveDisabled}>
+						Save
+					</Button>
 				</div>
 			</form>
 

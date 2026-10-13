@@ -20,6 +20,7 @@ import { InfoTip } from "~/components/ui/info-tip.tsx";
 import { ShellBar, ShellText } from "~/components/ui/shell.tsx";
 import {
 	type HighlightPeriod,
+	type HighlightThresholds,
 	highlightGuide,
 } from "~/lib/highlight-thresholds.ts";
 import type {
@@ -47,6 +48,7 @@ export function HighlightsCard({
 	highlights,
 	emptyMessage,
 	period,
+	thresholds,
 	className = "",
 }: {
 	/** Empty for a window with no detections, which gets the empty note; null
@@ -59,6 +61,9 @@ export function HighlightsCard({
 	/** The window the lines were judged for, so the info tip can explain them
 	    in its terms. Without it the card has no info tip. */
 	period?: HighlightPeriod;
+	/** The station's own rules, so the info tip describes what was actually
+	    applied. The defaults stand in while they load. */
+	thresholds?: HighlightThresholds;
 	className?: string;
 }) {
 	return (
@@ -67,7 +72,9 @@ export function HighlightsCard({
 			className={`feature-card rounded-md p-4 ${className}`}
 		>
 			<CardHeader title="Highlights">
-				{period ? <HighlightsInfo period={period} /> : null}
+				{period ? (
+					<HighlightsInfo period={period} thresholds={thresholds} />
+				) : null}
 			</CardHeader>
 
 			{highlights === null ? (
@@ -117,11 +124,17 @@ function PendingNotes() {
 
 /** What each line on the card means for this period -- the basics, from the
     same thresholds the rules use. */
-function HighlightsInfo({ period }: { period: HighlightPeriod }) {
+function HighlightsInfo({
+	period,
+	thresholds,
+}: {
+	period: HighlightPeriod;
+	thresholds?: HighlightThresholds;
+}) {
 	return (
 		<InfoTip label="Highlights">
 			<ul className="space-y-1">
-				{highlightGuide(period).map((entry) => (
+				{highlightGuide(period, thresholds).map((entry) => (
 					<li key={entry.name}>
 						<strong>{entry.name}:</strong> {entry.meaning}
 					</li>

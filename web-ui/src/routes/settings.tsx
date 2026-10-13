@@ -16,11 +16,18 @@ import {
 	restartStationFn,
 	saveAudioSettingsFn,
 	saveDetectionSettingsFn,
+	saveHighlightSettingsFn,
 	savePrivacySettingsFn,
 	saveRecordingSettingsFn,
 	saveStationSettingsFn,
 	saveStorageSettingsFn,
+	saveUpdateSettingsFn,
 } from "~/lib/settings.ts";
+import {
+	checkForUpdatesFn,
+	getUpdateState,
+	installUpdateFn,
+} from "~/lib/updates.ts";
 import { usePolledData } from "~/lib/use-polled-data.ts";
 import { useSettled } from "~/lib/use-settled.ts";
 
@@ -30,6 +37,8 @@ import { useSettled } from "~/lib/use-settled.ts";
  * about, and none of these figures move faster than that anyway.
  */
 const HEALTH_INTERVAL_MS = 30_000;
+
+const UPDATES_INTERVAL_MS = 5_000;
 
 export const Route = createFileRoute("/settings")({
 	head: () => ({ meta: [{ title: pageTitle("Settings") }] }),
@@ -43,6 +52,7 @@ export const Route = createFileRoute("/settings")({
 	loader: () => ({
 		data: getSettingsPage(),
 		health: getStationHealth(),
+		updates: getUpdateState(),
 	}),
 	component: SettingsRoute,
 	errorComponent: SettingsUnavailable,
@@ -64,6 +74,17 @@ function SettingsRoute() {
 	const saveAudio = useServerFn(saveAudioSettingsFn);
 	const saveRecording = useServerFn(saveRecordingSettingsFn);
 	const saveStorage = useServerFn(saveStorageSettingsFn);
+	const saveHighlights = useServerFn(saveHighlightSettingsFn);
+	const saveUpdates = useServerFn(saveUpdateSettingsFn);
+	const checkForUpdates = useServerFn(checkForUpdatesFn);
+	const installUpdate = useServerFn(installUpdateFn);
+	// Every few seconds: cheap (two small files), and what lets the card follow
+	// an install through the restart it causes.
+	const { data: updates } = usePolledData(
+		getUpdateState,
+		loaded.updates,
+		UPDATES_INTERVAL_MS,
+	);
 	const reset = useServerFn(resetSettingsFn);
 	const restart = useServerFn(restartStationFn);
 	const router = useRouter();
@@ -75,6 +96,9 @@ function SettingsRoute() {
 			data={settled.value}
 			health={health ?? undefined}
 			onRestart={(card) => restart({ data: { card } })}
+			updates={updates}
+			onCheckUpdates={() => checkForUpdates()}
+			onInstallUpdate={() => installUpdate()}
 			onReset={async () => {
 				const result = await reset({});
 				// The cards remount against this reload, so it has to land before
@@ -95,6 +119,8 @@ function SettingsRoute() {
 				audio: (values) => saveAudio({ data: values }),
 				recording: (values) => saveRecording({ data: values }),
 				storage: (values) => saveStorage({ data: values }),
+				highlights: (values) => saveHighlights({ data: values }),
+				updates: (values) => saveUpdates({ data: values }),
 			}}
 		/>
 	);

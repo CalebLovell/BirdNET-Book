@@ -46,10 +46,11 @@ export function SettingsReset({ onReset }: { onReset: () => Promise<void> }) {
 							Reset all settings to defaults?
 						</h2>
 						<p className="mt-2 text-muted-foreground text-sm leading-relaxed">
-							Detection, Privacy, Audio input, Recording, Storage, and the
-							Review queue threshold all go back to the values a fresh install
-							writes. Any RTSP streams you have configured are cleared and the
-							station returns to microphone input. This cannot be undone.
+							Detection, Privacy, Audio input, Recording, Storage, Highlights,
+							and the Review queue threshold all go back to the values a fresh
+							install writes. Any RTSP streams you have configured are cleared
+							and the station returns to microphone input. This cannot be
+							undone.
 						</p>
 						<p className="mt-4 rounded-md bg-muted p-(--page-gap) text-muted-foreground text-xs leading-relaxed">
 							Your Station card is left as it is. Its name, coordinates, and

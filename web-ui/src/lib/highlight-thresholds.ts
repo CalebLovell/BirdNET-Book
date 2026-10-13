@@ -54,6 +54,32 @@ export const HIGHLIGHT_THRESHOLDS: HighlightThresholds = {
 	},
 };
 
+/** The owner-tunable knobs (the Settings page's Highlights card), shaped
+    here rather than imported so this file stays free of the settings
+    schema -- which itself reads the defaults above. */
+export type HighlightKnobs = {
+	rareMax: number;
+	returnedDays: number;
+	goneQuietDays: number;
+	regularDays: number;
+	vocalRatio: number;
+};
+
+/** The full rule set with the owner's knobs laid over the defaults. Only the
+    day-scale lookbacks move; weeks and months keep their fixed values. */
+export function thresholdsFromSettings(
+	knobs: HighlightKnobs,
+): HighlightThresholds {
+	const base = HIGHLIGHT_THRESHOLDS;
+	return {
+		rareMax: knobs.rareMax,
+		consistent: { ...base.consistent, streakDays: knobs.regularDays },
+		goneQuiet: { ...base.goneQuiet, days: knobs.goneQuietDays },
+		returned: { ...base.returned, days: knobs.returnedDays },
+		vocal: { ...base.vocal, ratio: knobs.vocalRatio },
+	};
+}
+
 /**
  * How many whole periods before the window a rule looks at: the setting in
  * the period's own unit, one for a year, none for all time (nothing comes

@@ -5,6 +5,7 @@ import { PageHeaderCard } from "~/components/page-header-card.tsx";
 import { destructiveToast, toast } from "~/components/ui/toaster.tsx";
 import type { StationHealth } from "~/lib/health-data.ts";
 import type { SettingsPageData } from "~/lib/settings-data.ts";
+import type { UpdateState } from "~/lib/updates-data.ts";
 import { RestartButton } from "./restart-button.tsx";
 import {
 	SettingsCards,
@@ -28,6 +29,9 @@ export function SettingsPage({
 	onReset,
 	onRestart,
 	health,
+	updates,
+	onCheckUpdates,
+	onInstallUpdate,
 }: {
 	data: SettingsPageData;
 	savers?: SettingsSavers;
@@ -37,6 +41,10 @@ export function SettingsPage({
 	onReset?: () => Promise<ResetOutcome>;
 	/** Bounces a card's services. Omit to hide every restart control. */
 	onRestart?: SettingsRestarter;
+	/** What the updater last reported; null while it loads. */
+	updates?: UpdateState | null;
+	onCheckUpdates?: () => Promise<void>;
+	onInstallUpdate?: () => Promise<void>;
 }) {
 	// A reset that stored the defaults but could not get BirdNET onto them
 	// leaves the Restart button beside Reset until it has done so.
@@ -54,6 +62,8 @@ export function SettingsPage({
 		data.audio,
 		data.recording,
 		data.storage,
+		data.highlights,
+		data.updates,
 	]);
 
 	return (
@@ -111,6 +121,9 @@ export function SettingsPage({
 				data={data}
 				savers={savers}
 				restarter={onRestart}
+				updates={updates}
+				onCheckUpdates={onCheckUpdates}
+				onInstallUpdate={onInstallUpdate}
 			/>
 		</div>
 	);

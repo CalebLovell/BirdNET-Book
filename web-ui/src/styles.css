@@ -379,6 +379,15 @@ a {
   animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
 
+/* A segmented choice is a value too: blank both halves alike, so the
+   default's moss segment doesn't flash before the station's own arrives. */
+.settings-skeleton [data-slot="toggle-group-item"] {
+  color: transparent;
+  background: var(--muted);
+  border-color: var(--paper-raised);
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
 .settings-skeleton :is(input, textarea)::placeholder {
   color: transparent;
 }

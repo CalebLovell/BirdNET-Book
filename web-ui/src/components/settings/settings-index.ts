@@ -3,9 +3,11 @@ import {
 	Disc3,
 	HardDrive,
 	MapPin,
+	RefreshCw,
 	Mic2,
 	ShieldCheck,
 	SlidersHorizontal,
+	Sparkles,
 } from "lucide-react";
 
 import type { SearchSetting } from "~/lib/site-search.ts";
@@ -53,7 +55,7 @@ export const SETTINGS_INDEX: SettingsIndexEntry[] = [
 		title: "Audio input",
 		icon: Mic2,
 		fields: [
-			"Input mode",
+			"Input",
 			"Recording device",
 			"Channels",
 			"RTSP streams",
@@ -71,10 +73,22 @@ export const SETTINGS_INDEX: SettingsIndexEntry[] = [
 		title: "Storage",
 		icon: HardDrive,
 		fields: [
-			"Disk-full action",
+			"When the disk fills",
 			"Disk-used threshold",
 			"Maximum files per species",
 		],
 		keywords: ["disk", "purge"],
+	},
+	{
+		title: "Highlights",
+		icon: Sparkles,
+		fields: ["Rare", "Returned", "Gone quiet", "Regular", "Vocal"],
+		keywords: ["rarity", "rarities", "returns", "thresholds"],
+	},
+	{
+		title: "Updates",
+		icon: RefreshCw,
+		fields: ["This station", "Newest release", "Automatic updates"],
+		keywords: ["version", "release", "upgrade"],
 	},
 ];

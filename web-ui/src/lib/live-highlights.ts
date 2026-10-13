@@ -4,7 +4,7 @@ import { count, sql } from "drizzle-orm";
 import { db } from "~/db/index.ts";
 import { detections } from "~/db/schema.ts";
 import {
-	HIGHLIGHT_THRESHOLDS,
+	type HighlightThresholds,
 	lookbackFor,
 } from "~/lib/highlight-thresholds.ts";
 import {
@@ -13,6 +13,7 @@ import {
 	judgeHighlights,
 } from "~/lib/highlights-data.ts";
 import { detectedAt, isLast24h } from "~/lib/now.ts";
+import { readHighlightThresholds } from "~/lib/settings-config.server.ts";
 import { timestampToMillis } from "~/lib/visits.ts";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -29,6 +30,8 @@ export type LiveHighlights = {
 	    above already says so, far more plainly than this card could. */
 	hasAnyDetections: boolean;
 	highlights: Highlight[];
+	/** The rules they were judged by, for the card's info tip. */
+	thresholds: HighlightThresholds;
 };
 
 /**
@@ -43,7 +46,7 @@ export type LiveHighlights = {
  */
 export const getLiveHighlights = createServerFn({ method: "GET" }).handler(
 	async (): Promise<LiveHighlights> => {
-		const settings = HIGHLIGHT_THRESHOLDS;
+		const settings = await readHighlightThresholds();
 		// One clock read for every age in the card, so two lines can never
 		// disagree about how long a bird has been away.
 		const nowMs = Date.now();
@@ -107,7 +110,11 @@ export const getLiveHighlights = createServerFn({ method: "GET" }).handler(
 			]);
 
 		if (!volume || volume.allTimeCount === 0) {
-			return { hasAnyDetections: false, highlights: [] };
+			return {
+				hasAnyDetections: false,
+				highlights: [],
+				thresholds: settings,
+			};
 		}
 
 		const slices: DayTally[] = Array.from(
@@ -172,6 +179,6 @@ export const getLiveHighlights = createServerFn({ method: "GET" }).handler(
 			settings,
 		);
 
-		return { hasAnyDetections: true, highlights };
+		return { hasAnyDetections: true, highlights, thresholds: settings };
 	},
 );
