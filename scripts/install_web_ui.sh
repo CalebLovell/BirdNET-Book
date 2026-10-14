@@ -68,7 +68,7 @@ ExecStart=${NODE_HOME}/bin/node ${WEB_CURRENT}/server/index.mjs
 AmbientCapabilities=CAP_NET_BIND_SERVICE
 Environment=NODE_ENV=production
 Environment=PORT=${WEB_UI_PORT}
-Environment=HOST=0.0.0.0
+Environment=HOST=::
 Environment=BIRDNET_CONF=/etc/birdnet/birdnet.conf
 Environment=BIRDNET_DB_PATH=${REPO_DIR}/scripts/birds.db
 Environment=BIRDNET_MODEL_DIR=${REPO_DIR}/model
