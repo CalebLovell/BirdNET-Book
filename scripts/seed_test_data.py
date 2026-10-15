@@ -45,10 +45,14 @@ have written.
 The station's location is blanked to 0, 0 in the fixture, since this
 repository is public.
 
-Also generates one placeholder audio clip per species (for its most recent
-detection) at BirdNET-Pi's real extraction path, so web-ui's play button
-has something real to play locally -- the same BIRDNET_EXTRACTED_DIR
-default web-ui itself uses.
+Every detection also gets an audio clip at BirdNET-Pi's real extraction
+path (the same BIRDNET_EXTRACTED_DIR default web-ui itself uses), so any
+play button or spectrogram in the UI has something to play. The clips are
+synthesized calls modelled on each species' real one (seed_calls.py), a few
+variants per species, rendered once into Extracted/.seed-calls/ and hard-
+linked into place -- tens of thousands of clips for the disk cost of a few
+hundred. A reseed removes the links the last seed made (listed in the pool's
+manifest) and never touches any other file.
 
 Usage:
     python3 scripts/seed_test_data.py               # wipes and reseeds a full year
@@ -56,7 +60,7 @@ Usage:
     python3 scripts/seed_test_data.py --empty       # wipes, leaving no detections
     python3 scripts/seed_test_data.py --append      # adds on top of existing rows
     python3 scripts/seed_test_data.py --days 14     # only the most recent 14 days
-    python3 scripts/seed_test_data.py --no-audio    # skip placeholder audio clips
+    python3 scripts/seed_test_data.py --no-audio    # skip the audio clips
 """
 import argparse
 import csv
@@ -64,9 +68,10 @@ import gzip
 import math
 import os
 import random
+import shutil
 import sqlite3
-import struct
-import wave
+import sys
+import zlib
 from collections import defaultdict
 from datetime import date, datetime, timedelta
 
@@ -565,58 +570,90 @@ def generate_rows(days: int | None = DEFAULT_DAYS, now: datetime | None = None, 
     return rows
 
 
-def write_placeholder_wav(path: str, seed_text: str, duration: float = 1.2, framerate: int = 22050):
-    """Writes a short synthesized tone, distinct per species, so the
-    web-ui's play button has something real to play during local dev."""
-    freq = 350 + (abs(hash(seed_text)) % 700)
-    frame_count = int(duration * framerate)
-    os.makedirs(os.path.dirname(path), exist_ok=True)
-    with wave.open(path, 'w') as wav_file:
-        wav_file.setnchannels(1)
-        wav_file.setsampwidth(2)
-        wav_file.setframerate(framerate)
-        frames = bytearray()
-        for i in range(frame_count):
-            t = i / framerate
-            envelope = max(0.0, min(1.0, t * 8, (duration - t) * 8))
-            sample = int(32767 * 0.3 * envelope * math.sin(2 * math.pi * freq * t))
-            frames += struct.pack('<h', sample)
-        wav_file.writeframes(bytes(frames))
+def clip_file_name(file_name: str) -> str:
+    """The name a seeded clip is written under. ':' is valid on the Pi's
+    Linux filesystem (where the real format comes from) but illegal on
+    Windows dev machines, and the clips are WAVs, not MP3s."""
+    return os.path.splitext(file_name)[0].replace(':', '-') + '.wav'
 
 
-def seed_placeholder_audio(con: sqlite3.Connection, extracted_dir: str):
-    """Generates one placeholder clip per species (its most recent
-    detection) at BirdNET-Pi's real extraction path (By_Date/<date>/
-    <species>/<file>), and repoints that one row's File_Name at the
-    matching .wav so the DB and the file on disk agree."""
-    cur = con.cursor()
-    cur.execute("""
-        SELECT Com_Name, Date, Time, File_Name FROM detections
-        ORDER BY Date DESC, Time DESC
-    """)
-    seen = set()
-    updates = []
-    for com_name, date_str, time_str, file_name in cur.fetchall():
-        if com_name in seen:
-            continue
-        seen.add(com_name)
+def _remove_last_seed(seed_root: str, extracted_dir: str):
+    """Deletes the clips the previous seed linked in, and any folders that
+    leaves empty. Only paths in the manifest are touched."""
+    manifest = os.path.join(seed_root, 'manifest.txt')
+    if not os.path.exists(manifest):
+        return
+    with open(manifest, encoding='utf-8') as listing:
+        paths = [line.rstrip('\n') for line in listing if line.strip()]
+    folders = set()
+    for relative in paths:
+        full = os.path.join(extracted_dir, relative)
+        try:
+            os.remove(full)
+        except FileNotFoundError:
+            pass
+        folders.add(os.path.dirname(full))
+        folders.add(os.path.dirname(os.path.dirname(full)))
+    for folder in sorted(folders, key=len, reverse=True):
+        try:
+            os.rmdir(folder)
+        except OSError:
+            pass  # not empty, or already gone
+    os.remove(manifest)
 
-        com_name_safe = com_name.replace("'", '').replace(' ', '_')
-        # ':' is valid in filenames on the Pi's Linux filesystem (where the
-        # real format comes from) but illegal on Windows dev machines, so
-        # the placeholder file itself uses a filesystem-safe name.
-        stem = os.path.splitext(file_name)[0].replace(':', '-')
-        wav_name = f'{stem}.wav'
-        full_path = os.path.join(extracted_dir, 'By_Date', date_str, com_name_safe, wav_name)
-        write_placeholder_wav(full_path, com_name)
-        updates.append((wav_name, com_name, date_str, time_str))
 
-    cur.executemany(
-        'UPDATE detections SET File_Name = ? WHERE Com_Name = ? AND Date = ? AND Time = ?',
-        updates,
-    )
-    con.commit()
-    print(f'Generated {len(updates)} placeholder audio clips under {extracted_dir}')
+def seed_audio(rows: list[tuple], extracted_dir: str, fresh: bool):
+    """Links a synthesized call into place for every row, at By_Date/<date>/
+    <species>/<File_Name>. Rows already carry their clip_file_name()."""
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    import seed_calls
+
+    # The manifest sits above the versioned pools, so a recipe change (a new
+    # VERSION) still finds and removes the previous seed's links.
+    seed_root = os.path.join(extracted_dir, '.seed-calls')
+    pool_dir = os.path.join(seed_root, f'v{seed_calls.VERSION}')
+    os.makedirs(pool_dir, exist_ok=True)
+    if fresh:
+        _remove_last_seed(seed_root, extracted_dir)
+        for name in os.listdir(seed_root):
+            stale = os.path.join(seed_root, name)
+            if name.startswith('v') and os.path.isdir(stale) and stale != pool_dir:
+                shutil.rmtree(stale)
+    pool = seed_calls.ensure_pool(pool_dir, sorted({row[3] for row in rows}))
+
+    # Every link is recorded as it's made, so even a run that fails partway
+    # leaves a manifest the next seed can clean up after.
+    linked = 0
+    made_dirs = set()
+    # NTFS allows a file 1,023 hard links; a common bird has thousands of
+    # detections. When a variant fills up, a fresh copy of it takes over.
+    overflow: dict[str, tuple[str, int]] = {}
+    with open(os.path.join(seed_root, 'manifest.txt'), 'a', encoding='utf-8') as manifest:
+        for row in rows:
+            date_str, com_name, file_name = row[0], row[3], row[11]
+            folder = os.path.join(extracted_dir, 'By_Date', date_str, seed_calls.safe_name(com_name))
+            target = os.path.join(folder, file_name)
+            if os.path.exists(target):
+                continue  # a real recording, or an earlier --append's clip
+            if folder not in made_dirs:
+                os.makedirs(folder, exist_ok=True)
+                made_dirs.add(folder)
+            variants = pool[com_name]
+            variant = variants[zlib.crc32(file_name.encode()) % len(variants)]
+            source, copies = overflow.get(variant, (variant, 0))
+            try:
+                os.link(source, target)
+            except OSError:
+                copies += 1
+                source = f'{os.path.splitext(variant)[0]}.{copies}.wav'
+                if not os.path.exists(source):
+                    shutil.copyfile(variant, source)
+                overflow[variant] = (source, copies)
+                os.link(source, target)
+            manifest.write(os.path.relpath(target, extracted_dir) + '\n')
+            linked += 1
+
+    print(f'Linked {linked} synthesized clips under {extracted_dir}')
 
 
 def days_for_years(years: int, today: date | None = None) -> int:
@@ -653,10 +690,10 @@ def main():
     parser.add_argument(
         '--extracted-dir',
         default=os.environ.get('BIRDNET_EXTRACTED_DIR', DEFAULT_EXTRACTED_DIR),
-        help='Directory to write placeholder audio clips into',
+        help='Directory to write the audio clips into',
     )
     parser.add_argument(
-        '--no-audio', action='store_true', help='Skip generating placeholder audio clips'
+        '--no-audio', action='store_true', help='Skip generating audio clips'
     )
     args = parser.parse_args()
     if args.empty:
@@ -691,14 +728,16 @@ def main():
         cur.execute('DELETE FROM detections')
 
     rows = generate_rows(args.days, seed=args.seed)
+    if not args.no_audio:
+        rows = [(*row[:11], clip_file_name(row[11])) for row in rows]
     cur.executemany(
         'INSERT INTO detections VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
         rows,
     )
     con.commit()
 
-    if rows and not args.no_audio:
-        seed_placeholder_audio(con, args.extracted_dir)
+    if not args.no_audio:
+        seed_audio(rows, args.extracted_dir, fresh=not args.append)
 
     total = cur.execute('SELECT COUNT(*) FROM detections').fetchone()[0]
     species = cur.execute('SELECT COUNT(DISTINCT Com_Name) FROM detections').fetchone()[0]
