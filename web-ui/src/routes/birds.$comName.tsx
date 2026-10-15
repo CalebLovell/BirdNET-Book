@@ -670,8 +670,10 @@ const PROFILE_CARD_CLASS =
 	"feature-card mt-(--page-gap) grid overflow-hidden rounded-md sm:grid-cols-[12rem_minmax(0,1fr)]";
 const COLUMNS_CLASS =
 	"mt-(--page-gap) grid @min-[80rem]/species:grid-cols-[minmax(0,max-content)_minmax(20rem,1fr)] grid-cols-[minmax(0,1fr)] items-stretch gap-(--page-gap)";
-const VISIT_LOG_CLASS =
-	"@container feature-card flex min-h-[420px] flex-col rounded-md p-4";
+const VISIT_LOG_BASE_CLASS =
+	"@container feature-card flex flex-col rounded-md p-4";
+const VISIT_LOG_CLASS = `${VISIT_LOG_BASE_CLASS} min-h-[420px]`;
+const VISIT_LOG_SHORT_CLASS = `${VISIT_LOG_BASE_CLASS} self-start`;
 const VISIT_LOG_HEADER_CLASS =
 	"-mx-(--page-gap) -mt-(--page-gap) flex min-h-[45px] flex-wrap items-center justify-between gap-2 border-b px-(--page-gap)";
 const VISIT_ROW_CLASS =
@@ -687,9 +689,9 @@ const SWATCH =
 	"size-3 rounded-[3px] border border-[var(--line)] transition-[outline] hover:z-10 hover:outline hover:outline-2 hover:outline-[var(--hover-line)] hover:outline-offset-1";
 
 /**
- * One square of the contribution grid. Days that actually recorded something
- * are links into that day's review; empty squares stay inert, since there is
- * nothing on the other side of them to read.
+ * One square of the contribution grid. Every day links into that day's
+ * Timeline, quiet days included: a day without this bird still has the rest
+ * of the station's detections to read.
  */
 function HeatMapDay({
 	date,
@@ -706,25 +708,20 @@ function HeatMapDay({
 	const label = `${dateLabel}: ${count.toLocaleString()} ${noun}`;
 	const fill = { backgroundColor: heatColor(count, maximum) };
 
-	// Inside a link the swatch is decoration: the link already carries the label,
-	// and repeating it would have a screen reader read the day twice.
-	const swatch =
-		count > 0 ? (
-			<Link
-				to="/timeline"
-				search={{ period: "day", date: bucketForDate(date) }}
-				aria-label={label}
-				className="block"
-			>
-				<div aria-hidden="true" className={SWATCH} style={fill} />
-			</Link>
-		) : (
-			<div role="img" aria-label={label} className={SWATCH} style={fill} />
-		);
-
+	// Inside the link the swatch is decoration: the link already carries the
+	// label, and repeating it would have a screen reader read the day twice.
 	return (
 		<Tooltip>
-			<TooltipTrigger asChild>{swatch}</TooltipTrigger>
+			<TooltipTrigger asChild>
+				<Link
+					to="/timeline"
+					search={{ period: "day", date: bucketForDate(date) }}
+					aria-label={label}
+					className="block"
+				>
+					<div aria-hidden="true" className={SWATCH} style={fill} />
+				</Link>
+			</TooltipTrigger>
 			<TooltipContent>
 				{dateLabel} — {count.toLocaleString()} {noun}
 			</TooltipContent>
@@ -913,7 +910,18 @@ function VisitLogCard({
 			// A container, because the log's width depends on the grid track it
 			// lands in more than on the screen: it gets ~18rem both on a phone and
 			// in the right-hand column at lg, and the whole content width between.
-			className={VISIT_LOG_CLASS}
+			//
+			// A log that fits on one page hugs its rows: stretched to the charts'
+			// height beside it, a short log would end in a block of empty card.
+			// Paged logs keep the full height so the stepper never jumps. With no
+			// footer to close it, the card drops its bottom padding, so the last
+			// row ends on its own padding like every other row. (Important, to beat
+			// the phone-width `.feature-card.p-4` padding rule.)
+			className={
+				pageCount > 1
+					? VISIT_LOG_CLASS
+					: `${VISIT_LOG_SHORT_CLASS} ${visits.length > 0 ? "pb-0!" : ""}`
+			}
 		>
 			{/* The footer's twin: the same full-width hairline and the same 45px
 			    band, rule included, so the log is bookended evenly. */}
