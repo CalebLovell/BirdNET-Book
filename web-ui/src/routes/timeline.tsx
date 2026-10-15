@@ -213,7 +213,7 @@ function Timeline() {
 /**
  * The cards as TimelineCards lays them out, each its own skeleton: the body
  * in the view the URL asks for, with the real view toggle and the window's
- * figures blurred in its header, then the hour chart and the Highlights.
+ * figures blurred in its header, then the Highlights and the hour chart.
  */
 function TimelineCardsShell({
 	period,
@@ -242,13 +242,13 @@ function TimelineCardsShell({
 				/>
 			)}
 			<div className="mt-(--page-gap) grid min-w-0 gap-(--page-gap) md:max-[1799px]:grid-cols-2 min-[1800px]:mt-0 min-[1800px]:flex-1">
-				<DetectionsByHourCardSkeleton />
 				<HighlightsCard
 					highlights={null}
 					period={period}
 					emptyMessage=""
 					className="self-start"
 				/>
+				<DetectionsByHourCardSkeleton />
 			</div>
 		</div>
 	);
@@ -562,7 +562,7 @@ function TimelineCards({
 
 	// On the widest screens the body sits on the left at one fixed width in both
 	// views, so the toggle never shifts the column beside it: the window's
-	// detections by hour, then Highlights, stacked. Below that there isn't room
+	// Highlights, then its detections by hour, stacked. Below that there isn't room
 	// for the column beside the body, so the same two cards follow it
 	// underneath, side by side from md (768px, roughly 360px each) up, each only
 	// as tall as its own content -- Highlights doesn't stretch to the chart's
@@ -575,16 +575,16 @@ function TimelineCards({
 			    period steps from a window that heard something to one that
 			    didn't. */}
 			<div className="mt-(--page-gap) grid min-w-0 gap-(--page-gap) md:max-[1799px]:grid-cols-2 min-[1800px]:mt-0 min-[1800px]:flex-1">
-				<DetectionsByHourCard
-					activity={hourActivity}
-					emptyMessage={emptyMessage}
-				/>
 				<HighlightsCard
 					highlights={highlights}
 					thresholds={thresholds}
 					period={period}
 					emptyMessage={emptyMessage}
 					className="self-start"
+				/>
+				<DetectionsByHourCard
+					activity={hourActivity}
+					emptyMessage={emptyMessage}
 				/>
 			</div>
 		</div>
