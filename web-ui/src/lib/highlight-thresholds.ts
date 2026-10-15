@@ -3,6 +3,8 @@
 // drift from what the rules in lib/highlights-data.ts actually do. Pure, so
 // the server and the browser can both read it.
 
+import type { Highlight } from "~/lib/highlights-data.ts";
+
 /** Every window the Highlights card is judged for. "live" is the Live page's
     rolling 24 hours; the rest are the timeline's calendar periods. */
 export type HighlightPeriod =
@@ -101,8 +103,13 @@ export function lookbackFor(lookback: Lookback, period: HighlightPeriod) {
 	}
 }
 
-/** One line of the info tip: a highlight's name and what earns it. */
-export type HighlightGuideEntry = { name: string; meaning: string };
+/** One line of the info tip: a highlight's name and what earns it, keyed by
+    the line it explains so each line's glyph can show its own. */
+export type HighlightGuideEntry = {
+	kind: Highlight["kind"];
+	name: string;
+	meaning: string;
+};
 
 const UNIT: Record<
 	Exclude<HighlightPeriod, "all">,
@@ -124,11 +131,16 @@ export function highlightGuide(
 	period: HighlightPeriod,
 	thresholds: HighlightThresholds = HIGHLIGHT_THRESHOLDS,
 ): HighlightGuideEntry[] {
-	const busiest = { name: "Busiest hour", meaning: "Most detections." };
+	const busiest: HighlightGuideEntry = {
+		kind: "busiest-hour",
+		name: "Busiest hour",
+		meaning: "Most detections.",
+	};
 	if (period === "all")
 		return [
 			busiest,
 			{
+				kind: "consistent",
 				name: "Regular",
 				meaning: `Heard on over ${thresholds.consistent.allTimeShare}% of days.`,
 			},
@@ -143,21 +155,29 @@ export function highlightGuide(
 
 	return [
 		{
+			kind: "activity",
 			name: "Up or down",
 			meaning: `Compared with ${period === "live" ? "the 24 hours before" : unit.last}.`,
 		},
 		busiest,
-		{ name: "New", meaning: "First record ever." },
-		{ name: "Rare", meaning: `${thresholds.rareMax} or fewer records.` },
+		{ kind: "new", name: "New", meaning: "First record ever." },
 		{
+			kind: "rare",
+			name: "Rare",
+			meaning: `${thresholds.rareMax} or fewer records.`,
+		},
+		{
+			kind: "vocal",
 			name: "Vocal",
 			meaning: `${thresholds.vocal.ratio}× its usual, vs. ${past(thresholds.vocal)}.`,
 		},
 		{
+			kind: "returned",
 			name: "Returned",
 			meaning: `Silent ${past(thresholds.returned)}, back ${unit.this}.`,
 		},
 		{
+			kind: "consistent",
 			name: "Regular",
 			meaning:
 				period === "live" || period === "day"
@@ -167,6 +187,7 @@ export function highlightGuide(
 						: `Heard every day ${unit.this}.`,
 		},
 		{
+			kind: "routine",
 			name: "Gone quiet",
 			meaning: `Heard ${past(thresholds.goneQuiet)}, not ${unit.this}.`,
 		},

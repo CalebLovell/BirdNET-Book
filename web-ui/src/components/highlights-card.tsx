@@ -16,9 +16,11 @@ import { type CSSProperties, Fragment, type ReactNode } from "react";
 import { CardHeader } from "~/components/card-header.tsx";
 import { EmptyNote } from "~/components/empty-state.tsx";
 import { BADGE_STYLES } from "~/components/species-flag-pills.tsx";
+import { Hint } from "~/components/ui/hint.tsx";
 import { InfoTip } from "~/components/ui/info-tip.tsx";
 import { ShellBar, ShellText } from "~/components/ui/shell.tsx";
 import {
+	type HighlightGuideEntry,
 	type HighlightPeriod,
 	type HighlightThresholds,
 	highlightGuide,
@@ -42,7 +44,8 @@ import { hourLabel } from "~/lib/time-ago.ts";
  *
  * Every bird note is only written when it has something to say, so a quiet
  * window gets a visibly shorter card. The info tip in the corner says what
- * each line means for the period on screen.
+ * every line means for the period on screen; each line's glyph explains just
+ * its own on hover.
  */
 export function HighlightsCard({
 	highlights,
@@ -66,15 +69,14 @@ export function HighlightsCard({
 	thresholds?: HighlightThresholds;
 	className?: string;
 }) {
+	const guide = period ? highlightGuide(period, thresholds) : [];
 	return (
 		<section
 			aria-label="Highlights"
 			className={`feature-card rounded-md p-4 ${className}`}
 		>
 			<CardHeader title="Highlights">
-				{period ? (
-					<HighlightsInfo period={period} thresholds={thresholds} />
-				) : null}
+				{period ? <HighlightsInfo guide={guide} /> : null}
 			</CardHeader>
 
 			{highlights === null ? (
@@ -84,7 +86,11 @@ export function HighlightsCard({
 			) : (
 				<ul className="mt-2">
 					{highlights.map((highlight) => (
-						<HighlightNote key={highlight.kind} highlight={highlight} />
+						<HighlightNote
+							key={highlight.kind}
+							highlight={highlight}
+							tip={guide.find((entry) => entry.kind === highlight.kind)}
+						/>
 					))}
 				</ul>
 			)}
@@ -124,17 +130,11 @@ function PendingNotes() {
 
 /** What each line on the card means for this period -- the basics, from the
     same thresholds the rules use. */
-function HighlightsInfo({
-	period,
-	thresholds,
-}: {
-	period: HighlightPeriod;
-	thresholds?: HighlightThresholds;
-}) {
+function HighlightsInfo({ guide }: { guide: HighlightGuideEntry[] }) {
 	return (
 		<InfoTip label="Highlights">
 			<ul className="space-y-1">
-				{highlightGuide(period, thresholds).map((entry) => (
+				{guide.map((entry) => (
 					<li key={entry.name}>
 						<strong>{entry.name}:</strong> {entry.meaning}
 					</li>
@@ -191,20 +191,27 @@ const SPECIES_NOTES: Record<
 	vocal: { icon: AudioLines, lead: () => "vocal" },
 };
 
-function HighlightNote({ highlight }: { highlight: Highlight }) {
+function HighlightNote({
+	highlight,
+	tip,
+}: {
+	highlight: Highlight;
+	/** The guide's entry for this line, shown on its glyph. */
+	tip?: HighlightGuideEntry;
+}) {
 	switch (highlight.kind) {
 		case "activity":
-			return <ActivityNote highlight={highlight} />;
+			return <ActivityNote highlight={highlight} tip={tip} />;
 		case "busiest-hour":
 			return (
-				<Note icon={Clock} badge={LINE_TINTS["busiest-hour"]}>
+				<Note icon={Clock} badge={LINE_TINTS["busiest-hour"]} tip={tip}>
 					Busiest at <Figure>{hourLabel(highlight.hour)}</Figure>.
 				</Note>
 			);
 		default: {
 			const { icon, lead } = SPECIES_NOTES[highlight.kind];
 			return (
-				<Note icon={icon} badge={LINE_TINTS[highlight.kind]}>
+				<Note icon={icon} badge={LINE_TINTS[highlight.kind]} tip={tip}>
 					<Figure>{highlight.total}</Figure> {lead(highlight)}:{" "}
 					<BirdNames birds={highlight.birds} total={highlight.total} />.
 				</Note>
@@ -219,14 +226,17 @@ function HighlightNote({ highlight }: { highlight: Highlight }) {
  */
 function ActivityNote({
 	highlight,
+	tip,
 }: {
 	highlight: Extract<Highlight, { kind: "activity" }>;
+	tip?: HighlightGuideEntry;
 }) {
 	const { direction, percent, baselineLabel, count, delta } = highlight;
 	const noun = (n: number) => (n === 1 ? "detection" : "detections");
 
 	return (
 		<Note
+			tip={tip}
 			icon={
 				direction === "up"
 					? TrendingUp
@@ -267,23 +277,45 @@ const NOTE_CLASS =
 function Note({
 	icon: Icon,
 	badge,
+	tip,
 	children,
 }: {
 	icon: LucideIcon;
 	/** The line's tint (see LINE_TINTS); without one the glyph sits in the
 	    neutral icon well. */
 	badge?: CSSProperties;
+	/** What this line means, shown on hovering or focusing its glyph. Without
+	    one the glyph is plain decoration. */
+	tip?: HighlightGuideEntry;
 	children: ReactNode;
 }) {
+	const glyphClass =
+		"grid size-5 shrink-0 place-items-center rounded-full bg-[var(--icon-well)] text-muted-foreground";
 	return (
 		<li className={NOTE_CLASS}>
-			<span
-				className="grid size-5 shrink-0 place-items-center rounded-full bg-[var(--icon-well)] text-muted-foreground"
-				style={badge}
-				aria-hidden="true"
-			>
-				<Icon className="size-3" />
-			</span>
+			{tip ? (
+				<Hint
+					className="max-w-80 leading-relaxed"
+					content={
+						<>
+							<strong>{tip.name}:</strong> {tip.meaning}
+						</>
+					}
+				>
+					<button
+						type="button"
+						aria-label={`About ${tip.name}`}
+						className={`${glyphClass} cursor-help`}
+						style={badge}
+					>
+						<Icon className="size-3" aria-hidden="true" />
+					</button>
+				</Hint>
+			) : (
+				<span className={glyphClass} style={badge} aria-hidden="true">
+					<Icon className="size-3" />
+				</span>
+			)}
 			<span className="min-w-0 pt-px">{children}</span>
 		</li>
 	);
