@@ -11,6 +11,7 @@ import {
 	Settings,
 	SlidersHorizontal,
 	UserRound,
+	X,
 } from "lucide-react";
 import { Popover } from "radix-ui";
 import { useEffect, useId, useMemo, useRef, useState } from "react";
@@ -224,8 +225,25 @@ export function SiteSearch({ onNavigate }: { onNavigate?: () => void }) {
 						}}
 						onBlur={() => setFocused(false)}
 						onKeyDown={onKeyDown}
-						className="pl-9 [&::-webkit-search-cancel-button]:hidden"
+						className="pr-9 pl-9 [&::-webkit-search-cancel-button]:hidden"
 					/>
+					{/* The same X as `SearchInput`, at the same inset. mousedown, not
+					    click, so the field never blurs: clearing leaves you in it,
+					    ready to type the next query. */}
+					{query ? (
+						<button
+							type="button"
+							aria-label="Clear search"
+							onMouseDown={(event) => event.preventDefault()}
+							onClick={() => {
+								setQuery("");
+								input.current?.focus();
+							}}
+							className="absolute top-0 right-3 bottom-3 flex w-9 items-center justify-center text-muted-foreground transition-colors hover:text-foreground"
+						>
+							<X className="size-4" />
+						</button>
+					) : null}
 				</div>
 			</Popover.Anchor>
 
