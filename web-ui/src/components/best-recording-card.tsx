@@ -1,23 +1,29 @@
 import { CardHeader } from "~/components/card-header.tsx";
-import { ConfidencePill } from "~/components/confidence-pill.tsx";
 import { EmptyNote } from "~/components/empty-state.tsx";
-import { RecordingButton } from "~/components/recording-button.tsx";
-import { Spectrogram } from "~/components/spectrogram.tsx";
-import { ShellBar, ShellSized, ShellText } from "~/components/ui/shell.tsx";
+import {
+	ClipMeta,
+	ClipMetaSkeleton,
+	SpectrogramPlayer,
+	SpectrogramPlayerSkeleton,
+} from "~/components/spectrogram-player.tsx";
 import { formatDateTime } from "~/lib/date-format.ts";
 import type { BestRecording } from "~/lib/species-detail.ts";
 
+const PLOT_CLASS = "min-h-32 flex-1";
+
 /**
  * The single cleanest clip this station has of the species -- its
- * highest-confidence detection -- featured with a spectrogram of the call and a
- * play control. Sits beside the detection-history heat map, filling the row the
- * heat map no longer needs all of.
+ * highest-confidence detection -- in the app's spectrogram player, with when it
+ * was heard and its score alongside the controls. Sits beside the
+ * detection-history heat map, the plot taking whatever height that row has.
  */
 export function BestRecordingCard({
 	recording,
+	speciesName,
 	className = "",
 }: {
 	recording: BestRecording | null;
+	speciesName?: string;
 	className?: string;
 }) {
 	return (
@@ -30,24 +36,20 @@ export function BestRecordingCard({
 			{!recording || !recording.audioUrl ? (
 				<EmptyNote>No recordings kept for this species yet.</EmptyNote>
 			) : (
-				<div className="mt-(--page-gap) flex flex-1 flex-col gap-3 max-[400px]:gap-2">
-					<Spectrogram
+				<div className="mt-(--page-gap) flex flex-1 flex-col">
+					<SpectrogramPlayer
+						key={recording.audioUrl}
 						audioUrl={recording.audioUrl}
-						className="min-h-32 flex-1"
-					/>
-
-					<div className="flex flex-wrap items-center justify-between gap-3 max-[400px]:gap-2">
-						<div className="tabular-data text-muted-foreground text-sm">
-							{formatDateTime(recording.date, recording.time)}
-						</div>
-						<div className="flex items-center gap-2">
-							<ConfidencePill confidence={recording.confidence} />
-							<RecordingButton
-								audioUrl={recording.audioUrl}
-								label="Play call"
+						speciesName={speciesName}
+						fill
+						className={PLOT_CLASS}
+						aside={
+							<ClipMeta
+								heardAt={formatDateTime(recording.date, recording.time)}
+								confidence={recording.confidence}
 							/>
-						</div>
-					</div>
+						}
+					/>
 				</div>
 			)}
 		</section>
@@ -55,9 +57,8 @@ export function BestRecordingCard({
 }
 
 /**
- * The card before its recording arrives: the spectrogram's slot at its
- * minimum height, and the row under it -- the date, then shells the size of
- * the pill and the Play button.
+ * The card before its recording arrives: the player's own skeleton, with the
+ * date and pill shelled at the end of its controls row.
  */
 export function BestRecordingCardSkeleton({
 	className = "",
@@ -71,22 +72,12 @@ export function BestRecordingCardSkeleton({
 			className={`feature-card flex flex-col rounded-md p-4 ${className}`}
 		>
 			<CardHeader title="Best recording" />
-			<div
-				aria-hidden="true"
-				className="mt-(--page-gap) flex flex-1 flex-col gap-3 max-[400px]:gap-2"
-			>
-				<ShellBar className="min-h-32 flex-1 rounded-md" />
-				<div className="flex flex-wrap items-center justify-between gap-3 max-[400px]:gap-2">
-					<ShellText className="w-40 text-sm" barClassName="w-full" />
-					<div className="flex items-center gap-2">
-						<ShellSized className="rounded-full">
-							<ConfidencePill confidence={0.9} />
-						</ShellSized>
-						<ShellSized className="rounded-md">
-							<RecordingButton audioUrl={null} label="Play call" />
-						</ShellSized>
-					</div>
-				</div>
+			<div className="mt-(--page-gap) flex flex-1 flex-col">
+				<SpectrogramPlayerSkeleton
+					fill
+					className={PLOT_CLASS}
+					aside={<ClipMetaSkeleton />}
+				/>
 			</div>
 		</section>
 	);

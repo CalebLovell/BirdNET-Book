@@ -271,7 +271,11 @@ export function RecentLogCard({
 									confidence={visit.confidence}
 									className="shrink-0"
 								/>
-								<RecordingButton audioUrl={visit.audioUrl} {...ROW_BUTTON} />
+								<RecordingButton
+									audioUrl={visit.audioUrl}
+									speciesName={visit.comName}
+									{...ROW_BUTTON}
+								/>
 							</li>
 						);
 					})}

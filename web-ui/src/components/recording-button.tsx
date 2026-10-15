@@ -3,16 +3,21 @@ import { Pause, Volume2 } from "lucide-react";
 import { Button } from "~/components/ui/button.tsx";
 import { usePlayableAudio } from "~/lib/use-playable-audio.ts";
 
+/** The one word on every compact play control in the app. */
+export const PLAY_LABEL = "Listen";
+
 /**
- * Plays a single detection's extracted clip. The label stays fixed while the
+ * The app's one compact play control: wherever a recording only has room for
+ * a button (a row, a card's footer, a hero), it is this -- an outline button
+ * with the speaker glyph and `PLAY_LABEL`. The label stays fixed while the
  * icon carries play/pause state, so the button holds its width mid-playback.
  * `iconOnly` drops the label for tight rows; the accessible name comes from
- * aria-label either way.
+ * aria-label either way. Where there's room for a spectrogram, use
+ * `SpectrogramPlayer` instead.
  */
 export function RecordingButton({
 	audioUrl,
 	iconOnly = false,
-	label = "Bird Call",
 	speciesName,
 	iconSize = "icon-xs",
 	labelClassName,
@@ -20,11 +25,8 @@ export function RecordingButton({
 }: {
 	audioUrl: string | null;
 	iconOnly?: boolean;
-	/** The visible text, dropped entirely when `iconOnly`. */
-	label?: string;
-	/** Names the bird in the accessible label. Worth passing from a list, where
-	 * a row of identical "Play bird call" buttons says nothing about which bird
-	 * each one belongs to. */
+	/** Names the bird in the accessible label, so a list of these buttons says
+	 * which bird each one plays. Pass it wherever the name is known. */
 	speciesName?: string;
 	/** Tap targets in a dense table want more than the default. */
 	iconSize?: "icon-xs" | "icon-lg";
@@ -53,14 +55,12 @@ export function RecordingButton({
 				loading={isLoading}
 				disabled={!audioUrl}
 				onClick={togglePlay}
-				aria-label={`${isPlaying ? "Pause" : "Play"} ${
-					speciesName ? `${speciesName} recording` : "bird call"
-				}`}
+				aria-label={recordingActionLabel(isPlaying, speciesName)}
 			>
 				{iconOnly ? null : labelClassName ? (
-					<span className={labelClassName}>{label}</span>
+					<span className={labelClassName}>{PLAY_LABEL}</span>
 				) : (
-					label
+					PLAY_LABEL
 				)}
 			</Button>
 			{audioUrl && (
@@ -76,4 +76,15 @@ export function RecordingButton({
 			)}
 		</>
 	);
+}
+
+/** "Play Northern Cardinal call" / "Pause the call": every play control's
+ * accessible name, compact or spectrogram. */
+export function recordingActionLabel(
+	isPlaying: boolean,
+	speciesName?: string,
+): string {
+	return `${isPlaying ? "Pause" : "Play"} ${
+		speciesName ? `${speciesName} call` : "the call"
+	}`;
 }

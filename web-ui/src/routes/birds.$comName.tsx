@@ -587,7 +587,10 @@ function SpeciesDetailView({ detail }: { detail: SpeciesDetail }) {
 						</div>
 					</section>
 
-					<BestRecordingCard recording={detail.bestRecording} />
+					<BestRecordingCard
+						recording={detail.bestRecording}
+						speciesName={detail.comName}
+					/>
 
 					{/* The hour/month charts and the visit log share the same two
 					    columns as the row above -- one grid, so the heat map and the
@@ -979,6 +982,7 @@ function VisitLogCard({
 								/>
 								<RecordingButton
 									audioUrl={visit.audioUrl ?? null}
+									speciesName={comName}
 									{...VISIT_ROW_BUTTON}
 								/>
 							</li>

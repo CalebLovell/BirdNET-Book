@@ -60,7 +60,7 @@ function PlayerPanel() {
 
 	return (
 		<CardShell status={isOffline ? "Stream unavailable" : null}>
-			<Spectrogram analyser={live.analyser} active={isPlaying} />
+			<LiveWaterfall analyser={live.analyser} active={isPlaying} />
 
 			<div className="mt-3 flex items-center gap-2 max-[400px]:mt-2">
 				<Button
@@ -151,7 +151,7 @@ const SPECTROGRAM_HEIGHT = 112;
 
 /** Scrolling waterfall: one new column per frame at the right edge, prior image
     shifted left. Colors come from the live tokens so it tracks the theme. */
-function Spectrogram({
+function LiveWaterfall({
 	analyser,
 	active,
 }: {
@@ -166,16 +166,17 @@ function Spectrogram({
 		const ctx = canvas.getContext("2d");
 		if (!ctx) return;
 
+		// Paper to moss, the same ramp as every clip's spectrogram, so the live
+		// feed and a saved call read as one kind of picture.
 		const styles = getComputedStyle(canvas);
-		const stops: Rgb[] = [
-			readRgb(styles.getPropertyValue("--sage"), [197, 204, 182]),
-			readRgb(styles.getPropertyValue("--moss"), [32, 59, 20]),
-			readRgb(styles.getPropertyValue("--clay"), [156, 74, 52]),
-		];
 		const background = readRgb(
 			styles.getPropertyValue("--paper"),
 			[251, 253, 246],
 		);
+		const stops: Rgb[] = [
+			background,
+			readRgb(styles.getPropertyValue("--moss"), [32, 59, 20]),
+		];
 
 		const bins = analyser.frequencyBinCount;
 		const data = new Uint8Array(bins);
@@ -192,8 +193,7 @@ function Spectrogram({
 				// Low frequencies at the bottom, like the reference spectrogram.
 				const bin = Math.floor(((h - 1 - y) / h) * bins);
 				const magnitude = data[bin] / 255;
-				const [r, g, b] =
-					magnitude <= 0.02 ? background : rampColor(stops, magnitude);
+				const [r, g, b] = rampColor(stops, magnitude);
 				ctx.fillStyle = `rgb(${r},${g},${b})`;
 				ctx.fillRect(w - 1, y, 1, 1);
 			}

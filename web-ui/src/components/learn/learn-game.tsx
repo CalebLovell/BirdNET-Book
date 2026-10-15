@@ -2,10 +2,14 @@ import { Link } from "@tanstack/react-router";
 import { ArrowRight, Check, RotateCcw, Trophy, X } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { CardHeader } from "~/components/card-header.tsx";
-import { ConfidencePill } from "~/components/confidence-pill.tsx";
-import { ClipPlayer } from "~/components/learn/clip-player.tsx";
 import { RecordingButton } from "~/components/recording-button.tsx";
 import { SpeciesImage } from "~/components/species-image.tsx";
+import {
+	ClipMeta,
+	ClipMetaSkeleton,
+	SpectrogramPlayer,
+	SpectrogramPlayerSkeleton,
+} from "~/components/spectrogram-player.tsx";
 import { Button } from "~/components/ui/button.tsx";
 import { ShellBar, ShellText } from "~/components/ui/shell.tsx";
 import { formatDateTime } from "~/lib/date-format.ts";
@@ -77,10 +81,6 @@ export function LearnGameSkeleton() {
 				>
 					<header className={GAME_HEADER_CLASS}>
 						<h2 className="island-kicker">Mystery call</h2>
-						<ShellText
-							className="w-36 text-xs"
-							barClassName="right-0 left-auto w-full"
-						/>
 					</header>
 
 					<div
@@ -102,12 +102,7 @@ export function LearnGameSkeleton() {
 						</div>
 					</div>
 
-					<div aria-hidden="true">
-						<div className="relative flex h-36 items-center justify-center max-[400px]:h-28">
-							<ShellBar className="absolute inset-0 rounded-md opacity-60" />
-							<ShellBar className="relative size-16 rounded-full max-[400px]:size-12" />
-						</div>
-					</div>
+					<SpectrogramPlayerSkeleton aside={<ClipMetaSkeleton />} />
 
 					<div aria-hidden="true" className={CHOICES_CLASS}>
 						{Array.from({ length: CHOICES_PER_QUESTION }, (_, choice) => (
@@ -271,9 +266,6 @@ export function LearnGame({
 				<section aria-label="Bird call quiz" className={GAME_CARD_CLASS}>
 					<header className={GAME_HEADER_CLASS}>
 						<h2 className="island-kicker">Mystery call</h2>
-						<div className="tabular-data text-muted-foreground text-xs">
-							Heard {formatDateTime(question.detectedAt)}
-						</div>
 					</header>
 
 					<div className="flex @3xl/quiz:hidden flex-col gap-2">
@@ -292,7 +284,19 @@ export function LearnGame({
 
 					<fieldset className="min-w-0">
 						<legend className="sr-only">Listening prompt</legend>
-						<ClipPlayer key={question.id} audioUrl={question.audioUrl} />
+						<SpectrogramPlayer
+							key={question.id}
+							audioUrl={question.audioUrl}
+							// The score stays hidden until the bird is named: a 98% clip
+							// is a hint toward the common birds.
+							aside={
+								<ClipMeta
+									heardAt={formatDateTime(question.detectedAt)}
+									confidence={question.confidence}
+									concealConfidence={!isSolved}
+								/>
+							}
+						/>
 					</fieldset>
 
 					<fieldset className={CHOICES_CLASS}>
@@ -302,13 +306,6 @@ export function LearnGame({
 								key={choice.sciName}
 								choice={choice}
 								shortcut={choiceIndex + 1}
-								// The clip's own confidence only shows once it can't give
-								// the answer away.
-								confidence={
-									isSolved && choice.sciName === question.answerSciName
-										? question.confidence
-										: null
-								}
 								state={
 									isSolved && choice.sciName === question.answerSciName
 										? "correct"
@@ -597,14 +594,11 @@ function ChoiceButton({
 	choice,
 	shortcut,
 	state,
-	confidence,
 	onSelect,
 }: {
 	choice: LearnChoice;
 	shortcut: number;
 	state: ChoiceState;
-	/** The clip's confidence, passed only to the solved answer's card. */
-	confidence: number | null;
 	onSelect: () => void;
 }) {
 	return (
@@ -630,7 +624,6 @@ function ChoiceButton({
 					{choice.sciName}
 				</span>
 			</span>
-			{confidence !== null ? <ConfidencePill confidence={confidence} /> : null}
 			{state === "correct" ? (
 				<Check className="size-4 shrink-0 text-[var(--moss)]" />
 			) : state === "wrong" ? (
@@ -750,7 +743,11 @@ function RoundSummary({
 							<span className="tabular-data shrink-0 text-sm">
 								+{pointsForAttempt(result.attempts)}
 							</span>
-							<RecordingButton audioUrl={question.audioUrl} iconOnly />
+							<RecordingButton
+								audioUrl={question.audioUrl}
+								speciesName={answer.comName}
+								iconOnly
+							/>
 						</li>
 					);
 				})}

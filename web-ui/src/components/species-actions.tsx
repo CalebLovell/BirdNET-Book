@@ -1,7 +1,7 @@
-import { ExternalLink, Pause, Volume2 } from "lucide-react";
+import { ExternalLink } from "lucide-react";
 
+import { RecordingButton } from "~/components/recording-button.tsx";
 import { Button } from "~/components/ui/button.tsx";
-import { usePlayableAudio } from "~/lib/use-playable-audio.ts";
 
 type SpeciesActionsProps = {
 	audioUrl?: string | null;
@@ -10,16 +10,6 @@ type SpeciesActionsProps = {
 };
 
 function SpeciesActions({ audioUrl, ebirdUrl, comName }: SpeciesActionsProps) {
-	const {
-		audioRef,
-		isPlaying,
-		isLoading,
-		togglePlay,
-		onPlay,
-		onPause,
-		onEnded,
-	} = usePlayableAudio(audioUrl ?? null);
-
 	return (
 		<div
 			className={
@@ -29,18 +19,7 @@ function SpeciesActions({ audioUrl, ebirdUrl, comName }: SpeciesActionsProps) {
 			}
 		>
 			{audioUrl !== undefined && (
-				<Button
-					variant="default"
-					icon={isPlaying ? Pause : Volume2}
-					loading={isLoading}
-					disabled={!audioUrl}
-					onClick={togglePlay}
-					aria-label={
-						isPlaying ? `Pause ${comName} sound` : `Play ${comName} sound`
-					}
-				>
-					{isPlaying ? "Pause" : "Bird Call"}
-				</Button>
+				<RecordingButton audioUrl={audioUrl} speciesName={comName} />
 			)}
 			<Button variant="outline" icon={ExternalLink} asChild>
 				<a
@@ -52,17 +31,6 @@ function SpeciesActions({ audioUrl, ebirdUrl, comName }: SpeciesActionsProps) {
 					eBird
 				</a>
 			</Button>
-			{audioUrl && (
-				<audio
-					ref={audioRef}
-					preload="none"
-					onPlay={onPlay}
-					onPause={onPause}
-					onEnded={onEnded}
-				>
-					<track kind="captions" />
-				</audio>
-			)}
 		</div>
 	);
 }

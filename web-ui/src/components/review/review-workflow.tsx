@@ -14,9 +14,12 @@ import { CardHeader } from "~/components/card-header.tsx";
 import { ConfidencePill } from "~/components/confidence-pill.tsx";
 import { EmptyNote } from "~/components/empty-state.tsx";
 import { IndexDot } from "~/components/index-dot.tsx";
-import { ClipPlayer } from "~/components/learn/clip-player.tsx";
 import { SpeciesImage } from "~/components/species-image.tsx";
 import { SpeciesThumbnail } from "~/components/species-row.tsx";
+import {
+	SpectrogramPlayer,
+	SpectrogramPlayerSkeleton,
+} from "~/components/spectrogram-player.tsx";
 import { Button } from "~/components/ui/button.tsx";
 import { Input } from "~/components/ui/input.tsx";
 import { PageStepper } from "~/components/ui/page-stepper.tsx";
@@ -32,6 +35,9 @@ const ROW_HEIGHT_PX = 54;
 // Shared by the workflow and its skeleton, so the two are one shape.
 const REVIEW_GRID_CLASS =
 	"grid @3xl/review:grid-cols-[minmax(0,1fr)_24rem] @7xl/review:grid-cols-[minmax(914px,1fr)_minmax(20rem,38rem)] items-start gap-(--page-gap)";
+// The evidence spectrogram: taller than the quiz's, since here its detail is
+// the point.
+const REVIEW_PLOT_CLASS = "h-56 max-sm:h-40";
 const UNDER_REVIEW_CLASS = "feature-card flex flex-col gap-4 rounded-md p-4";
 const IDENTITY_ROW_CLASS = "flex items-center gap-4 max-[400px]:gap-3";
 const PORTRAIT_CLASS =
@@ -91,13 +97,7 @@ export function ReviewWorkflowSkeleton() {
 						<ShellText className="w-28" barClassName="w-full" />
 						<ShellText className="w-40" barClassName="w-full" />
 					</div>
-					<div
-						aria-hidden="true"
-						className="relative flex h-56 items-center justify-center max-sm:h-40"
-					>
-						<ShellBar className="absolute inset-0 rounded-md opacity-60" />
-						<ShellBar className="relative size-16 rounded-full max-[400px]:size-12" />
-					</div>
+					<SpectrogramPlayerSkeleton className={REVIEW_PLOT_CLASS} />
 					<div className="flex flex-wrap items-center gap-2">
 						<Button size="xs" disabled>
 							<ShieldCheck />
@@ -341,10 +341,11 @@ export function ReviewWorkflow({
 
 						{/* The evidence itself: hear the call and see its shape. */}
 						{row.audioAvailable ? (
-							<ClipPlayer
+							<SpectrogramPlayer
 								key={row.rowId}
 								audioUrl={row.audioUrl}
-								className="h-56 max-sm:h-40"
+								speciesName={row.comName}
+								className={REVIEW_PLOT_CLASS}
 							/>
 						) : (
 							<p className="grid h-40 place-items-center rounded-md border border-[var(--line)] border-dashed px-4 text-center text-destructive text-sm">

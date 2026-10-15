@@ -165,7 +165,7 @@ export function SpeciesHeroCard({
 				<div className="tabular-data mt-1 flex flex-wrap items-center gap-2 text-sm">
 					<span className="text-muted-foreground">last heard {heardAt}</span>
 					<ConfidencePill confidence={confidence} />
-					<RecordingButton audioUrl={audioUrl} />
+					<RecordingButton audioUrl={audioUrl} speciesName={comName} />
 				</div>
 			</div>
 		</HeroCardShell>

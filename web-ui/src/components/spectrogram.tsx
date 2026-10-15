@@ -1,6 +1,7 @@
 import { type ReactNode, useEffect, useRef, useState } from "react";
 
 import { fftMagnitudes } from "~/lib/fft.ts";
+import { fetchAudioBlob } from "~/lib/use-playable-audio.ts";
 
 const FFT_SIZE = 1024;
 const HOP = 256;
@@ -29,19 +30,20 @@ type RenderState = "loading" | "ready" | "empty";
 export function Spectrogram({
 	audioUrl,
 	className,
-	progress = null,
+	onDecoded,
 	children,
 }: {
 	audioUrl: string;
 	className?: string;
-	/** How far through the clip playback is, 0-1; draws a playhead when set. */
-	progress?: number | null;
-	/** Laid over the middle of the plot -- a play control, say. The status
-	 * line moves to the bottom edge so the two don't collide. */
+	/** Called with the clip's length in seconds once it's decoded. */
+	onDecoded?: (seconds: number) => void;
+	/** Laid over the whole plot once it's drawn -- a player's playhead. */
 	children?: ReactNode;
 }) {
 	const canvasRef = useRef<HTMLCanvasElement>(null);
 	const [state, setState] = useState<RenderState>("loading");
+	const onDecodedRef = useRef(onDecoded);
+	onDecodedRef.current = onDecoded;
 
 	useEffect(() => {
 		let cancelled = false;
@@ -62,14 +64,14 @@ export function Spectrogram({
 
 			const context = new AudioCtx();
 			try {
-				const response = await fetch(audioUrl);
-				if (!response.ok) throw new Error("fetch failed");
-				const buffer = await context.decodeAudioData(
-					await response.arrayBuffer(),
-				);
+				// The player fetches the same clip; the shared cache makes it one
+				// request between them.
+				const blob = await fetchAudioBlob(audioUrl);
+				const buffer = await context.decodeAudioData(await blob.arrayBuffer());
 				if (cancelled) return;
 				paint(canvas, buffer);
 				setState("ready");
+				onDecodedRef.current?.(buffer.duration);
 			} catch {
 				if (!cancelled) setState("empty");
 			} finally {
@@ -101,22 +103,11 @@ export function Spectrogram({
 					transition: "opacity 200ms ease",
 				}}
 			/>
-			{progress !== null && state === "ready" ? (
-				<div
-					aria-hidden="true"
-					className="pointer-events-none absolute inset-y-0 w-px bg-[var(--ink)]"
-					style={{ left: `${clamp01(progress) * 100}%` }}
-				/>
-			) : null}
-			{children ? (
-				<div className="absolute inset-0 grid place-items-center">
-					{children}
-				</div>
+			{children && state === "ready" ? (
+				<div className="pointer-events-none absolute inset-0">{children}</div>
 			) : null}
 			{state !== "ready" ? (
-				<div
-					className={`pointer-events-none absolute inset-x-0 text-center text-muted-foreground text-xs ${children ? "bottom-2" : "top-1/2 -translate-y-1/2"}`}
-				>
+				<div className="pointer-events-none absolute inset-x-0 top-1/2 -translate-y-1/2 text-center text-muted-foreground text-xs">
 					{state === "loading"
 						? "Rendering spectrogram…"
 						: "Spectrogram unavailable"}
