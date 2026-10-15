@@ -54,39 +54,46 @@ function PlayerPanel() {
 	const isPlaying = live.state === "playing";
 	const isOffline = live.state === "offline";
 	const isConnecting = live.state === "connecting";
-	// Offline, or retrying after being offline: the button stays a quiet
-	// outline rather than the green call to action.
-	const isRetry = isOffline || (isConnecting && live.hasFailed);
+	const readout = isConnecting
+		? live.hasFailed
+			? "Retrying…"
+			: "Connecting…"
+		: isPlaying
+			? "Live"
+			: isOffline
+				? "Offline"
+				: "Live feed";
 
 	return (
 		<CardShell status={isOffline ? "Stream unavailable" : null}>
 			<LiveWaterfall analyser={live.analyser} active={isPlaying} />
 
-			<div className="mt-3 flex items-center gap-2 max-[400px]:mt-2">
+			{/* Laid out like the spectrogram player's controls: a square outline
+			    play button, then a quiet readout where a clip shows its time. */}
+			<div className="mt-(--page-gap) flex items-center gap-2">
 				<Button
 					type="button"
-					variant={isRetry ? "outline" : "default"}
-					icon={isPlaying ? Pause : isRetry ? RotateCcw : Play}
+					variant="outline"
+					size="icon"
+					icon={isPlaying ? Pause : isOffline ? RotateCcw : Play}
 					loading={isConnecting}
 					onClick={() => (isPlaying ? live.pause() : live.play())}
-				>
-					{isConnecting
-						? isRetry
-							? "Retrying…"
-							: "Connecting…"
-						: isPlaying
-							? "Pause"
+					aria-label={
+						isPlaying
+							? "Pause live audio"
 							: isOffline
-								? "Retry"
-								: "Listen live"}
-				</Button>
+								? "Retry live audio"
+								: "Listen live"
+					}
+				/>
+				<span className="text-muted-foreground text-xs">{readout}</span>
 
 				<Popover.Root>
 					<Popover.Trigger asChild>
 						<Button
 							type="button"
 							variant="outline"
-							size="icon-xs"
+							size="icon"
 							icon={SlidersHorizontal}
 							aria-label="Audio settings"
 							className="ml-auto"
