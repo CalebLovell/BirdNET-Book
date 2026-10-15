@@ -8,6 +8,7 @@ import {
 import { formatDateTime } from "~/lib/date-format.ts";
 import type { CurrentBird } from "~/lib/now.ts";
 import { formatTimeAgo } from "~/lib/time-ago.ts";
+import { useAgeOffset } from "~/lib/use-age-offset.ts";
 
 /**
  * The page's masthead: the most recent detection of the last 24 hours as its
@@ -18,18 +19,21 @@ import { formatTimeAgo } from "~/lib/time-ago.ts";
 export function CurrentBirdCard({
 	current,
 	hasAnyDetections,
-	offsetMs,
+	generatedAt,
 	flash,
 	pill,
 }: {
 	current: CurrentBird | null;
 	hasAnyDetections: boolean;
-	offsetMs: number;
+	/** When the snapshot was measured; the card ages it once a second itself,
+	 * so that tick re-renders this card rather than the whole page. */
+	generatedAt: string;
 	flash: boolean;
 	/** The station's status pill (or its shell), set beside the title. */
 	pill: ReactNode;
 }) {
 	const live = pill;
+	const offsetMs = useAgeOffset(generatedAt);
 
 	if (!current && hasAnyDetections) {
 		return (

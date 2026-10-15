@@ -18,7 +18,6 @@ import {
 import { getNowSnapshot, type NowSnapshot } from "~/lib/now.ts";
 import { pageTitle } from "~/lib/page-title.ts";
 import { getStationStatus } from "~/lib/station-status.ts";
-import { useAgeOffset } from "~/lib/use-age-offset.ts";
 import { useFavicon } from "~/lib/use-favicon.ts";
 import { usePolledData } from "~/lib/use-polled-data.ts";
 
@@ -144,7 +143,6 @@ function LiveBody({
 	/** The station's status pill, or its shell until that arrives. */
 	pill: ReactNode;
 }) {
-	const offsetMs = useAgeOffset(snapshot.generatedAt);
 	const freshKeys = useFreshKeys(snapshot.recent.map((row) => row.key));
 	// Follows the poll rather than the loader, so the tab keeps pace with the hero
 	// card as new birds arrive. It reuses the hero's own image, whatever that
@@ -165,7 +163,7 @@ function LiveBody({
 			<CurrentBirdCard
 				current={snapshot.current}
 				hasAnyDetections={snapshot.hasAnyDetections}
-				offsetMs={offsetMs}
+				generatedAt={snapshot.generatedAt}
 				flash={heroIsNew}
 				pill={pill}
 			/>

@@ -475,7 +475,6 @@ function SpeciesNotFound() {
 function SpeciesDetailView({ detail }: { detail: SpeciesDetail }) {
 	const { year, visits: visitsPage } = Route.useSearch();
 	const navigate = Route.useNavigate();
-	const offsetMs = useAgeOffset(detail.generatedAt);
 	// The same flight illustration the hero draws, so the browser serves it from
 	// cache rather than pulling a second half-megabyte PNG. The wings lose their
 	// detail at 16px, but the silhouette still reads. Species without a bundled
@@ -511,7 +510,7 @@ function SpeciesDetailView({ detail }: { detail: SpeciesDetail }) {
 	return (
 		<TooltipProvider>
 			<div className="@container/species page-wrap pb-4">
-				<SummaryCard detail={detail} offsetMs={offsetMs} />
+				<SummaryCard detail={detail} />
 
 				{/* Two columns only once the page is wide enough (80rem) for a full
 				    year of heat map (~920px card) beside the 20rem column; any
@@ -738,13 +737,11 @@ function HeatMapDay({
  * heard and the eBird link. Just the bird -- its all-time figures sit under
  * the detection history, and the recording lives in the visit log below.
  */
-function SummaryCard({
-	detail,
-	offsetMs,
-}: {
-	detail: SpeciesDetail;
-	offsetMs: number;
-}) {
+function SummaryCard({ detail }: { detail: SpeciesDetail }) {
+	// The once-a-second age tick lives here, not on the page: ticking the page
+	// re-rendered every heat-map square and chart each second, a ~90ms stall
+	// that made anything animating on it (a spectrogram's playhead) stutter.
+	const offsetMs = useAgeOffset(detail.generatedAt);
 	// The most recent visit is the same detection as `lastDetected`, and it is the
 	// only one carrying a server-measured age, so the relative label agrees with
 	// the visit log instead of drifting.
