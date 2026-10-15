@@ -113,10 +113,6 @@ export function SpeciesByHourCard({
 	className?: string;
 }) {
 	const isEmpty = rows.length === 0;
-	// The count column is fixed to the widest count's character count, so every
-	// count right-aligns into the same column.
-	const maxTotal = Math.max(...rows.map((row) => row.totalDetections), 0);
-	const countWidthCh = maxTotal.toLocaleString().length;
 	const heatMax = heatMaximum(rows);
 
 	return (
@@ -180,7 +176,6 @@ export function SpeciesByHourCard({
 								<SpeciesHourRowView
 									key={row.comName}
 									row={row}
-									countWidthCh={countWidthCh}
 									heatMax={heatMax}
 								/>
 							))}
@@ -233,16 +228,14 @@ function HourTick({ hour }: { hour: number }) {
 }
 
 /**
- * One species: bird, name and its detection count for the window, then its
- * hours beside it.
+ * One species: bird, name, its flags and its detection count for the window,
+ * then its hours beside it. The flags sit at the far right, hugging the count.
  */
 function SpeciesHourRowView({
 	row,
-	countWidthCh,
 	heatMax,
 }: {
 	row: SpeciesHourRow;
-	countWidthCh: number;
 	heatMax: number;
 }) {
 	return (
@@ -264,6 +257,11 @@ function SpeciesHourRowView({
 					<div className="min-w-0 truncate font-semibold text-sm group-hover:underline">
 						{row.comName}
 					</div>
+				</div>
+
+				{/* The flags pressed up against the count, which ends every row at the
+				    same edge, so the digits still stack in a straight line. */}
+				<div className="flex items-center justify-end gap-2">
 					<SpeciesFlagPills
 						isNew={row.isNew}
 						isReturned={row.isReturned}
@@ -274,16 +272,10 @@ function SpeciesHourRowView({
 						vocal={row.vocal}
 						firstHeard={row.firstHeard}
 					/>
+					<span className="count-figure text-right">
+						{row.totalDetections.toLocaleString()}
+					</span>
 				</div>
-
-				{/* Right-aligned into a column fixed to the widest count, so the digits
-				    stack in a straight line down the list. */}
-				<span
-					className="count-figure text-right"
-					style={{ width: `${countWidthCh}ch` }}
-				>
-					{row.totalDetections.toLocaleString()}
-				</span>
 			</Link>
 
 			<div className={HOURS_LAYOUT}>

@@ -1,5 +1,5 @@
 import { AudioLines, Gem, House, Sparkles, Undo2 } from "lucide-react";
-import type { CSSProperties } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import { Pill } from "~/components/pill.tsx";
 import { formatDate } from "~/lib/date-format.ts";
 import {
@@ -9,23 +9,42 @@ import {
 	windowPhrase,
 } from "~/lib/highlights-data.ts";
 
+/** A figure inside a tooltip's sentence, in bold so it stands out. */
+function B({ children }: { children: ReactNode }) {
+	return <strong>{children}</strong>;
+}
+
+/** A sentence with each number in it ("14 of 18 hours", "93%") set in bold. */
+function withBoldNumbers(text: string): ReactNode {
+	return text.split(/(\d+(?:[.,]\d+)*%?)/).map((part, i) =>
+		// biome-ignore lint/suspicious/noArrayIndexKey: a fixed sentence, never reordered
+		i % 2 === 1 ? <B key={i}>{part}</B> : part,
+	);
+}
+
 /** "First recorded here on Sep 22, 2026." -- the day itself, not the window. */
-export function newTooltip(firstHeard: string | null): string {
+export function newTooltip(firstHeard: string | null): ReactNode {
 	if (firstHeard == null) return "First recorded here.";
-	return `First recorded here on ${formatDate(firstHeard)}.`;
+	return (
+		<>
+			First recorded here on <B>{formatDate(firstHeard)}</B>.
+		</>
+	);
 }
 
 /** "Heard 14 of 18 hours.", "Heard every day so far this week.", "Heard on
     93% of days." */
-export function consistentTooltip(note: string | null): string {
+export function consistentTooltip(note: string | null): ReactNode {
 	if (note == null) return "Heard here day in, day out.";
-	return note.endsWith("of days") ? `Heard on ${note}.` : `Heard ${note}.`;
+	return withBoldNumbers(
+		note.endsWith("of days") ? `Heard on ${note}.` : `Heard ${note}.`,
+	);
 }
 
 /** "Back after 3 weeks missing." -- in the window's own unit. */
-export function returnedTooltip(away: string | null): string {
+export function returnedTooltip(away: string | null): ReactNode {
 	if (away == null) return "Back after time missing.";
-	return `Back after ${away} missing.`;
+	return withBoldNumbers(`Back after ${away} missing.`);
 }
 
 /**
@@ -37,9 +56,23 @@ export function vocalTooltip({
 	count,
 	usual,
 	period,
-}: Pick<VocalJump, "count" | "usual" | "period">): string {
+}: Pick<VocalJump, "count" | "usual" | "period">): ReactNode {
 	const times = count === 1 ? "time" : "times";
-	return `Heard ${formatRate(count)} ${times} ${windowPhrase(period)}, usually only ${formatRate(usual)}.`;
+	return (
+		<>
+			Heard <B>{formatRate(count)}</B> {times} {windowPhrase(period)}, usually
+			only <B>{formatRate(usual)}</B>.
+		</>
+	);
+}
+
+/** A flag's tooltip: its name in bold, then what earned it. */
+function flagTip(name: string, meaning: ReactNode): ReactNode {
+	return (
+		<>
+			<B>{name}</B> — {meaning}
+		</>
+	);
 }
 
 // Each status pill wears its own tint over the raised paper, so a glance down a
@@ -121,7 +154,7 @@ export function SpeciesFlagPills({
 					icon={Sparkles}
 					label="New"
 					style={NEW_PILL_STYLE}
-					tooltip={`New — ${newTooltip(firstHeard)}`}
+					tooltip={flagTip("New", newTooltip(firstHeard))}
 					iconOnly
 				/>
 			) : null}
@@ -130,7 +163,7 @@ export function SpeciesFlagPills({
 					icon={Gem}
 					label="Rare"
 					style={RARE_PILL_STYLE}
-					tooltip="Rare — Barely ever heard here."
+					tooltip={flagTip("Rare", "Barely ever heard here.")}
 					iconOnly
 				/>
 			) : null}
@@ -139,7 +172,7 @@ export function SpeciesFlagPills({
 					icon={AudioLines}
 					label="Vocal"
 					style={VOCAL_PILL_STYLE}
-					tooltip={`Vocal — ${vocalTooltip(vocal)}`}
+					tooltip={flagTip("Vocal", vocalTooltip(vocal))}
 					iconOnly
 				/>
 			) : null}
@@ -148,7 +181,7 @@ export function SpeciesFlagPills({
 					icon={Undo2}
 					label="Returned"
 					style={RETURNED_PILL_STYLE}
-					tooltip={`Returned — ${returnedTooltip(away)}`}
+					tooltip={flagTip("Returned", returnedTooltip(away))}
 					iconOnly
 				/>
 			) : null}
@@ -157,7 +190,7 @@ export function SpeciesFlagPills({
 					icon={House}
 					label="Regular"
 					style={CONSISTENT_PILL_STYLE}
-					tooltip={`Regular — ${consistentTooltip(regularNote)}`}
+					tooltip={flagTip("Regular", consistentTooltip(regularNote))}
 					iconOnly
 				/>
 			) : null}

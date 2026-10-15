@@ -1,4 +1,4 @@
-import type { CSSProperties } from "react";
+import type { CSSProperties, ReactNode } from "react";
 
 import { Hint } from "~/components/ui/hint.tsx";
 
@@ -21,7 +21,7 @@ export function Pill({
 	icon?: React.ComponentType<{ className?: string }>;
 	label: string;
 	style: CSSProperties;
-	tooltip?: string;
+	tooltip?: ReactNode;
 	tabular?: boolean;
 	iconOnly?: boolean;
 	className?: string;
