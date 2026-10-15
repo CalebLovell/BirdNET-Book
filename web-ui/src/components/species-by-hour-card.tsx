@@ -261,17 +261,19 @@ function SpeciesHourRowView({
 
 				{/* The flags pressed up against the count, which ends every row at the
 				    same edge, so the digits still stack in a straight line. */}
-				<div className="flex items-center justify-end gap-2">
-					<SpeciesFlagPills
-						isNew={row.isNew}
-						isReturned={row.isReturned}
-						isRare={row.isRare}
-						isConsistent={row.isConsistent}
-						regularNote={row.regularNote}
-						away={row.away}
-						vocal={row.vocal}
-						firstHeard={row.firstHeard}
-					/>
+				<div className="flex items-center justify-end gap-3">
+					<div className="flex items-center gap-2">
+						<SpeciesFlagPills
+							isNew={row.isNew}
+							isReturned={row.isReturned}
+							isRare={row.isRare}
+							isConsistent={row.isConsistent}
+							regularNote={row.regularNote}
+							away={row.away}
+							vocal={row.vocal}
+							firstHeard={row.firstHeard}
+						/>
+					</div>
 					<span className="count-figure text-right">
 						{row.totalDetections.toLocaleString()}
 					</span>
