@@ -15,7 +15,7 @@ fi
 # The installed bundle carries the tool prebuilt (`npm run build`), so a
 # station installed from a release -- no source dependencies on disk -- can
 # still set its password. A source checkout falls back to running it with tsx.
-bundled_cli="/home/${BIRDNET_USER:-${USER}}/BirdNET-Pi-web/current/cli/set-password.mjs"
+bundled_cli="/home/${BIRDNET_USER:-${USER:-}}/BirdNET-Pi-web/current/cli/set-password.mjs"
 node_bin=/opt/birdnet-node/bin/node
 tsx_bin="${web_ui_dir}/node_modules/.bin/tsx"
 run_cli() {
