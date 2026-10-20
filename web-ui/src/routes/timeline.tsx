@@ -24,7 +24,6 @@ import { ButtonLink } from "~/components/ui/button-link.tsx";
 import { ShellFigure } from "~/components/ui/shell.tsx";
 import { TooltipProvider } from "~/components/ui/tooltip.tsx";
 import { useShareCard } from "~/components/use-share-card.tsx";
-import { formatDate } from "~/lib/date-format.ts";
 import { getDayShareCard } from "~/lib/day-share.ts";
 import { formatDayTitle } from "~/lib/day-title.ts";
 import type { HighlightThresholds } from "~/lib/highlight-thresholds.ts";
@@ -46,6 +45,7 @@ import { formatTimelineShareCard } from "~/lib/timeline-share.ts";
 import {
 	currentAnchor,
 	isValidAnchor,
+	spelledDate,
 	windowFor,
 } from "~/lib/timeline-window.ts";
 import { useSettled } from "~/lib/use-settled.ts";
@@ -114,18 +114,6 @@ export const Route = createFileRoute("/timeline")({
 	// as the window's data arrives.
 	loader: ({ deps }) => ({ page: getTimelinePage({ data: deps }) }),
 	component: Timeline,
-});
-
-/**
- * The day masthead drops the weekday the shared window label carries -- the
- * "Daily" eyebrow above it already says what kind of window this is, so
- * "Thu, " only crowds the date. UTC to match every other timeline label.
- */
-const DAY_TITLE = new Intl.DateTimeFormat("en-US", {
-	month: "short",
-	day: "numeric",
-	year: "numeric",
-	timeZone: "UTC",
 });
 
 function Timeline() {
@@ -291,7 +279,7 @@ function jumpTarget(
 		direction,
 		noun: PERIOD_NOUNS[period],
 		label:
-			period === "day" ? formatDate(anchor) : windowFor(period, anchor).label,
+			period === "day" ? spelledDate(anchor) : windowFor(period, anchor).label,
 	};
 }
 
@@ -378,13 +366,11 @@ function TimelineHeader({
 }
 
 /**
- * The page's title: the scope, then the window -- "Daily — Aug 26, 2026". "all"
- * has no window to name, so it stops at the scope ("All Time"); every other
- * period appends the window label the picker moves through.
- *
- * The week label carries its own range dash (an en dash). Stepped down here to a
- * hyphen so it reads as subordinate to the em dash that splits scope from
- * window, rather than a second separator of the same weight sitting beside it.
+ * The page's title: the scope, then the window -- "Daily — August 26th, 2026".
+ * "all" has no window to name, so it stops at the scope ("All Time"); every
+ * other period appends the window label the picker moves through. The day title
+ * drops the weekday the shared window label carries -- the "Daily" eyebrow
+ * already says what kind of window this is.
  */
 function headerTitle(period: TimelinePeriod, anchor: string): string {
 	const scope = TIMELINE_PERIOD_LABELS[period];
@@ -395,11 +381,11 @@ function headerTitle(period: TimelinePeriod, anchor: string): string {
 	// explains it once the server has judged it.
 	if (period === "day") {
 		return isValidAnchor("day", anchor)
-			? `${scope} — ${DAY_TITLE.format(new Date(`${anchor}T00:00:00Z`))}`
+			? `${scope} — ${spelledDate(anchor)}`
 			: `${scope} — ${anchor}`;
 	}
 	const window = safeWindow(period, anchor)?.label ?? anchor;
-	return `${scope} — ${window.replace(/–/g, "-")}`;
+	return `${scope} — ${window}`;
 }
 
 /** The window an anchor names, or null for one that names none. */

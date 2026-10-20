@@ -160,7 +160,7 @@ function PeriodSelect({
 	return (
 		<div className="relative shrink-0 min-[800px]:hidden">
 			{/* Under 400px the icon goes too: the row needs its width for the
-			    longest short window name ("Sep 23, 2026") beside it. */}
+			    longest window name ("September 23rd, 2026") beside it. */}
 			<Icon
 				className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 max-[400px]:hidden"
 				aria-hidden="true"
@@ -195,7 +195,7 @@ function PeriodSelect({
  *
  * Clicking the name opens the native picker for the granularity, laid
  * invisibly over it -- or, for a year, a native list of the station's years.
- * Fills the row beside the period menu on a phone; a fixed 14rem from 400px.
+ * Fills the row beside the period menu on a phone; a fixed 16rem from 400px.
  */
 function WindowStepper({
 	period,
@@ -230,7 +230,7 @@ function WindowStepper({
 	const overlay = "absolute inset-0 size-full cursor-pointer opacity-0";
 
 	return (
-		<div className="flex h-9 min-w-0 flex-1 overflow-hidden rounded-md border border-input bg-card focus-within:border-[var(--focus-ring)] min-[400px]:w-56 min-[400px]:flex-none">
+		<div className="flex h-9 min-w-0 flex-1 overflow-hidden rounded-md border border-input bg-card focus-within:border-[var(--focus-ring)] min-[400px]:w-64 min-[400px]:flex-none">
 			<JoinedStep
 				direction="prev"
 				label={`Previous ${label.toLowerCase()} with detections`}

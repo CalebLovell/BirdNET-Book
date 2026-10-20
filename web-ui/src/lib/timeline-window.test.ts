@@ -9,6 +9,7 @@ import {
 	precedingWindows,
 	previousPeriodStart,
 	shortAnchorLabel,
+	spelledDate,
 	windowFor,
 } from "./timeline-window.ts";
 
@@ -16,7 +17,7 @@ test("a day window is the single day it names", () => {
 	assert.deepEqual(windowFor("day", "2026-07-28"), {
 		start: "2026-07-28",
 		end: "2026-07-28",
-		label: "Tue, Jul 28, 2026",
+		label: "Tuesday, July 28th, 2026",
 	});
 });
 
@@ -24,7 +25,15 @@ test("a week window runs Monday through Sunday", () => {
 	const week = windowFor("week", "2026-W31");
 	assert.equal(week.start, "2026-07-27");
 	assert.equal(week.end, "2026-08-02");
-	assert.equal(week.label, "Jul 27 – Aug 2, 2026");
+	assert.equal(week.label, "Jul 27th to Aug 2nd, 2026");
+});
+
+test("spelled dates carry the right ordinal", () => {
+	assert.equal(spelledDate("2026-10-01"), "October 1st, 2026");
+	assert.equal(spelledDate("2026-10-03"), "October 3rd, 2026");
+	assert.equal(spelledDate("2026-10-11"), "October 11th, 2026");
+	assert.equal(spelledDate("2026-10-12"), "October 12th, 2026");
+	assert.equal(spelledDate("2026-10-22"), "October 22nd, 2026");
 });
 
 test("a month window ends on the real last day", () => {
@@ -129,7 +138,7 @@ test("the previous period crosses month, year and ISO-week boundaries", () => {
 });
 
 test("short anchor labels fit a phone's date stepper", () => {
-	assert.equal(shortAnchorLabel("day", "2026-09-23"), "Sep 23, 2026");
+	assert.equal(shortAnchorLabel("day", "2026-09-23"), "September 23rd, 2026");
 	assert.equal(shortAnchorLabel("week", "2026-W39"), "Week 39, 2026");
 	assert.equal(shortAnchorLabel("week", "2026-W01"), "Week 1, 2026");
 	assert.equal(
@@ -138,7 +147,7 @@ test("short anchor labels fit a phone's date stepper", () => {
 	);
 	assert.equal(
 		shortAnchorLabel("day", "2026-09-23", { compact: true }),
-		"Sep 23, 2026",
+		"September 23rd, 2026",
 	);
 	assert.equal(shortAnchorLabel("month", "2026-09"), "Sep 2026");
 	assert.equal(shortAnchorLabel("year", "2026"), "2026");

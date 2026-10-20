@@ -33,11 +33,16 @@ const ANCHOR_PATTERNS: Record<TimelinePeriod, RegExp> = {
 	all: /^$/,
 };
 
-const DAY_LABEL = new Intl.DateTimeFormat("en-US", {
-	weekday: "short",
+const WEEKDAY_NAME = new Intl.DateTimeFormat("en-US", {
+	weekday: "long",
+	timeZone: "UTC",
+});
+const MONTH_NAME = new Intl.DateTimeFormat("en-US", {
+	month: "long",
+	timeZone: "UTC",
+});
+const SHORT_MONTH_NAME = new Intl.DateTimeFormat("en-US", {
 	month: "short",
-	day: "numeric",
-	year: "numeric",
 	timeZone: "UTC",
 });
 const MONTH_LABEL = new Intl.DateTimeFormat("en-US", {
@@ -45,11 +50,29 @@ const MONTH_LABEL = new Intl.DateTimeFormat("en-US", {
 	year: "numeric",
 	timeZone: "UTC",
 });
-const RANGE_DAY = new Intl.DateTimeFormat("en-US", {
-	month: "short",
-	day: "numeric",
-	timeZone: "UTC",
-});
+const ORDINAL = new Intl.PluralRules("en-US", { type: "ordinal" });
+const ORDINAL_SUFFIX: Partial<Record<Intl.LDMLPluralRule, string>> = {
+	one: "st",
+	two: "nd",
+	few: "rd",
+};
+
+/**
+ * A UTC date with an ordinal day, e.g. "October 20th" -- or "Oct 20th" with
+ * `short`, which keeps a week's two ends from spelling a month out twice.
+ */
+function spelledDay(date: Date, { short = false } = {}): string {
+	const day = date.getUTCDate();
+	const suffix = ORDINAL_SUFFIX[ORDINAL.select(day)] ?? "th";
+	const month = (short ? SHORT_MONTH_NAME : MONTH_NAME).format(date);
+	return `${month} ${day}${suffix}`;
+}
+
+/** A "YYYY-MM-DD" day spelled out in full, e.g. "October 20th, 2026". */
+export function spelledDate(day: string): string {
+	const date = utcDate(day);
+	return `${spelledDay(date)}, ${date.getUTCFullYear()}`;
+}
 
 function utcDate(day: string): Date {
 	return new Date(`${day}T00:00:00Z`);
@@ -125,12 +148,6 @@ export function isValidAnchor(period: TimelinePeriod, anchor: string): boolean {
 	}
 }
 
-const SHORT_DAY = new Intl.DateTimeFormat("en-US", {
-	month: "short",
-	day: "numeric",
-	year: "numeric",
-	timeZone: "UTC",
-});
 const SHORT_MONTH = new Intl.DateTimeFormat("en-US", {
 	month: "short",
 	year: "numeric",
@@ -138,7 +155,7 @@ const SHORT_MONTH = new Intl.DateTimeFormat("en-US", {
 });
 
 /**
- * The anchor as the timeline's date stepper names it -- "Sep 23, 2026",
+ * The anchor as the timeline's date stepper names it -- "September 23rd, 2026",
  * "Week 39, 2026", "Sep 2026", "2026" -- shorter than the browser's own picker
  * text ("09/23/2026", "September 2026"). `compact` squeezes the one word that
  * can give, "Week" to "Wk", for a phone.
@@ -150,7 +167,8 @@ export function shortAnchorLabel(
 ): string {
 	switch (period) {
 		case "day":
-			return SHORT_DAY.format(utcDate(anchor));
+			// Spelled the way the masthead title is, so the two always agree.
+			return spelledDate(anchor);
 		case "week":
 			return `${compact ? "Wk" : "Week"} ${Number(anchor.slice(6))}, ${anchor.slice(0, 4)}`;
 		case "month":
@@ -215,7 +233,7 @@ export function windowFor(
 			return {
 				start: anchor,
 				end: anchor,
-				label: DAY_LABEL.format(utcDate(anchor)),
+				label: `${WEEKDAY_NAME.format(utcDate(anchor))}, ${spelledDate(anchor)}`,
 			};
 		case "week": {
 			const monday = isoWeekAnchorMonday(anchor);
@@ -224,7 +242,7 @@ export function windowFor(
 			return {
 				start,
 				end,
-				label: `${RANGE_DAY.format(monday)} – ${RANGE_DAY.format(utcDate(end))}, ${utcDate(end).getUTCFullYear()}`,
+				label: `${spelledDay(monday, { short: true })} to ${spelledDay(utcDate(end), { short: true })}, ${utcDate(end).getUTCFullYear()}`,
 			};
 		}
 		case "month": {
