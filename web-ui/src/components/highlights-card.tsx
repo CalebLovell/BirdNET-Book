@@ -15,8 +15,8 @@ import {
 import { type CSSProperties, Fragment, type ReactNode } from "react";
 import { CardHeader } from "~/components/card-header.tsx";
 import { EmptyNote } from "~/components/empty-state.tsx";
+import { GLYPH_CHIP_SIZE, GlyphChip } from "~/components/glyph-chip.tsx";
 import { BADGE_STYLES } from "~/components/species-flag-pills.tsx";
-import { Hint } from "~/components/ui/hint.tsx";
 import { InfoTip } from "~/components/ui/info-tip.tsx";
 import { ShellBar, ShellText } from "~/components/ui/shell.tsx";
 import {
@@ -111,8 +111,8 @@ function PendingNotes() {
 			{PENDING_NOTES.map((lines, index) => (
 				// biome-ignore lint/suspicious/noArrayIndexKey: static decoration
 				<li key={index} className={NOTE_CLASS}>
-					<ShellBar className="size-5 shrink-0 rounded-full" />
-					<span className="min-w-0 flex-1 pt-px">
+					<ShellBar className={`${GLYPH_CHIP_SIZE} shrink-0 rounded-full`} />
+					<span className="min-w-0 flex-1">
 						{lines.map((width, line) => (
 							<ShellText
 								// biome-ignore lint/suspicious/noArrayIndexKey: static decoration
@@ -132,7 +132,7 @@ function PendingNotes() {
     same thresholds the rules use. */
 function HighlightsInfo({ guide }: { guide: HighlightGuideEntry[] }) {
 	return (
-		<InfoTip label="Highlights">
+		<InfoTip label="Highlights" size="default">
 			<ul className="space-y-1">
 				{guide.map((entry) => (
 					<li key={entry.name}>
@@ -272,7 +272,7 @@ function ActivityNote({
 /** One highlight: its glyph, then the sentence, hairlines between notes. */
 /** A note's row, shared with the pending shell so the two are one shape. */
 const NOTE_CLASS =
-	"flex items-start gap-2.5 border-[var(--line)] border-t py-2.5 text-[13px] leading-normal first:border-t-0 first:pt-1.5 last:pb-0 max-[400px]:gap-2";
+	"flex items-center gap-2.5 border-[var(--line)] border-t py-2.5 text-[13px] leading-normal first:border-t-0 first:pt-1.5 last:pb-0 max-[400px]:gap-2";
 
 function Note({
 	icon: Icon,
@@ -289,34 +289,25 @@ function Note({
 	tip?: HighlightGuideEntry;
 	children: ReactNode;
 }) {
-	const glyphClass =
-		"grid size-5 shrink-0 place-items-center rounded-full bg-[var(--icon-well)] text-muted-foreground";
 	return (
 		<li className={NOTE_CLASS}>
 			{tip ? (
-				<Hint
-					className="max-w-80 leading-relaxed"
-					content={
+				<GlyphChip
+					icon={Icon}
+					style={badge}
+					interactive
+					label={`About ${tip.name}`}
+					tooltipClassName="max-w-80 leading-relaxed"
+					tooltip={
 						<>
 							<strong>{tip.name}:</strong> {tip.meaning}
 						</>
 					}
-				>
-					<button
-						type="button"
-						aria-label={`About ${tip.name}`}
-						className={`${glyphClass} cursor-help`}
-						style={badge}
-					>
-						<Icon className="size-3" aria-hidden="true" />
-					</button>
-				</Hint>
+				/>
 			) : (
-				<span className={glyphClass} style={badge} aria-hidden="true">
-					<Icon className="size-3" />
-				</span>
+				<GlyphChip icon={Icon} style={badge} />
 			)}
-			<span className="min-w-0 pt-px">{children}</span>
+			<span className="min-w-0">{children}</span>
 		</li>
 	);
 }
@@ -352,14 +343,15 @@ function BirdNames({
 	);
 }
 
-/** A named bird, linked to its species page in the sentence's own colour --
- * underlined only on hover, like species links elsewhere. */
+/** A named bird, linked to its species page the way Recent activity links its
+ * birds: moss at medium weight, underlined only on hover, so a line of four
+ * names reads as links without turning into a row of rules. */
 function BirdName({ bird }: { bird: HighlightBird }) {
 	return (
 		<Link
 			to="/birds/$comName"
 			params={{ comName: comNameToSlug(bird.comName) }}
-			className="text-[inherit]! no-underline hover:underline"
+			className="font-medium no-underline hover:underline"
 		>
 			{bird.comName}
 		</Link>

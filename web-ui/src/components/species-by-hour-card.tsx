@@ -228,8 +228,9 @@ function HourTick({ hour }: { hour: number }) {
 }
 
 /**
- * One species: bird, name, its flags and its detection count for the window,
- * then its hours beside it. The flags sit at the far right, hugging the count.
+ * One species: bird, name and its flags, then its detection count for the
+ * window, then its hours beside it. The flags follow the name, so they read
+ * as belonging to the bird rather than to the count.
  */
 function SpeciesHourRowView({
 	row,
@@ -240,11 +241,9 @@ function SpeciesHourRowView({
 }) {
 	return (
 		<div className={`${ROW_LAYOUT} border-[var(--line)] border-t`}>
-			<Link
-				to="/birds/$comName"
-				params={{ comName: comNameToSlug(row.comName) }}
-				className={`group h-8 no-underline ${LABEL_LAYOUT}`}
-			>
+			{/* Only the name links, as on the grid's tiles: a row-wide link swallowed
+			    every tap, so on a phone the flags' tooltips could never open. */}
+			<div className={`h-8 ${LABEL_LAYOUT}`}>
 				<div className="flex min-w-0 items-center gap-2">
 					<div className={BIRD_BOX_CLASS}>
 						<SpeciesImage
@@ -254,15 +253,16 @@ function SpeciesHourRowView({
 							loading="lazy"
 						/>
 					</div>
-					<div className="min-w-0 truncate font-semibold text-sm group-hover:underline">
+					<Link
+						to="/birds/$comName"
+						params={{ comName: comNameToSlug(row.comName) }}
+						className="min-w-0 truncate font-semibold text-sm no-underline hover:underline"
+					>
 						{row.comName}
-					</div>
-				</div>
-
-				{/* The flags pressed up against the count, which ends every row at the
-				    same edge, so the digits still stack in a straight line. */}
-				<div className="flex items-center justify-end gap-3">
-					<div className="flex items-center gap-2">
+					</Link>
+					{/* The name gives way before the flags: they keep their size and
+					    the name truncates beside them. */}
+					<div className="flex shrink-0 items-center gap-2">
 						<SpeciesFlagPills
 							isNew={row.isNew}
 							isReturned={row.isReturned}
@@ -274,11 +274,14 @@ function SpeciesHourRowView({
 							firstHeard={row.firstHeard}
 						/>
 					</div>
-					<span className="count-figure text-right">
-						{row.totalDetections.toLocaleString()}
-					</span>
 				</div>
-			</Link>
+
+				{/* Every row's count ends at the same edge, so the digits stack in a
+				    straight line down the list. */}
+				<span className="count-figure text-right">
+					{row.totalDetections.toLocaleString()}
+				</span>
+			</div>
 
 			<div className={HOURS_LAYOUT}>
 				<HeatRow row={row} heatMax={heatMax} />

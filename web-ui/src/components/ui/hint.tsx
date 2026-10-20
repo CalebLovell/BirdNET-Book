@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { type ReactNode, useRef, useState } from "react";
 
 import {
 	Tooltip,
@@ -14,6 +14,10 @@ import {
  * With no content it renders the child untouched, so callers can pass an
  * optional explanation straight through. The child must accept a ref (a DOM
  * element or a forwarding component), since it becomes the trigger.
+ *
+ * A tap opens it too. Radix leaves tooltips to hover and focus, which a phone
+ * has neither of, so a touch on the trigger is caught here and toggles the
+ * tooltip itself; a tap anywhere else closes it.
  */
 export function Hint({
 	content,
@@ -24,12 +28,30 @@ export function Hint({
 	children: ReactNode;
 	className?: string;
 }) {
+	const [open, setOpen] = useState(false);
+	const touched = useRef(false);
+
 	if (content == null || content === "") return children;
 
 	return (
 		<TooltipProvider>
-			<Tooltip>
-				<TooltipTrigger asChild>{children}</TooltipTrigger>
+			<Tooltip open={open} onOpenChange={setOpen}>
+				<TooltipTrigger
+					asChild
+					// Default prevented so Radix's own handlers, which close the
+					// tooltip on press and click, stand aside for a touch.
+					onPointerDown={(event) => {
+						touched.current = event.pointerType === "touch";
+						if (touched.current) event.preventDefault();
+					}}
+					onClick={(event) => {
+						if (!touched.current) return;
+						event.preventDefault();
+						setOpen((wasOpen) => !wasOpen);
+					}}
+				>
+					{children}
+				</TooltipTrigger>
 				<TooltipContent className={className}>{content}</TooltipContent>
 			</Tooltip>
 		</TooltipProvider>

@@ -11,9 +11,14 @@ import { Hint } from "~/components/ui/hint.tsx";
  */
 export function InfoTip({
 	label,
+	size = "sm",
 	children,
 }: {
 	label: string;
+	/** `default` is a 16px glyph on a 28px target for a card's header, pulled
+	    out so the glyph sits 12px from the card's edge; `sm` is the
+	    bare glyph that sits inside a field's label. */
+	size?: "sm" | "default";
 	children: ReactNode;
 }) {
 	return (
@@ -21,10 +26,14 @@ export function InfoTip({
 			<button
 				type="button"
 				aria-label={`About ${label}`}
-				className="inline-flex items-center text-muted-foreground transition-colors hover:text-[var(--moss)]"
+				className={
+					size === "default"
+						? "-me-2.5 inline-flex size-7 shrink-0 items-center justify-center text-muted-foreground transition-colors hover:text-[var(--moss)]"
+						: "inline-flex items-center text-muted-foreground transition-colors hover:text-[var(--moss)]"
+				}
 				onClick={(event) => event.preventDefault()}
 			>
-				<Info className="size-3.5" />
+				<Info className={size === "default" ? "size-4" : "size-3.5"} />
 			</button>
 		</Hint>
 	);
