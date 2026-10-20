@@ -13,3 +13,6 @@ __unconfig*
 todos.json
 /test-results
 /playwright-report
+
+# The dev server's own station password (vite.config.ts)
+.dev/

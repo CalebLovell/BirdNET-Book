@@ -1,11 +1,12 @@
 import { useRouter } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { AlertTriangle, KeyRound } from "lucide-react";
+import { AlertTriangle, FlaskConical, KeyRound } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { CardHeader } from "~/components/card-header.tsx";
 import { Button } from "~/components/ui/button.tsx";
 import { Input } from "~/components/ui/input.tsx";
 import { unlockFn } from "~/lib/auth.ts";
+import { DEV_PASSWORD } from "~/lib/dev-password.ts";
 import { SITE_NAME } from "~/lib/page-title.ts";
 import { messageForThrown, UNLOCK_MESSAGES } from "~/lib/unlock-messages.ts";
 import { forgetUnlockStatus } from "~/lib/unlock-status.ts";
@@ -38,10 +39,14 @@ export function UnlockGate({
 
 	async function onSubmit(event: React.FormEvent) {
 		event.preventDefault();
+		await signIn(password);
+	}
+
+	async function signIn(attempt: string) {
 		setPending(true);
 		setError(undefined);
 		try {
-			const result = await unlock({ data: { password } });
+			const result = await unlock({ data: { password: attempt } });
 			if (result.ok) {
 				setPassword("");
 				forgetUnlockStatus();
@@ -146,6 +151,21 @@ export function UnlockGate({
 				>
 					{pending ? "Unlocking…" : "Unlock"}
 				</Button>
+				{/* Dev server only: signs in with the password it gave its own
+				    station, through the same request the form makes. Dropped from
+				    the production build. */}
+				{import.meta.env.DEV ? (
+					<Button
+						type="button"
+						size="sm"
+						variant="outline"
+						icon={FlaskConical}
+						disabled={pending}
+						onClick={() => void signIn(DEV_PASSWORD)}
+					>
+						Dev sign-in
+					</Button>
+				) : null}
 				<p
 					aria-live="polite"
 					role="alert"

@@ -1,10 +1,45 @@
+import { execFileSync } from "node:child_process";
+import { existsSync, mkdirSync } from "node:fs";
+import path from "node:path";
 import tailwindcss from "@tailwindcss/vite";
-
 import { tanstackStart } from "@tanstack/react-start/plugin/vite";
-
 import viteReact from "@vitejs/plugin-react";
 import { nitro } from "nitro/vite";
-import { defineConfig } from "vite";
+import { defineConfig, type Plugin } from "vite";
+
+import { DEV_PASSWORD } from "./src/lib/dev-password.ts";
+
+/**
+ * Gives `npm run dev` a station password of its own: a file inside the
+ * project (`.dev/`, gitignored), holding `DEV_PASSWORD`, created on start if
+ * it's missing -- so delete it to test the "no password yet" screen, and
+ * restart to get it back. `apply: "serve"` keeps this out of the production
+ * build entirely; a real station still has no default password.
+ */
+function devStationPassword(): Plugin {
+	return {
+		name: "birdnet-dev-station-password",
+		apply: "serve",
+		config() {
+			const file = path.resolve(".dev/auth.conf");
+			process.env.BIRDNET_AUTH_CONF ??= file;
+			if (process.env.BIRDNET_AUTH_CONF !== file || existsSync(file)) return;
+			mkdirSync(path.dirname(file), { recursive: true });
+			// The same tool the Pi sets its password with, rather than importing
+			// the app's auth code here: Vite loads this file before the app's
+			// import aliases exist.
+			execFileSync(
+				process.execPath,
+				["--import", "tsx", "src/lib/set-password-cli.ts"],
+				{
+					input: DEV_PASSWORD,
+					env: process.env,
+					stdio: ["pipe", "ignore", "inherit"],
+				},
+			);
+		},
+	};
+}
 
 const config = defineConfig({
 	// PORT lets a harness hand the dev server a free port when 3000 is taken;
@@ -13,6 +48,7 @@ const config = defineConfig({
 	server: { port: Number(process.env.PORT) || 3000 },
 	resolve: { tsconfigPaths: true },
 	plugins: [
+		devStationPassword(),
 		nitro({ rollupConfig: { external: [/^@sentry\//] } }),
 		tailwindcss(),
 		tanstackStart({
