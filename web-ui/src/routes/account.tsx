@@ -42,7 +42,7 @@ function Account() {
 			<PageHeaderCard
 				icon={UserRound}
 				title="Account"
-				description="The station password opens Review, Species Control and Settings. Everything else stays public."
+				description="Sign in to manage your station, and sign out when you're done."
 			/>
 			{auth.unlocked ? (
 				<SessionCard />
