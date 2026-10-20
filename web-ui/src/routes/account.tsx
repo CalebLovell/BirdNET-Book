@@ -37,16 +37,12 @@ function Account() {
 
 	return (
 		<div className="page-wrap space-y-(--page-gap) py-4">
-			{/* The masthead says where this browser stands; the form or the
-			    session controls are their own card beneath it. */}
+			{/* The masthead stays the same whatever the state; where this
+			    browser stands is the card's job beneath it. */}
 			<PageHeaderCard
 				icon={UserRound}
 				title="Account"
-				description={
-					auth.unlocked
-						? "Signed in. This browser can open Review, Control and Settings until you lock it."
-						: "Sign in with the station password to review detections, control species and change settings. Everything else stays public."
-				}
+				description="The station password opens Review, Species Control and Settings. Everything else stays public."
 			/>
 			{auth.unlocked ? (
 				<SessionCard />

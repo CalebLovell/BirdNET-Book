@@ -59,6 +59,10 @@ export function SessionCard() {
 				className="feature-card flex flex-col gap-(--page-gap) rounded-md p-(--page-gap)"
 			>
 				<CardHeader as="h2" titleId="account-session" title="This browser" />
+				<p className="text-muted-foreground text-sm">
+					Signed in. This browser can open Review, Species Control and Settings
+					until you lock it.
+				</p>
 				{/* A failure arrives as a toast, so the row holds only the two
 				    buttons, set to the right like the settings cards' Save. */}
 				<div className="flex flex-wrap items-center justify-end gap-2">
