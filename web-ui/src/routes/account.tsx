@@ -42,7 +42,7 @@ function Account() {
 			<PageHeaderCard
 				icon={UserRound}
 				title="Account"
-				description="Your key to managing the station."
+				description="Manage access to your station."
 			/>
 			{auth.unlocked ? (
 				<SessionCard />
