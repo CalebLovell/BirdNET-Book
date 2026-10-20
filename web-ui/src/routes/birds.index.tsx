@@ -20,7 +20,7 @@ import { useDebouncedCallback } from "use-debounce";
 import { z } from "zod";
 import { CardHeader } from "~/components/card-header.tsx";
 import { Deferred } from "~/components/deferred.tsx";
-import { EmptyNote, EmptyState } from "~/components/empty-state.tsx";
+import { EmptyNote } from "~/components/empty-state.tsx";
 import { PageHeaderCard } from "~/components/page-header-card.tsx";
 import { SpeciesActions } from "~/components/species-actions.tsx";
 import { SpeciesImage } from "~/components/species-image.tsx";
@@ -36,6 +36,7 @@ import {
 import { ToggleGroup, ToggleGroupItem } from "~/components/ui/toggle-group.tsx";
 import { formatDateTime } from "~/lib/date-format.ts";
 import { getLifeListCards, type LifeListCard } from "~/lib/detections.ts";
+import { EMPTY } from "~/lib/empty-messages.ts";
 import { pageTitle } from "~/lib/page-title.ts";
 import { comNameToSlug } from "~/lib/species-slug.ts";
 import { useSettled } from "~/lib/use-settled.ts";
@@ -97,9 +98,6 @@ const FOOTER_CLASS =
 
 function Species() {
 	const { cards } = Route.useLoaderData();
-	// Only to learn whether the station is empty, which takes the controls away.
-	const settled = useSettled(cards);
-	const stationEmpty = settled !== null && settled.value.length === 0;
 
 	return (
 		<div className="page-wrap flex min-h-full flex-col gap-(--page-gap) py-4">
@@ -110,9 +108,9 @@ function Species() {
 			/>
 
 			{/* Drawn at once: what you search and how you sort live in the URL,
-			    not the life list. Gated only on the station being known empty --
-			    a search that matches nothing keeps the box you need to clear it. */}
-			{stationEmpty ? null : <SpeciesControls />}
+			    not the life list. Kept on an empty station too, so the page holds
+			    the shape its loading state promised. */}
+			<SpeciesControls />
 
 			<Deferred promise={cards} shell={<SpeciesGridShell />}>
 				{(loaded) => <SpeciesBrowser cards={loaded} />}
@@ -128,16 +126,12 @@ function Species() {
 function LifeListSummary({ cards }: { cards: Promise<LifeListCard[]> }) {
 	const settled = useSettled(cards);
 	const loaded = settled?.value ?? null;
-	// An empty station has nothing to tally, so it keeps the plain line rather
-	// than reading as a pair of zeros.
-	if (loaded?.length === 0)
-		return "Every species ever recorded at this station.";
 	const detections = loaded?.reduce((sum, card) => sum + card.allTimeCount, 0);
 	return (
 		<>
 			This station has recorded{" "}
 			{detections === undefined ? (
-				<ShellFigure placeholder="000,000" />
+				<ShellFigure />
 			) : (
 				<span className="count-figure">{detections.toLocaleString()}</span>
 			)}{" "}
@@ -145,7 +139,7 @@ function LifeListSummary({ cards }: { cards: Promise<LifeListCard[]> }) {
 			{loaded ? (
 				<span className="count-figure">{loaded.length.toLocaleString()}</span>
 			) : (
-				<ShellFigure placeholder="00" />
+				<ShellFigure />
 			)}{" "}
 			species.
 		</>
@@ -343,22 +337,17 @@ function SpeciesBrowser({ cards }: { cards: LifeListCard[] }) {
 	return (
 		<div className="flex flex-1 flex-col gap-(--page-gap)">
 			{pageItems.length === 0 ? (
-				cards.length === 0 ? (
-					// Nothing has ever been recorded: the page itself is empty, so it
-					// carries the card rather than a line inside one.
-					<EmptyState title="Species recorded">
-						No species recorded yet. Every species the station hears will be
-						listed here.
-					</EmptyState>
-				) : (
-					<section
-						aria-label="Species recorded"
-						className="feature-card rounded-md p-4"
-					>
-						<CardHeader title="Species recorded" />
-						<EmptyNote>No species match &ldquo;{search}&rdquo;.</EmptyNote>
-					</section>
-				)
+				<section
+					aria-label="Species recorded"
+					className="feature-card rounded-md p-4"
+				>
+					<CardHeader title="Species recorded" />
+					<EmptyNote>
+						{cards.length === 0
+							? EMPTY.station.species
+							: EMPTY.filter.birdsSearch(search)}
+					</EmptyNote>
+				</section>
 			) : (
 				<div className={GRID_CLASS}>
 					{pageItems.map((card) => (

@@ -23,10 +23,11 @@ export function ShellBar({ className }: { className?: string }) {
  * A figure set in running text that hasn't arrived yet: a small rectangle in
  * its place, as wide as `placeholder` would set and a little under the line's
  * height, so the sentence around it reads in full from the first frame and
- * the line keeps its height.
+ * the line keeps its height. One digit wide by default: the real figure grows
+ * out of it when it's longer, rather than a wide guess shrinking to a lone 0.
  */
 export function ShellFigure({
-	placeholder = "00,000",
+	placeholder = "0",
 	className,
 }: {
 	/** Only its length is used: one character width per character. */

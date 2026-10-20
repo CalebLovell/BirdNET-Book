@@ -7,13 +7,14 @@ import { useServerFn } from "@tanstack/react-start";
 import type { RowSelectionState } from "@tanstack/react-table";
 import { AudioWaveform } from "lucide-react";
 import { useState } from "react";
-import { Deferred } from "~/components/deferred.tsx";
+import { CardHeader } from "~/components/card-header.tsx";
+import { Deferred, SHELL_DELAY_MS } from "~/components/deferred.tsx";
 import { DeleteDetectionsDialog } from "~/components/detections/delete-detections-dialog.tsx";
 import {
 	DetectionsFilters,
 	DetectionsTable,
 } from "~/components/detections/detections-table.tsx";
-import { EmptyNote, EmptyState } from "~/components/empty-state.tsx";
+import { EmptyNote } from "~/components/empty-state.tsx";
 import { PageHeaderCard } from "~/components/page-header-card.tsx";
 import { destructiveToast, toast } from "~/components/ui/toaster.tsx";
 import {
@@ -22,6 +23,7 @@ import {
 	normalizeDetectionWorkspaceSearch,
 } from "~/lib/detection-workspace.ts";
 import { deleteDetections, getDetectionsPage } from "~/lib/detections.ts";
+import { EMPTY } from "~/lib/empty-messages.ts";
 import { pageTitle } from "~/lib/page-title.ts";
 import { useSettled } from "~/lib/use-settled.ts";
 
@@ -62,10 +64,6 @@ function Detections() {
 		.map(([rowId]) => Number(rowId));
 	const selectedCount = selectedRowIds.length;
 	const isFiltered = hasActiveFilters(search);
-	// Only a station that has never recorded anything drops its filters. An empty
-	// filter result keeps them, or there would be no way to clear the filter that
-	// emptied it. Unknown until the rows arrive, so the filters show meanwhile.
-	const stationEmpty = page !== null && page.total === 0 && !isFiltered;
 
 	async function confirmDeletion() {
 		setIsDeleting(true);
@@ -113,81 +111,74 @@ function Detections() {
 					description="Browse, filter, and manage every individual detection."
 				/>
 
-				{!stationEmpty && (
-					<DetectionsFilters
-						search={search}
-						onSearchChange={(nextSearch) => {
-							setRowSelection({});
-							navigate({ search: nextSearch, replace: true });
-						}}
-					/>
-				)}
+				<DetectionsFilters
+					search={search}
+					onSearchChange={(nextSearch) => {
+						setRowSelection({});
+						navigate({ search: nextSearch, replace: true });
+					}}
+				/>
 			</div>
 
-			{/* A station that has never recorded anything replaces the table card
-			    outright rather than sitting a card inside it -- there is no table
-			    to head, and the filters above are gone too, so the shell would be
-			    an empty frame around one message. A filter that matched nothing
-			    keeps the card: the control that emptied it is right there. */}
-			{stationEmpty ? (
-				<EmptyState title="Detections">
-					No detections recorded yet. They will appear here once the station
-					hears something.
-				</EmptyState>
-			) : (
-				// Keyed on the search, so a new filter, sort or page drops the table
-				// to its shell at once rather than holding the old rows.
-				<Deferred
-					key={JSON.stringify(search)}
-					promise={pagePromise}
-					className="flex min-h-0 flex-1 flex-col"
-					shell={
-						<DetectionsTableShell
-							search={search}
-							canDelete={canDelete}
-							onSearchChange={(nextSearch) =>
-								navigate({ search: nextSearch, replace: true })
-							}
-						/>
-					}
-				>
-					{(loaded) => {
-						const isEmpty = loaded.total === 0;
-						return (
-							/* Takes the leftover height when there are rows to scroll. An
-							   empty filter result has nothing to scroll, so it keeps its
-							   natural size rather than stretching a one-line message down
-							   the whole page. `overflow-hidden` clips the table's header
-							   band, which runs out to the card's top-left edge, to the
-							   card's rounded corner -- square, it painted over the
-							   border's curve there. */
-							<section
-								aria-label="Detections"
-								className={`${TABLE_CARD_CLASS} ${isEmpty ? "shrink-0 pt-0" : "flex-1 pr-(--card-edge) pb-0"}`}
-							>
-								{/* No header strip: the "All detections" kicker is gone and
-								    Delete moved up into the filter row, so the table starts
-								    at the top of the card and takes its full height. */}
-								{isEmpty ? (
-									<EmptyNote>No detections match these filters.</EmptyNote>
-								) : (
-									<DetectionsTable
-										page={loaded}
-										search={search}
-										onSearchChange={(nextSearch) =>
-											navigate({ search: nextSearch, replace: true })
-										}
-										rowSelection={rowSelection}
-										onRowSelectionChange={setRowSelection}
-										canDelete={canDelete}
-										onDeleteSelected={() => setDeleteOpen(true)}
-									/>
-								)}
-							</section>
-						);
-					}}
-				</Deferred>
-			)}
+			{/* A new search, filter, sort or page keeps the current card up for a
+			    moment: most answers land inside it and swap straight in, rather
+			    than flashing the table's shell between two results on every
+			    keystroke. A slow one still drops to the shell. */}
+			<Deferred
+				promise={pagePromise}
+				shellAfterMs={SHELL_DELAY_MS}
+				className="flex min-h-0 flex-1 flex-col"
+				shell={
+					<DetectionsTableShell
+						search={search}
+						canDelete={canDelete}
+						onSearchChange={(nextSearch) =>
+							navigate({ search: nextSearch, replace: true })
+						}
+					/>
+				}
+			>
+				{(loaded) =>
+					loaded.total === 0 ? (
+						// Nothing to list: a plain titled card with one line, sized to
+						// its content rather than holding a table's header and pager.
+						<section
+							aria-label="Detections"
+							className="feature-card shrink-0 rounded-md p-4"
+						>
+							<CardHeader title="Detections" />
+							{/* Unfiltered and still empty: the station has never recorded
+							    anything. Otherwise the filters emptied it. */}
+							<EmptyNote>
+								{isFiltered
+									? EMPTY.filter.detectionsFilters
+									: EMPTY.station.detections}
+							</EmptyNote>
+						</section>
+					) : (
+						/* Takes the leftover height, so only the rows scroll.
+						   `overflow-hidden` clips the table's header band, which runs
+						   out to the card's top-left edge, to the card's rounded corner
+						   -- square, it painted over the border's curve there. */
+						<section
+							aria-label="Detections"
+							className={`${TABLE_CARD_CLASS} flex-1 pr-(--card-edge) pb-0`}
+						>
+							<DetectionsTable
+								page={loaded}
+								search={search}
+								onSearchChange={(nextSearch) =>
+									navigate({ search: nextSearch, replace: true })
+								}
+								rowSelection={rowSelection}
+								onRowSelectionChange={setRowSelection}
+								canDelete={canDelete}
+								onDeleteSelected={() => setDeleteOpen(true)}
+							/>
+						</section>
+					)
+				}
+			</Deferred>
 
 			{deleteOpen ? (
 				<DeleteDetectionsDialog

@@ -223,6 +223,15 @@ code {
 .page-wrap {
   width: 100%;
   padding-inline: var(--page-gap);
+  /* The scroll pane always reserves its scrollbar's gutter (see `__root`), and
+     that band already reads as space at the right edge -- so the padding only
+     tops it up to the page gap, keeping at least spacing 1 so the content
+     never touches the scrollbar. Where scrollbars float over the content
+     (--scrollbar-w is 0) this is the full page gap, as on the left. */
+  padding-right: max(
+    calc(var(--spacing) * 1),
+    calc(var(--page-gap) - var(--scrollbar-w, 0px))
+  );
 }
 
 /* Top and bottom come from each page's own `py-4` (or `pb-4`) utility, and a

@@ -44,6 +44,9 @@ export type ReviewPage = {
 	total: number;
 	/** How many distinct species those recordings span. */
 	speciesTotal: number;
+	/** Whether the station has recorded anything at all, so an empty queue can
+	    say which of the two it is: nothing recorded, or nothing to review. */
+	hasAnyDetections: boolean;
 	candidates: ReviewCandidate[];
 };
 
@@ -161,6 +164,9 @@ export function loadReviewPage(
 		rareSpeciesMax,
 		total,
 		speciesTotal: Number(totals?.species ?? 0),
+		hasAnyDetections:
+			total > 0 ||
+			database.prepare("SELECT 1 FROM detections LIMIT 1").get() !== undefined,
 		candidates: rows.map((row) => {
 			const clip = {
 				date: row.date,

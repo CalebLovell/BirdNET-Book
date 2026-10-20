@@ -19,6 +19,7 @@ import {
 	saveHighlightSettingsFn,
 	savePrivacySettingsFn,
 	saveRecordingSettingsFn,
+	saveReviewSettingsFn,
 	saveStationSettingsFn,
 	saveStorageSettingsFn,
 	saveUpdateSettingsFn,
@@ -74,6 +75,7 @@ function SettingsRoute() {
 	const saveAudio = useServerFn(saveAudioSettingsFn);
 	const saveRecording = useServerFn(saveRecordingSettingsFn);
 	const saveStorage = useServerFn(saveStorageSettingsFn);
+	const saveReview = useServerFn(saveReviewSettingsFn);
 	const saveHighlights = useServerFn(saveHighlightSettingsFn);
 	const saveUpdates = useServerFn(saveUpdateSettingsFn);
 	const checkForUpdates = useServerFn(checkForUpdatesFn);
@@ -119,6 +121,7 @@ function SettingsRoute() {
 				audio: (values) => saveAudio({ data: values }),
 				recording: (values) => saveRecording({ data: values }),
 				storage: (values) => saveStorage({ data: values }),
+				review: (values) => saveReview({ data: values }),
 				highlights: (values) => saveHighlights({ data: values }),
 				updates: (values) => saveUpdates({ data: values }),
 			}}

@@ -62,6 +62,7 @@ export function SettingsPage({
 		data.audio,
 		data.recording,
 		data.storage,
+		data.review,
 		data.highlights,
 		data.updates,
 	]);

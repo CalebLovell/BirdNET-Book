@@ -6,17 +6,16 @@ import {
 import { Lightbulb } from "lucide-react";
 import { useEffect, useState } from "react";
 import { z } from "zod";
-import { CardHeader } from "~/components/card-header.tsx";
-import { EmptyNote, EmptyState } from "~/components/empty-state.tsx";
 import {
 	LearnGame,
+	LearnGameEmpty,
 	LearnGameSkeleton,
 } from "~/components/learn/learn-game.tsx";
 import { LearnPoolSelector } from "~/components/learn/learn-layout.tsx";
 import { PageHeaderCard } from "~/components/page-header-card.tsx";
+import { EMPTY } from "~/lib/empty-messages.ts";
 import { getLearnRound } from "~/lib/learn.ts";
 import { LEARN_POOLS, type LearnPool } from "~/lib/learn-pools.ts";
-import { CHOICES_PER_QUESTION } from "~/lib/learn-round.ts";
 import { pageTitle } from "~/lib/page-title.ts";
 import { useHeldRound } from "~/lib/use-held-round.ts";
 
@@ -68,8 +67,6 @@ function Learn() {
 		};
 	}, [roundPromise, pool]);
 	const forPool = loaded?.pool === pool ? loaded : null;
-	// Only a station known to have recorded nothing drops the switcher.
-	const hasAnyDetections = loaded?.data.hasAnyDetections ?? true;
 
 	return (
 		<div className="page-wrap py-4">
@@ -79,20 +76,17 @@ function Learn() {
 				description="Ear training on the recordings your own station captured."
 			/>
 
-			{/* Gated on the station, not the pool: an empty pool still needs the
-			    switcher to reach a fuller one, which is exactly what the empty card
-			    advises. */}
-			{hasAnyDetections && (
-				<LearnPoolSelector
-					pool={pool}
-					onPoolChange={(value) => {
-						navigate({
-							search: (previous) => ({ ...previous, pool: value }),
-							replace: true,
-						});
-					}}
-				/>
-			)}
+			{/* Always drawn, an empty station included: the pool comes from the
+			    URL, and the page keeps the shape its loading state promised. */}
+			<LearnPoolSelector
+				pool={pool}
+				onPoolChange={(value) => {
+					navigate({
+						search: (previous) => ({ ...previous, pool: value }),
+						replace: true,
+					});
+				}}
+			/>
 
 			<div className="mt-(--page-gap) w-full">
 				{forPool ? (
@@ -127,10 +121,7 @@ function LearnRoundView({
 	const { round, requestNextRound } = useHeldRound(loaded.round, pool);
 
 	return round.questions.length === 0 ? (
-		<EmptyPool
-			speciesInPool={round.speciesInPool}
-			hasAnyDetections={loaded.hasAnyDetections}
-		/>
+		<EmptyPool hasAnyDetections={loaded.hasAnyDetections} />
 	) : (
 		<LearnGame
 			key={round.id}
@@ -144,34 +135,14 @@ function LearnRoundView({
 	);
 }
 
-function EmptyPool({
-	speciesInPool,
-	hasAnyDetections,
-}: {
-	speciesInPool: number;
-	hasAnyDetections: boolean;
-}) {
-	// Pointing at a wider selection is only useful advice when a wider selection
-	// could hold something. With nothing recorded anywhere, it would just send
-	// someone around a loop of empty pools.
-	if (!hasAnyDetections) {
-		return (
-			<EmptyState title="Nothing to play yet">
-				No detections recorded yet. A round needs recordings to play, so this
-				page waits until the station has heard something.
-			</EmptyState>
-		);
-	}
-
+function EmptyPool({ hasAnyDetections }: { hasAnyDetections: boolean }) {
+	// Nothing recorded anywhere is a different gap from a selection too narrow
+	// to fill a round, so each names its own missing thing.
 	return (
-		<section className="feature-card rounded-md p-4">
-			<CardHeader title="Not enough to go on" />
-			<EmptyNote>
-				A round needs {CHOICES_PER_QUESTION} species with clear recordings still
-				on disk, and this selection has{" "}
-				{speciesInPool === 0 ? "none" : speciesInPool}. Try another selection —
-				All always has the most to work with.
-			</EmptyNote>
-		</section>
+		<LearnGameEmpty
+			message={
+				hasAnyDetections ? EMPTY.filter.learnPool : EMPTY.station.recordings
+			}
+		/>
 	);
 }

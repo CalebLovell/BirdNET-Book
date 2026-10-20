@@ -198,6 +198,20 @@ export function SpeciesHeroCardShell({
 				</div>
 			}
 		>
+			<HeroTextShell actions={actions} />
+		</HeroCardShell>
+	);
+}
+
+/**
+ * The content column's shell on its own. A card that stands in for the bird
+ * (an empty station, say) can lay this down invisibly beneath its own text,
+ * so it holds the same height the shell and the bird do and nothing below it
+ * moves when the data lands.
+ */
+export function HeroTextShell({ actions }: { actions?: ReactNode }) {
+	return (
+		<>
 			<div className="flex flex-wrap items-start justify-between gap-3 max-[400px]:gap-2">
 				<div className="min-w-0 flex-1">
 					<ShellText
@@ -221,6 +235,6 @@ export function SpeciesHeroCardShell({
 					</ShellSized>
 				</div>
 			</div>
-		</HeroCardShell>
+		</>
 	);
 }

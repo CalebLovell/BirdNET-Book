@@ -9,11 +9,14 @@ import {
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useDebouncedCallback } from "use-debounce";
+import { CardHeader } from "~/components/card-header.tsx";
+import { EmptyNote } from "~/components/empty-state.tsx";
 import { PageHeaderCard } from "~/components/page-header-card.tsx";
 import { Button } from "~/components/ui/button.tsx";
 import { InfoTip } from "~/components/ui/info-tip.tsx";
 import { SearchInput } from "~/components/ui/search-input.tsx";
 import { destructiveToast, toast } from "~/components/ui/toaster.tsx";
+import { EMPTY } from "~/lib/empty-messages.ts";
 import {
 	type SpeciesControlPageData,
 	type SpeciesControlSaveInput,
@@ -479,54 +482,66 @@ export function SpeciesControlPage({
 				</div>
 			</div>
 
-			{/* The detections card: the table's header band, rows and footer run
-			    out to its edges and take its padding as their own inset, so the
-			    right padding is the narrower card edge and there is none at the
-			    bottom. With nothing to list, it keeps its natural size. */}
-			<section
-				aria-label="Installed species"
-				className={`${TABLE_CARD_CLASS} ${pagedRows.length ? "flex-1 pr-(--card-edge) pb-0" : "shrink-0"}`}
-			>
-				<SpeciesControlTable
-					rows={pagedRows}
-					page={safePage}
-					pageCount={pageCount}
-					selected={selected}
-					sort={search.sort}
-					direction={search.direction}
-					onSortChange={(sort) => {
-						setSelected(new Set());
-						onSearchChange(nextSpeciesControlSort(search, sort));
-					}}
-					onSelectedChange={setSelected}
-					onPageChange={(page) => {
-						setSelected(new Set());
-						onSearchChange({ ...search, page });
-					}}
-					// The tip explains the four status buttons, so it arrives with them:
-					// with nothing selected there is nothing for it to explain.
-					actions={
-						selected.size > 0 ? (
-							<>
-								<InfoTip label="Species statuses">
-									<p>
-										<strong>Automatic</strong> uses BirdNET's usual species
-										rules. <strong>Custom</strong> adds the species to your
-										custom list. <strong>Always detect</strong> skips its
-										species-frequency check, and <strong>Never detect</strong>{" "}
-										excludes it outright.
-									</p>
-								</InfoTip>
-								<SpeciesSelectionBar
-									count={selected.size}
-									onClear={() => setSelected(new Set())}
-									onStatus={proposeBulkStatus}
-								/>
-							</>
-						) : null
-					}
-				/>
-			</section>
+			{/* With nothing to list, the site's standard empty card: a titled
+			    header band and one line, rather than the table's frame around a
+			    bare sentence. */}
+			{pagedRows.length === 0 ? (
+				<section
+					aria-label="Installed species"
+					className="feature-card shrink-0 rounded-md p-4"
+				>
+					<CardHeader title="Installed species" />
+					<EmptyNote>{EMPTY.filter.speciesControlSearch}</EmptyNote>
+				</section>
+			) : (
+				/* The table card: its header band, rows and footer run out to its
+			   edges and take its padding as their own inset, so the right padding
+			   is the narrower card edge and there is none at the bottom. */
+				<section
+					aria-label="Installed species"
+					className={`${TABLE_CARD_CLASS} flex-1 pr-(--card-edge) pb-0`}
+				>
+					<SpeciesControlTable
+						rows={pagedRows}
+						page={safePage}
+						pageCount={pageCount}
+						selected={selected}
+						sort={search.sort}
+						direction={search.direction}
+						onSortChange={(sort) => {
+							setSelected(new Set());
+							onSearchChange(nextSpeciesControlSort(search, sort));
+						}}
+						onSelectedChange={setSelected}
+						onPageChange={(page) => {
+							setSelected(new Set());
+							onSearchChange({ ...search, page });
+						}}
+						// The tip explains the four status buttons, so it arrives with them:
+						// with nothing selected there is nothing for it to explain.
+						actions={
+							selected.size > 0 ? (
+								<>
+									<InfoTip label="Species statuses">
+										<p>
+											<strong>Automatic</strong> uses BirdNET's usual species
+											rules. <strong>Custom</strong> adds the species to your
+											custom list. <strong>Always detect</strong> skips its
+											species-frequency check, and <strong>Never detect</strong>{" "}
+											excludes it outright.
+										</p>
+									</InfoTip>
+									<SpeciesSelectionBar
+										count={selected.size}
+										onClear={() => setSelected(new Set())}
+										onStatus={proposeBulkStatus}
+									/>
+								</>
+							) : null
+						}
+					/>
+				</section>
+			)}
 
 			{unresolvedCount > 0 ? (
 				// Keeps its natural height but never more than it is owed: the page no

@@ -5,6 +5,7 @@ import {
 	MapPin,
 	Mic2,
 	RefreshCw,
+	SearchCheck,
 	ShieldCheck,
 	SlidersHorizontal,
 	Sparkles,
@@ -78,6 +79,12 @@ export const SETTINGS_INDEX: SettingsIndexEntry[] = [
 			"Maximum files per species",
 		],
 		keywords: ["disk", "purge"],
+	},
+	{
+		title: "Review",
+		icon: SearchCheck,
+		fields: ["Rare species threshold"],
+		keywords: ["queue", "confirm", "rare"],
 	},
 	{
 		title: "Highlights",

@@ -121,6 +121,21 @@ test("the queue pages in order, and a page past the end falls back", async () =>
 	database.close();
 });
 
+test("an empty queue says whether the station has recorded anything", async () => {
+	const database = bandedFixture();
+	const root = await mkdtemp(path.join(tmpdir(), "birdnet-review-empty-"));
+	// A threshold of 1 queues nothing: no species has fewer than one detection.
+	const nothingQueued = loadReviewPage(database, root, { page: 1 }, 1, 50);
+	assert.equal(nothingQueued.total, 0);
+	assert.equal(nothingQueued.hasAnyDetections, true);
+	database.exec("DELETE FROM detections");
+	assert.equal(
+		loadReviewPage(database, root, { page: 1 }, undefined, 50).hasAnyDetections,
+		false,
+	);
+	database.close();
+});
+
 test("configured rarity changes the queue at a strict boundary", async () => {
 	const database = bandedFixture();
 	const root = await mkdtemp(path.join(tmpdir(), "birdnet-review-configured-"));

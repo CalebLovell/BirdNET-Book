@@ -11,6 +11,7 @@ import {
 	RecentLogCardSkeleton,
 } from "~/components/now/recent-log-card.tsx";
 import { SpeciesHeroCardShell } from "~/components/species-hero-card.tsx";
+import { EMPTY } from "~/lib/empty-messages.ts";
 import {
 	getLiveHighlights,
 	type LiveHighlights,
@@ -24,7 +25,7 @@ import { usePolledData } from "~/lib/use-polled-data.ts";
 const POLL_INTERVAL_MS = 10_000;
 const STATUS_INTERVAL_MS = 30_000;
 const FLASH_DURATION_MS = 2_400;
-const HIGHLIGHTS_EMPTY = "No detections recorded in the last 24 hours.";
+const HIGHLIGHTS_EMPTY = EMPTY.window.last24Hours;
 
 export const Route = createFileRoute("/live")({
 	head: () => ({ meta: [{ title: pageTitle("Live") }] }),

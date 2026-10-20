@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { type ReactNode, useEffect, useState } from "react";
 
 import { useSettled } from "~/lib/use-settled.ts";
 import { cn } from "~/lib/utils.ts";
@@ -15,11 +15,19 @@ import { cn } from "~/lib/utils.ts";
  * No animation either way: the shell is there from the first frame, and the
  * content replaces it in place the moment it lands -- the same on every page.
  */
+/**
+ * How long a part holds its last content on a new promise before its shell
+ * shows (see `shellAfterMs`). Most answers land well inside it, so they swap
+ * straight in; one that doesn't still shows it is loading.
+ */
+export const SHELL_DELAY_MS = 300;
+
 export function Deferred<T>({
 	promise,
 	shell,
 	inline = false,
 	className,
+	shellAfterMs,
 	children,
 }: {
 	promise: Promise<T>;
@@ -29,10 +37,18 @@ export function Deferred<T>({
 	inline?: boolean;
 	/** For the shell's wrapper, when it has to take a layout slot (flex-1). */
 	className?: string;
+	/** On a new promise, keep the last content up for this long before giving
+	    way to the shell. A quick answer then swaps straight in, with no shell
+	    flashing up for a frame or two between them; a slow one still shows
+	    that something is loading. Without it the last content holds until the
+	    new answer lands. */
+	shellAfterMs?: number;
 	children: (value: T) => ReactNode;
 }) {
 	const settled = useSettled(promise);
-	if (!settled) {
+	const stale = settled !== null && !settled.current;
+	const waitedOut = useWaitedOut(promise, stale, shellAfterMs);
+	if (!settled || waitedOut) {
 		return (
 			<ShellReveal inline={inline} className={className}>
 				{shell}
@@ -40,6 +56,21 @@ export function Deferred<T>({
 		);
 	}
 	return children(settled.value);
+}
+
+/** True once `promise` has been pending, with stale content up, for `ms`. */
+function useWaitedOut(
+	promise: Promise<unknown>,
+	stale: boolean,
+	ms: number | undefined,
+): boolean {
+	const [expired, setExpired] = useState<Promise<unknown> | null>(null);
+	useEffect(() => {
+		if (!stale || ms === undefined) return;
+		const timeout = setTimeout(() => setExpired(promise), ms);
+		return () => clearTimeout(timeout);
+	}, [promise, stale, ms]);
+	return stale && expired === promise;
 }
 
 /**

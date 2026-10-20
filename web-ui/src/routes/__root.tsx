@@ -1,4 +1,9 @@
-import { createRootRoute, HeadContent, Scripts } from "@tanstack/react-router";
+import {
+	createRootRoute,
+	HeadContent,
+	ScriptOnce,
+	Scripts,
+} from "@tanstack/react-router";
 import { RouteError, RouteNotFound } from "~/components/root-status.tsx";
 import { MobileNav } from "~/components/sidebar/mobile-nav.tsx";
 import { SiteSidebar } from "~/components/sidebar/site-sidebar.tsx";
@@ -51,11 +56,32 @@ export const Route = createRootRoute({
 	shellComponent: RootDocument,
 });
 
+/**
+ * Measures the browser's scrollbar once, before the first paint, into
+ * `--scrollbar-w`: 15px or so for a classic desktop scrollbar, 0 where
+ * scrollbars float over the content (phones, most Macs). The page's right
+ * padding counts the reserved gutter toward its own spacing (see `.page-wrap`),
+ * and reading it this early means that padding is right on the first frame
+ * rather than settling after hydration. A <style> rather than an attribute on
+ * <html>, so hydration finds nothing it didn't render.
+ */
+const SCROLLBAR_PROBE = `(() => {
+	const probe = document.createElement("div");
+	probe.style.cssText = "position:absolute;visibility:hidden;width:100px;height:100px;overflow:scroll";
+	document.documentElement.appendChild(probe);
+	const width = probe.offsetWidth - probe.clientWidth;
+	probe.remove();
+	const style = document.createElement("style");
+	style.textContent = ":root{--scrollbar-w:" + width + "px}";
+	document.head.appendChild(style);
+})()`;
+
 function RootDocument({ children }: { children: React.ReactNode }) {
 	return (
 		<html lang="en">
 			<head>
 				<HeadContent />
+				<ScriptOnce>{SCROLLBAR_PROBE}</ScriptOnce>
 			</head>
 			<body>
 				{/* The shell is pinned to the viewport and never scrolls itself.
@@ -78,11 +104,15 @@ function RootDocument({ children }: { children: React.ReactNode }) {
 					<SiteSidebar />
 					<div className="flex min-h-0 min-w-0 flex-1 flex-col">
 						<MobileNav />
-						{/* No `scrollbar-gutter` here on purpose: reserving the gutter
-						    always would leave a dead band at the right edge on top of
-						    the page's own 1rem, so the content would sit further from
-						    the edge than it does from the sidebar. */}
-						<main id="app-scroll" className="min-h-0 flex-1 overflow-y-auto">
+						{/* The scrollbar's gutter is always reserved, so a page that
+						    grows past the viewport (a tall shell giving way to a short
+						    empty card, say) doesn't change the content's width and
+						    walk everything sideways. Right edge only: mirroring it on
+						    the left opens a gap between the sidebar and the page. */}
+						<main
+							id="app-scroll"
+							className="min-h-0 flex-1 overflow-y-auto [scrollbar-gutter:stable]"
+						>
 							{children}
 						</main>
 					</div>

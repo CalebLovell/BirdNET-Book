@@ -26,6 +26,7 @@ import { PageStepper } from "~/components/ui/page-stepper.tsx";
 import { ShellBar, ShellSized, ShellText } from "~/components/ui/shell.tsx";
 import { formatConfidence } from "~/lib/confidence.ts";
 import { formatDate, formatDateTime } from "~/lib/date-format.ts";
+import { EMPTY } from "~/lib/empty-messages.ts";
 import type { ReviewCandidate, ReviewPage } from "~/lib/review.server.ts";
 import { REVIEW_PAGE_SIZE, type SpeciesOption } from "~/lib/review-data.ts";
 
@@ -127,8 +128,10 @@ export function ReviewWorkflowSkeleton() {
 				>
 					<div className={QUEUE_HEADER_CLASS}>
 						<div className="island-kicker">In the queue</div>
+						{/* One digit wide, as the site's other loading figures: the real
+						    count grows out of it rather than a wide bar shrinking. */}
 						<ShellText
-							className="count-figure w-10"
+							className="count-figure w-[1ch]"
 							barClassName="right-0 left-auto w-full"
 						/>
 					</div>
@@ -179,6 +182,60 @@ export function ReviewWorkflowSkeleton() {
 							</ShellSized>
 						</span>
 					</div>
+				</section>
+			</div>
+		</div>
+	);
+}
+
+/**
+ * The workflow with nothing to show: the same two cards as the loaded page and
+ * its skeleton, each saying what's missing instead of a recording or a list.
+ */
+function ReviewWorkflowEmpty({
+	message,
+	total,
+	nextPage,
+}: {
+	message: string;
+	total: number;
+	/** Offered when this page is worked through but the queue runs on. */
+	nextPage?: () => void;
+}) {
+	return (
+		<div className="@container/review">
+			<div className={REVIEW_GRID_CLASS}>
+				{/* Both as the site's standard empty card -- header band, hairline,
+				    one line -- so the pair sits level at the same height. */}
+				<section
+					aria-label="Detection under review"
+					className="feature-card rounded-md p-4"
+				>
+					<CardHeader title="Under review" />
+					<EmptyNote>{message}</EmptyNote>
+				</section>
+
+				<section
+					aria-label="Review queue"
+					className="feature-card rounded-md p-4"
+				>
+					<CardHeader title="In the queue">
+						<span className="count-figure">{total}</span>
+					</CardHeader>
+					<EmptyNote>{message}</EmptyNote>
+					{nextPage ? (
+						<div className="mt-3">
+							<Button
+								variant="outline"
+								size="xs"
+								icon={ArrowRight}
+								iconPosition="end"
+								onClick={nextPage}
+							>
+								Next page
+							</Button>
+						</div>
+					) : null}
 				</section>
 			</div>
 		</div>
@@ -254,32 +311,25 @@ export function ReviewWorkflow({
 		setAction(null);
 		setIndex(0);
 	}
-	if (!row)
+	if (!row) {
+		// Three different gaps, each named for what's missing: nothing recorded
+		// at all, nothing that needs reviewing, or this page worked through
+		// with more waiting on the next.
+		const message = !page.hasAnyDetections
+			? EMPTY.station.detections
+			: page.page < pageCount
+				? EMPTY.done.reviewPage
+				: EMPTY.done.reviewQueue;
 		return (
-			<section
-				aria-label="Review queue"
-				className="feature-card rounded-md p-4"
-			>
-				<CardHeader title="Review queue">
-					{page.page < pageCount ? (
-						<Button
-							variant="outline"
-							size="xs"
-							icon={ArrowRight}
-							iconPosition="end"
-							onClick={() => onPageChange(page.page + 1)}
-						>
-							Next page
-						</Button>
-					) : null}
-				</CardHeader>
-				<EmptyNote>
-					{page.page < pageCount
-						? "All caught up. Nothing left on this page."
-						: "All caught up. No more recordings in the queue."}
-				</EmptyNote>
-			</section>
+			<ReviewWorkflowEmpty
+				message={message}
+				total={page.total}
+				nextPage={
+					page.page < pageCount ? () => onPageChange(page.page + 1) : undefined
+				}
+			/>
 		);
+	}
 	const position = rows.indexOf(row);
 	return (
 		<>

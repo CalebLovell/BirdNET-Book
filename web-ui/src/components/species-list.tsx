@@ -2,6 +2,7 @@ import { Link } from "@tanstack/react-router";
 import { CardHeader } from "~/components/card-header.tsx";
 import { EmptyNote } from "~/components/empty-state.tsx";
 import { LIST_ROW, SpeciesThumbnail } from "~/components/species-row.tsx";
+import { EMPTY } from "~/lib/empty-messages.ts";
 import { comNameToSlug } from "~/lib/species-slug.ts";
 import { rankingBarPercent } from "~/lib/stats-data.ts";
 
@@ -24,7 +25,7 @@ export type SpeciesListItem = {
 export function SpeciesList({
 	title,
 	species,
-	emptyMessage = "No detections recorded yet.",
+	emptyMessage = EMPTY.station.detections,
 	ariaLabel = title,
 	className = "",
 }: {

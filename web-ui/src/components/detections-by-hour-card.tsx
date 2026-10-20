@@ -19,6 +19,7 @@ import {
 	CHART_MARGIN,
 	X_AXIS_HEIGHT,
 } from "~/lib/chart-style.ts";
+import { EMPTY } from "~/lib/empty-messages.ts";
 import type { HourActivity } from "~/lib/stats-data.ts";
 import { hourLabel } from "~/lib/time-ago.ts";
 
@@ -30,7 +31,7 @@ const EVEN_HOURS = Array.from({ length: 12 }, (_, index) => index * 2);
  */
 export function DetectionsByHourCard({
 	activity,
-	emptyMessage = "No detections recorded yet.",
+	emptyMessage = EMPTY.station.detections,
 	className = "",
 }: {
 	activity: HourActivity[];

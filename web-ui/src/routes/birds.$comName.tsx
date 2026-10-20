@@ -43,6 +43,7 @@ import { YearSelector } from "~/components/year-selector.tsx";
 import { formatConfidence } from "~/lib/confidence.ts";
 import { formatDate, formatDateTime, formatTime } from "~/lib/date-format.ts";
 import { ebirdUrlFor } from "~/lib/ebird.ts";
+import { EMPTY } from "~/lib/empty-messages.ts";
 import { heatColor, heatColorAt } from "~/lib/heatmap.ts";
 import { illustrationUrlFor } from "~/lib/illustrations.ts";
 import { pageTitle } from "~/lib/page-title.ts";
@@ -936,7 +937,7 @@ function VisitLogCard({
 			</div>
 
 			{visits.length === 0 ? (
-				<EmptyNote>No visits recorded yet.</EmptyNote>
+				<EmptyNote>{EMPTY.window.birdVisits}</EmptyNote>
 			) : (
 				<ul
 					aria-busy={loading}

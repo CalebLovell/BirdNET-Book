@@ -5,7 +5,6 @@ import { useState } from "react";
 import { Deferred } from "~/components/deferred.tsx";
 import { PageHeaderCard } from "~/components/page-header-card.tsx";
 import { PageStatus } from "~/components/page-status.tsx";
-import { ReviewQueueSettings } from "~/components/review/review-queue-settings.tsx";
 import {
 	ReviewWorkflow,
 	ReviewWorkflowSkeleton,
@@ -24,7 +23,6 @@ import {
 	normalizeReviewSearch,
 	type SpeciesOption,
 } from "~/lib/review-data.ts";
-import { saveReviewSettingsFn } from "~/lib/settings.ts";
 import { useSettled } from "~/lib/use-settled.ts";
 
 const REVIEW_PAGE_TITLE = "Review detections";
@@ -54,16 +52,14 @@ export const Route = createFileRoute("/review")({
 
 function Review() {
 	const { queue } = Route.useLoaderData();
-	// The masthead's threshold, from the latest queue to arrive.
+	// Whether the queue on screen is the latest, to hold the buttons busy.
 	const settled = useSettled(queue);
-	const page = settled?.value.page ?? null;
 	const search = Route.useSearch();
 	const navigate = Route.useNavigate();
 	const router = useRouter();
 	const correct = useServerFn(confirmReviewDetection),
 		recategorize = useServerFn(recategorizeReviewDetection),
-		remove = useServerFn(deleteReviewDetection),
-		saveQueueSettings = useServerFn(saveReviewSettingsFn);
+		remove = useServerFn(deleteReviewDetection);
 	const [busy, setBusy] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 	async function run(work: () => Promise<unknown>) {
@@ -85,22 +81,9 @@ function Review() {
 			<PageHeaderCard
 				icon={SearchCheck}
 				title={REVIEW_PAGE_TITLE}
-				// Fixed, so it is there from the first frame: the threshold that
-				// makes a species "rare" lives in the queue settings beside it.
+				// Fixed, so it is there from the first frame. The threshold that
+				// makes a species "rare" is set on the Settings page.
 				description="Low-confidence recordings of the station's rarest species, to confirm, correct or delete."
-				action={
-					page ? (
-						<ReviewQueueSettings
-							rareSpeciesMax={page.rareSpeciesMax}
-							onSave={async (rareSpeciesMax) => {
-								await saveQueueSettings({ data: { rareSpeciesMax } });
-								// The threshold decides the queue, so the page has to be
-								// refetched before the new number means anything on screen.
-								await router.invalidate();
-							}}
-						/>
-					) : undefined
-				}
 			/>
 			{error ? (
 				<p className="flex items-center gap-2 text-destructive text-sm">

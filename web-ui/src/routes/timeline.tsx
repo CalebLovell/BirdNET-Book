@@ -1,12 +1,11 @@
 import { createFileRoute, stripSearchParams } from "@tanstack/react-router";
 import { ArrowRight, CalendarRange, LayoutDashboard, List } from "lucide-react";
 import { z } from "zod";
-import { Deferred } from "~/components/deferred.tsx";
+import { Deferred, SHELL_DELAY_MS } from "~/components/deferred.tsx";
 import {
 	DetectionsByHourCard,
 	DetectionsByHourCardSkeleton,
 } from "~/components/detections-by-hour-card.tsx";
-import { EmptyState } from "~/components/empty-state.tsx";
 import { HighlightsCard } from "~/components/highlights-card.tsx";
 import { PageHeaderCard } from "~/components/page-header-card.tsx";
 import {
@@ -26,6 +25,7 @@ import { TooltipProvider } from "~/components/ui/tooltip.tsx";
 import { useShareCard } from "~/components/use-share-card.tsx";
 import { getDayShareCard } from "~/lib/day-share.ts";
 import { formatDayTitle } from "~/lib/day-title.ts";
+import { EMPTY } from "~/lib/empty-messages.ts";
 import type { HighlightThresholds } from "~/lib/highlight-thresholds.ts";
 import { pageTitle } from "~/lib/page-title.ts";
 import { formatShareCard } from "~/lib/share-card.ts";
@@ -153,12 +153,14 @@ function Timeline() {
 					onChange={show}
 				/>
 
-				{/* Keyed on the window, so a new period or date mounts a fresh
-				    boundary: the cards drop to their shells at once, instead of the
-				    old window holding the screen until the new one is in. */}
+				{/* A new period or date keeps the old window's cards up for a
+				    moment: most windows answer well inside it and swap straight in,
+				    rather than flashing their shells for a frame. One that takes
+				    longer drops to the shells, so the old window never passes for
+				    the new one for long. */}
 				<Deferred
-					key={`${period}:${anchor}`}
 					promise={page}
+					shellAfterMs={SHELL_DELAY_MS}
 					shell={
 						<TimelineCardsShell
 							period={period}
@@ -168,12 +170,10 @@ function Timeline() {
 					}
 				>
 					{(data) =>
-						data.body.kind ===
-						"day-out-of-range" ? null : data.hasAnyDetections ? (
-							// A station with nothing recorded has no window picker and no
-							// figures, so every card below would be an empty shell with one
-							// line in it. The page-level treatment replaces them outright
-							// rather than nesting a card inside a card.
+						data.body.kind === "day-out-of-range" ? null : (
+							// A station with nothing recorded yet draws the same cards as a
+							// quiet window, each saying so, so the page holds the shape its
+							// shells promised and every control stays usable.
 							<TimelineCards
 								rows={data.body.rows}
 								highlights={data.body.highlights}
@@ -181,15 +181,10 @@ function Timeline() {
 								period={period}
 								jumpTo={jumpTarget(period, data)}
 								windowLabel={data.window?.label ?? null}
+								stationEmpty={!data.hasAnyDetections}
 								view={view}
 								onViewChange={(next) => show({ view: next })}
 							/>
-						) : (
-							<EmptyState title="Timeline">
-								No detections recorded yet. Once the station hears something,
-								its rhythm will show up here -- hour by hour, day by day, and
-								across the whole of its history.
-							</EmptyState>
 						)
 					}
 				</Deferred>
@@ -344,20 +339,19 @@ function TimelineHeader({
 			// this window's page is on its way it draws from the last one to
 			// arrive (or from nothing, on the first), and what it can't know yet
 			// -- where the arrows lead, the station's first and last days -- waits
-			// for the data. Only a station known to have recorded nothing drops it.
+			// for the data. A station that has recorded nothing keeps it too, so
+			// the page reads the same before and after its first bird.
 			afterHeader={
-				toolbarData && !toolbarData.hasAnyDetections ? undefined : (
-					<PeriodToolbar
-						period={period}
-						anchor={anchor}
-						window={data ? data.window : safeWindow(period, anchor)}
-						prevAnchor={data?.prevAnchor ?? null}
-						nextAnchor={data?.nextAnchor ?? null}
-						lastActiveDay={data?.lastActiveDay ?? null}
-						stationRange={toolbarData?.stationRange ?? null}
-						onChange={onChange}
-					/>
-				)
+				<PeriodToolbar
+					period={period}
+					anchor={anchor}
+					window={data ? data.window : safeWindow(period, anchor)}
+					prevAnchor={data?.prevAnchor ?? null}
+					nextAnchor={data?.nextAnchor ?? null}
+					lastActiveDay={data?.lastActiveDay ?? null}
+					stationRange={toolbarData?.stationRange ?? null}
+					onChange={onChange}
+				/>
 			}
 		>
 			{share.summary}
@@ -422,7 +416,7 @@ function WindowSummary({ rows }: { rows: TimelineRow[] | null }) {
 			<div className="flex -translate-y-[1.5px] items-center gap-2 truncate text-[13px] text-muted-foreground">
 				<span className="whitespace-nowrap">
 					{detections === undefined ? (
-						<ShellFigure placeholder="0,000" />
+						<ShellFigure />
 					) : (
 						<span className="count-figure">{detections.toLocaleString()}</span>
 					)}{" "}
@@ -436,7 +430,7 @@ function WindowSummary({ rows }: { rows: TimelineRow[] | null }) {
 					{rows ? (
 						<span className="count-figure">{rows.length.toLocaleString()}</span>
 					) : (
-						<ShellFigure placeholder="00" />
+						<ShellFigure />
 					)}{" "}
 					species
 				</span>
@@ -458,6 +452,7 @@ function TimelineCards({
 	period,
 	jumpTo,
 	windowLabel,
+	stationEmpty,
 	view,
 	onViewChange,
 }: {
@@ -468,12 +463,14 @@ function TimelineCards({
 	/** The nearest window with detections, offered when this one has none. */
 	jumpTo: JumpTarget | null;
 	windowLabel: string | null;
+	/** The station has recorded nothing at all, in any window. */
+	stationEmpty: boolean;
 	view: TimelineView;
 	onViewChange: (next: TimelineView) => void;
 }) {
-	const emptyMessage = windowLabel
-		? `No detections recorded for ${windowLabel}.`
-		: "No detections recorded in this window.";
+	const emptyMessage = stationEmpty
+		? EMPTY.station.detections
+		: EMPTY.window.timelineWindow(windowLabel);
 	// Only the body card carries the way out, as a button on its own line so
 	// it reads as the next step rather than the tail of a sentence; the two
 	// cards beside it just say they're empty.
@@ -506,14 +503,10 @@ function TimelineCards({
 		hourCounts: row.hourCounts,
 	}));
 
-	// A quiet window (no rows) shows the empty card without a "0 detections · 0
-	// species" line reading back the emptiness the card already states, and
-	// without the view toggle: there's nothing to draw either way.
-	const hasRows = rows.length > 0;
-	const toggle = hasRows ? (
-		<ViewToggle view={view} onViewChange={onViewChange} />
-	) : undefined;
-	const summary = hasRows ? <WindowSummary rows={rows} /> : undefined;
+	// Kept for a quiet window too: the shell drew both, so dropping them once
+	// the data lands would change the card's header under the reader.
+	const toggle = <ViewToggle view={view} onViewChange={onViewChange} />;
+	const summary = <WindowSummary rows={rows} />;
 
 	// The window's day for the side column's hour chart: every species summed,
 	// hour by hour.

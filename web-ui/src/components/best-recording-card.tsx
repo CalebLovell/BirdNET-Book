@@ -7,6 +7,7 @@ import {
 	SpectrogramPlayerSkeleton,
 } from "~/components/spectrogram-player.tsx";
 import { formatDateTime } from "~/lib/date-format.ts";
+import { EMPTY } from "~/lib/empty-messages.ts";
 import type { BestRecording } from "~/lib/species-detail.ts";
 
 const PLOT_CLASS = "min-h-32 flex-1";
@@ -34,7 +35,7 @@ export function BestRecordingCard({
 			<CardHeader title="Best recording" />
 
 			{!recording || !recording.audioUrl ? (
-				<EmptyNote>No recordings kept for this species yet.</EmptyNote>
+				<EmptyNote>{EMPTY.window.birdRecording}</EmptyNote>
 			) : (
 				<div className="mt-(--page-gap) flex flex-1 flex-col">
 					<SpectrogramPlayer

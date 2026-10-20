@@ -16,6 +16,7 @@ import {
 	type HighlightSettings,
 	type PrivacySettings,
 	type RecordingSettings,
+	type ReviewSettings,
 	SETTINGS_DEFAULTS,
 	type SettingsCardKind,
 	type SettingsPageData,
@@ -46,6 +47,7 @@ export type SettingsSavers = {
 	audio?: Saver<AudioSettings>;
 	recording?: Saver<RecordingSettings>;
 	storage?: Saver<StorageSettings>;
+	review?: Saver<ReviewSettings>;
 	highlights?: Saver<HighlightSettings>;
 	updates?: Saver<UpdateSettings>;
 };
@@ -383,6 +385,7 @@ export function SettingsCards({
 				save={savers.storage}
 				restart={restartFor("storage")}
 			/>
+			<ReviewSettingsCard initial={data.review} save={savers.review} />
 			<HighlightsSettingsCard
 				initial={data.highlights}
 				save={savers.highlights}
@@ -1040,6 +1043,48 @@ function StorageCard({
 								event,
 								form.values.maxFilesPerSpecies,
 							),
+						})
+					}
+				/>
+			</Field>
+		</SettingsCard>
+	);
+}
+
+/**
+ * How rare a species has to be for its detections to land in the Review
+ * queue. Nothing to restart -- the queue is judged by it on its next load.
+ */
+function ReviewSettingsCard({
+	initial,
+	save,
+}: {
+	initial: ReviewSettings;
+	save?: Saver<ReviewSettings>;
+}) {
+	const form = useCardSave("Review", initial, save);
+	return (
+		<SettingsCard
+			title="Review"
+			description="Decide which uncommon species the Review page asks you to confirm."
+			confirmDescription="This writes the value in this card to the station's configuration. Nothing restarts: the Review queue is judged by it from its next load."
+			onSave={() => void form.submit()}
+			saveDisabled={form.saveDisabled}
+		>
+			<Field
+				label="Rare species threshold"
+				hint="Species with fewer detections than this, in all, are queued for review."
+			>
+				<FieldInput
+					type="number"
+					min={1}
+					max={10_000}
+					required
+					unit="detections"
+					value={form.values.rareSpeciesMax}
+					onChange={(event) =>
+						form.setValues({
+							rareSpeciesMax: numberOr(event, form.values.rareSpeciesMax),
 						})
 					}
 				/>

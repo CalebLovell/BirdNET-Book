@@ -1,11 +1,13 @@
 import type { ReactNode } from "react";
-
+import { LivePillSkeleton } from "~/components/now/live-pill.tsx";
 import {
 	HERO_CARD_SHELL,
 	HeroCardShell,
+	HeroTextShell,
 	SpeciesHeroCard,
 } from "~/components/species-hero-card.tsx";
 import { formatDateTime } from "~/lib/date-format.ts";
+import { EMPTY } from "~/lib/empty-messages.ts";
 import type { CurrentBird } from "~/lib/now.ts";
 import { formatTimeAgo } from "~/lib/time-ago.ts";
 import { useAgeOffset } from "~/lib/use-age-offset.ts";
@@ -38,13 +40,10 @@ export function CurrentBirdCard({
 	if (!current && hasAnyDetections) {
 		return (
 			<HeroCardShell label="Last 24 hours" portrait={<NestPortrait />}>
-				<CenteredBody>
-					<TitleRow live={live}>All quiet</TitleRow>
-					<p className="text-muted-foreground">
-						Nothing heard in the last 24 hours. New detections will appear here
-						on their own.
-					</p>
-				</CenteredBody>
+				<StandInBody>
+					<TitleRow live={live}>{EMPTY.window.liveQuietTitle}</TitleRow>
+					<p className="text-muted-foreground">{EMPTY.window.liveQuietBody}</p>
+				</StandInBody>
 			</HeroCardShell>
 		);
 	}
@@ -53,15 +52,12 @@ export function CurrentBirdCard({
 	if (!current) {
 		return (
 			<HeroCardShell label="Station status" portrait={<NestPortrait />}>
-				<CenteredBody>
+				<StandInBody>
 					<h1 className="display-title font-bold text-2xl sm:text-3xl">
-						Nothing recorded yet
+						{EMPTY.station.liveHeroTitle}
 					</h1>
-					<p className="text-muted-foreground">
-						Once BirdNET-Pi's analysis pipeline writes to birds.db, detections
-						will appear here on their own.
-					</p>
-				</CenteredBody>
+					<p className="text-muted-foreground">{EMPTY.station.liveHeroBody}</p>
+				</StandInBody>
 			</HeroCardShell>
 		);
 	}
@@ -108,9 +104,23 @@ function TitleRow({
 	);
 }
 
-function CenteredBody({ children }: { children: ReactNode }) {
+// Laid over an invisible copy of the loading shell's text, in one grid cell,
+// so the card keeps the height the shell gave it and the page below doesn't
+// jump when the snapshot lands. The text itself stays centred in that height.
+function StandInBody({ children }: { children: ReactNode }) {
 	return (
-		<div className="flex flex-1 flex-col justify-center gap-2">{children}</div>
+		<div className="grid">
+			<div
+				aria-hidden="true"
+				inert
+				className="invisible col-start-1 row-start-1 flex flex-col gap-2.5 max-[400px]:gap-2"
+			>
+				<HeroTextShell actions={<LivePillSkeleton />} />
+			</div>
+			<div className="col-start-1 row-start-1 flex flex-col justify-center gap-2">
+				{children}
+			</div>
+		</div>
 	);
 }
 

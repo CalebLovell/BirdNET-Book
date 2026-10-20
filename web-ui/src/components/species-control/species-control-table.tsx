@@ -1,6 +1,5 @@
 import { Link } from "@tanstack/react-router";
 import type { CSSProperties, ReactNode } from "react";
-import { EmptyNote } from "~/components/empty-state.tsx";
 import { IndexDot, TABLE_INDEX_FLOOR } from "~/components/index-dot.tsx";
 import { Badge } from "~/components/ui/badge.tsx";
 import { PageStepper } from "~/components/ui/page-stepper.tsx";
@@ -162,10 +161,6 @@ export function SpeciesControlTable({
 	 *  table keeps its selection bar. */
 	actions?: ReactNode;
 }) {
-	if (rows?.length === 0) {
-		return <EmptyNote>No installed species match that search.</EmptyNote>;
-	}
-
 	const allSelected = rows?.every((row) => selected.has(row.sciName));
 	// Row numbers count on across pages rather than restarting at 1, as on the
 	// detections table.

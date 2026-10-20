@@ -14,6 +14,7 @@ import { ChartValueTooltip } from "~/components/chart-tooltip.tsx";
 import { EmptyNote } from "~/components/empty-state.tsx";
 import { ShellChartCard } from "~/components/ui/shell.tsx";
 import { CHART_MARGIN, X_AXIS_HEIGHT } from "~/lib/chart-style.ts";
+import { EMPTY } from "~/lib/empty-messages.ts";
 import type { TrendPoint } from "~/lib/stats-data.ts";
 
 /**
@@ -54,7 +55,7 @@ export function DetectionsByMonthCard({
 			<CardHeader title="Detections by month" />
 
 			{isEmpty ? (
-				<EmptyNote>No detections recorded yet.</EmptyNote>
+				<EmptyNote>{EMPTY.station.detections}</EmptyNote>
 			) : (
 				<div className="mt-(--page-gap) min-h-0 flex-1">
 					{/* `minHeight` is not decoration: ResponsiveContainer measures its own

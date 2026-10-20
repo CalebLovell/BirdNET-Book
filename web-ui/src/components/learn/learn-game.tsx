@@ -165,6 +165,35 @@ export function LearnGameSkeleton() {
 	);
 }
 
+/**
+ * The game with no round to deal: the same two cards under the same names as
+ * the game and its skeleton, each saying what's missing instead of showing a
+ * clip or a tally.
+ */
+export function LearnGameEmpty({ message }: { message: string }) {
+	return (
+		<div className="@container/quiz">
+			<div className={QUIZ_GRID_CLASS}>
+				<section aria-label="Bird call quiz" className={GAME_CARD_CLASS}>
+					<header className={GAME_HEADER_CLASS}>
+						<h2 className="island-kicker">Mystery call</h2>
+					</header>
+					<p className="text-muted-foreground text-sm">{message}</p>
+				</section>
+
+				<aside aria-label="This round" className={RAIL_CLASS}>
+					<div className={RAIL_HEADER_CLASS}>
+						<div className="island-kicker">This round</div>
+					</div>
+					<p className="mt-(--page-gap) text-muted-foreground text-sm">
+						{message}
+					</p>
+				</aside>
+			</div>
+		</div>
+	);
+}
+
 export function LearnGame({
 	round,
 	onPlayAgain,

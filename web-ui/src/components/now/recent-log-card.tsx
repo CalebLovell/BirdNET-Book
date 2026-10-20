@@ -9,6 +9,7 @@ import { RecordingButton } from "~/components/recording-button.tsx";
 import { SpeciesThumbnail } from "~/components/species-row.tsx";
 import { PageStepper } from "~/components/ui/page-stepper.tsx";
 import { ShellBar, ShellSized, ShellText } from "~/components/ui/shell.tsx";
+import { EMPTY } from "~/lib/empty-messages.ts";
 import {
 	getRecentPage,
 	RECENT_PAGE_SIZE,
@@ -200,7 +201,7 @@ export function RecentLogCard({
 			<RecentLogHeader />
 
 			{shown.recent.length === 0 ? (
-				<EmptyNote>No detections recorded in the last 24 hours.</EmptyNote>
+				<EmptyNote>{EMPTY.window.last24Hours}</EmptyNote>
 			) : (
 				<ul
 					aria-busy={loading}
