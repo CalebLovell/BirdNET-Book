@@ -7,9 +7,27 @@ my_dir=$(dirname "$(realpath "$0")")
 web_ui_dir="$(dirname "${my_dir}")/web-ui"
 export BIRDNET_AUTH_CONF="${BIRDNET_AUTH_CONF:-/etc/birdnet/web-ui/auth.conf}"
 
+if [ -f /etc/birdnet/birdnet.conf ]; then
+  # shellcheck disable=SC1091
+  source /etc/birdnet/birdnet.conf
+fi
+
+# The installed bundle carries the tool prebuilt (`npm run build`), so a
+# station installed from a release -- no source dependencies on disk -- can
+# still set its password. A source checkout falls back to running it with tsx.
+bundled_cli="/home/${BIRDNET_USER:-${USER}}/BirdNET-Pi-web/current/cli/set-password.mjs"
+node_bin=/opt/birdnet-node/bin/node
 tsx_bin="${web_ui_dir}/node_modules/.bin/tsx"
-if [ ! -x "${tsx_bin}" ]; then
-  echo "tsx not found at ${tsx_bin}; run 'npm install' in web-ui first." >&2
+run_cli() {
+  if [ -f "${bundled_cli}" ] && [ -x "${node_bin}" ]; then
+    "${node_bin}" "${bundled_cli}"
+  else
+    (cd "${web_ui_dir}" && "${tsx_bin}" src/lib/set-password-cli.ts)
+  fi
+}
+if [ ! -f "${bundled_cli}" ] && [ ! -x "${tsx_bin}" ]; then
+  echo "No password tool: neither ${bundled_cli} nor ${tsx_bin} exists." >&2
+  echo "Install the web UI first (scripts/install_web_ui.sh)." >&2
   exit 1
 fi
 
@@ -29,11 +47,6 @@ mkdir -p -m 700 "${auth_dir}"
 
 fix_auth_file_ownership() {
   [ "${EUID}" -eq 0 ] || return 0
-
-  if [ -f /etc/birdnet/birdnet.conf ]; then
-    # shellcheck disable=SC1091
-    source /etc/birdnet/birdnet.conf
-  fi
 
   if [ -z "${BIRDNET_USER:-}" ]; then
     echo "Cannot determine BIRDNET_USER from /etc/birdnet/birdnet.conf." >&2
@@ -70,5 +83,5 @@ if [ "${password}" != "${confirm}" ]; then
   exit 1
 fi
 
-printf '%s' "${password}" | (cd "${web_ui_dir}" && "${tsx_bin}" src/lib/set-password-cli.ts)
+printf '%s' "${password}" | run_cli
 fix_auth_file_ownership

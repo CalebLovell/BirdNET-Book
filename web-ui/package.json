@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "vite dev",
     "generate-routes": "tsr generate",
-    "build": "vite build",
+    "build": "vite build && esbuild src/lib/set-password-cli.ts --bundle --platform=node --format=esm --target=node22 --log-level=warning --outfile=.output/cli/set-password.mjs",
     "preview": "vite preview",
     "test": "tsx --test \"src/**/*.test.ts\" \"src/**/*.test.tsx\"",
     "db:generate": "drizzle-kit generate",
@@ -55,6 +55,7 @@
     "@types/react-dom": "^19.2.0",
     "@vitejs/plugin-react": "^6.0.1",
     "dotenv": "^17.3.1",
+    "esbuild": "0.28.1",
     "tsx": "^4.21.0",
     "typescript": "^6.0.2",
     "vite": "^8.0.0"
