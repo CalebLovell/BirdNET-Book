@@ -22,12 +22,12 @@ import { comNameToSlug } from "~/lib/species-slug.ts";
 // about become questions.
 const MINIMUM_CLIP_CONFIDENCE = 0.65;
 
-// Taken per species, not per pool, so a bird heard twice all year is as likely
-// to come up as the crow that never shuts up. Newest first, because BirdNET-Pi's
-// cleanup job trims old audio: a species' recent detections are the ones whose
-// files are still on disk. Which of the survivors a question uses is then
-// chosen at random, so a round doesn't replay the same clip every time.
-const CLIPS_PER_SPECIES = 30;
+// Every question about a species plays its best recording -- the same
+// highest-confidence clip the species page features -- so the ear learns one
+// clean example rather than whatever happened to be caught last. BirdNET-Pi's
+// cleanup job can take that file off disk, so a few runners-up come along in
+// confidence order to stand in for it.
+const CANDIDATE_CLIPS_PER_SPECIES = 10;
 
 type ClipRow = {
 	date: string;
@@ -44,7 +44,7 @@ type ClipRow = {
  * sqlite-proxy driver hands back positional rows, which makes a raw statement on
  * the shared handle the clearer way to express this particular shape.
  */
-function recentClipsPerSpecies(pool: LearnPool): ClipRow[] {
+function bestClipsPerSpecies(pool: LearnPool): ClipRow[] {
 	const conditions = ["Confidence >= ?"];
 	const params: (string | number)[] = [MINIMUM_CLIP_CONFIDENCE];
 
@@ -67,19 +67,21 @@ function recentClipsPerSpecies(pool: LearnPool): ClipRow[] {
 				File_Name AS fileName,
 				Confidence AS confidence,
 				Date || ' ' || Time AS detectedAt,
-				ROW_NUMBER() OVER (PARTITION BY Com_Name ORDER BY Date DESC, Time DESC) AS rn
+				-- Ties break toward the most recent, as on the species page, since
+				-- that clip is likeliest to still be on disk.
+				ROW_NUMBER() OVER (PARTITION BY Com_Name ORDER BY Confidence DESC, Date DESC, Time DESC) AS rn
 			FROM detections
 			WHERE ${conditions.join(" AND ")}
 		)
 		WHERE rn <= ?
+		ORDER BY comName, rn
 	`);
 
-	return statement.all(...params, CLIPS_PER_SPECIES) as ClipRow[];
+	return statement.all(...params, CANDIDATE_CLIPS_PER_SPECIES) as ClipRow[];
 }
 
 // A clip whose file has been cleaned off disk would leave a question with
-// nothing to play, so it never makes it into the pool. Only the sampled rows
-// are checked, which keeps this to a few hundred stat calls at most.
+// nothing to play, so it never makes it into the pool.
 function clipFileExists(row: ClipRow): boolean {
 	const path = resolveDetectionClipPath(extractedDir(), {
 		date: row.date,
@@ -89,27 +91,30 @@ function clipFileExists(row: ClipRow): boolean {
 	return path !== null && existsSync(path);
 }
 
-function groupIntoSpecies(rows: ClipRow[]): PoolSpecies[] {
+/**
+ * Keeps each species' best clip that is still on disk. Rows arrive best first
+ * within a species, so the first survivor wins and the runners-up behind it
+ * are never stat-ed -- usually one check per species.
+ */
+function bestPlayableClipPerSpecies(rows: ClipRow[]): PoolSpecies[] {
 	const bySpecies = new Map<string, PoolSpecies>();
 
 	for (const row of rows) {
-		let species = bySpecies.get(row.comName);
-		if (!species) {
-			species = {
-				comName: row.comName,
-				sciName: row.sciName,
-				speciesSlug: comNameToSlug(row.comName),
-				// The bundled illustration, or null for the generic bird glyph.
-				imageUrl: illustrationUrlFor(row.sciName),
-				clips: [],
-			};
-			bySpecies.set(row.comName, species);
-		}
-		species.clips.push({
-			date: row.date,
-			fileName: row.fileName,
-			detectedAt: row.detectedAt,
-			confidence: row.confidence,
+		if (bySpecies.has(row.comName) || !clipFileExists(row)) continue;
+		bySpecies.set(row.comName, {
+			comName: row.comName,
+			sciName: row.sciName,
+			speciesSlug: comNameToSlug(row.comName),
+			// The bundled illustration, or null for the generic bird glyph.
+			imageUrl: illustrationUrlFor(row.sciName),
+			clips: [
+				{
+					date: row.date,
+					fileName: row.fileName,
+					detectedAt: row.detectedAt,
+					confidence: row.confidence,
+				},
+			],
 		});
 	}
 
@@ -170,8 +175,8 @@ export type LearnRoundData = {
 export const getLearnRound = createServerFn({ method: "GET" })
 	.validator((pool: LearnPool) => pool)
 	.handler(async ({ data: pool }): Promise<LearnRoundData> => {
-		const rows = recentClipsPerSpecies(pool).filter(clipFileExists);
-		const round = addSpeciesStats(buildRound(groupIntoSpecies(rows)));
+		const species = bestPlayableClipPerSpecies(bestClipsPerSpecies(pool));
+		const round = addSpeciesStats(buildRound(species));
 
 		// A playable round is proof enough; only an empty one pays for the probe.
 		const hasAnyDetections =
