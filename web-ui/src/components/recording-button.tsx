@@ -8,10 +8,9 @@ export const PLAY_LABEL = "Listen";
 
 /**
  * The app's one compact play control: wherever a recording only has room for
- * a button (a row, a card's footer, a hero), it is this -- a moss-filled
- * button, like "Listen live", with the speaker glyph and `PLAY_LABEL`. The
- * label stays fixed while the icon carries play/pause state, so the button
- * holds its width mid-playback.
+ * a button (a row, a card's footer, a hero), it is this -- an outline button
+ * with the speaker glyph and `PLAY_LABEL`. The label stays fixed while the
+ * icon carries play/pause state, so the button holds its width mid-playback.
  * `iconOnly` drops the label for tight rows; the accessible name comes from
  * aria-label either way. Where there's room for a spectrogram, use
  * `SpectrogramPlayer` instead.
@@ -21,6 +20,7 @@ export function RecordingButton({
 	iconOnly = false,
 	speciesName,
 	iconSize = "icon-xs",
+	variant = "outline",
 	labelClassName,
 	className = "",
 }: {
@@ -31,6 +31,8 @@ export function RecordingButton({
 	speciesName?: string;
 	/** Tap targets in a dense table want more than the default. */
 	iconSize?: "icon-xs" | "icon-lg";
+	/** Outline everywhere; the Birds grid's cards fill it with moss. */
+	variant?: "outline" | "default";
 	/** Lets a responsive row hide the label at some widths (e.g. under a
 	 * container query) while the button, and its one <audio>, stay mounted. */
 	labelClassName?: string;
@@ -49,7 +51,7 @@ export function RecordingButton({
 	return (
 		<>
 			<Button
-				variant="default"
+				variant={variant}
 				size={iconOnly ? iconSize : "xs"}
 				className={`shrink-0 ${className}`}
 				icon={isPlaying ? Pause : Volume2}

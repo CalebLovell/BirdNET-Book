@@ -19,7 +19,11 @@ function SpeciesActions({ audioUrl, ebirdUrl, comName }: SpeciesActionsProps) {
 			}
 		>
 			{audioUrl !== undefined && (
-				<RecordingButton audioUrl={audioUrl} speciesName={comName} />
+				<RecordingButton
+					audioUrl={audioUrl}
+					speciesName={comName}
+					variant="default"
+				/>
 			)}
 			<Button variant="outline" icon={ExternalLink} asChild>
 				<a
