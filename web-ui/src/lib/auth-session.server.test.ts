@@ -7,7 +7,6 @@ import { signSessionToken, verifySessionToken } from "./auth-session.server.ts";
 
 const auth: AuthFile = {
 	hash: hashPassword("swifts-over-the-creek"),
-	isDefault: false,
 	nonce: "0".repeat(32),
 };
 

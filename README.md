@@ -60,33 +60,30 @@ Settings, Species Control, and Review require a password. Everything else -- det
 species, stats, timeline, learn -- stays public, so you can share your station without
 handing over its controls.
 
-New installs ship with the password `birdnet`. **While that default is in use, the site can
-only be unlocked from your local network**, so a station that ends up reachable from the
-internet cannot be opened with a password everyone knows. Set your own with:
+There is no default password. The installer asks you to choose one; until one is set, nobody
+can sign in, and the Account page says so. Set or change it any time with:
 
 ```
-./scripts/set_web_ui_password.sh
+sudo ./scripts/set_web_ui_password.sh
 ```
 
 It prompts twice without echoing, so the password never reaches your shell history. Minimum
-12 characters. `--clear` restores the default. Changing the password signs out every device;
-Settings also has a "Sign out all devices" button that does so without changing it.
+12 characters. Changing the password signs out every device; the Account page also has a
+"Sign out all devices" button that does so without changing it.
 
-The password is stored only as a salted scrypt hash, in `/etc/birdnet/web-ui-auth.conf`
-(mode 0600). It is never stored in plaintext, is kept out of `birdnet.conf` and
+The password is stored only as a salted scrypt hash, in `/etc/birdnet/web-ui/auth.conf`
+(mode 0600, in a directory owned by the web UI's account). It is never stored in plaintext, is kept out of `birdnet.conf` and
 `firstrun.ini`, and is excluded from backup archives. If you forget it, re-run the script
 over SSH -- there is no reset through the browser, by design.
 
 ### Before exposing this station to the internet
 
-The gate is built for it, but three things are required first:
+The gate is built for it, but two things are required first:
 
 1. **TLS in front of it** -- a Cloudflare Tunnel, Tailscale, or Caddy with a certificate.
    Over plain HTTP the password and the session cookie are readable by anyone on the network
    path, and hashing at rest does not help with that. This one cannot be skipped.
-2. **A real password set**, which clears the default. Until then, unlocking from outside your
-   local network is refused.
-3. **`WEB_UI_TRUSTED_PROXY=1`** set for the web UI (`sudo systemctl edit birdnet_web_ui`,
+2. **`WEB_UI_TRUSTED_PROXY=1`** set for the web UI (`sudo systemctl edit birdnet_web_ui`,
    then `Environment=WEB_UI_TRUSTED_PROXY=1`), so that failed-unlock throttling sees real
    client addresses rather than your proxy's. Without it every request appears to come from
    one address; with it set but no proxy actually in front, addresses can be spoofed.

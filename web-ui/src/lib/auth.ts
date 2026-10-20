@@ -6,6 +6,7 @@ import {
 	clearSession,
 	readUnlockStatus,
 	rotateSessionNonce,
+	type UnlockStatus,
 } from "./auth.server.ts";
 import { readSiteName } from "./settings-config.server.ts";
 
@@ -27,9 +28,9 @@ export const requireUnlocked = createMiddleware({ type: "function" }).server(
 		try {
 			({ unlocked } = await readUnlockStatus());
 		} catch {
-			// A missing or corrupt auth file must read as locked, never as a crash
-			// and never as open. Failing open here would hand out mutating
-			// endpoints to anyone who could corrupt the file.
+			// readUnlockStatus already reads a missing or corrupt auth file as
+			// locked; this catches anything unforeseen the same way. Failing open
+			// here would hand out mutating endpoints.
 			unlocked = false;
 		}
 		if (!unlocked) throw new UnauthorizedError();
@@ -39,19 +40,21 @@ export const requireUnlocked = createMiddleware({ type: "function" }).server(
 
 export const getUnlockStatusFn = createServerFn({ method: "GET" }).handler(
 	async () => {
+		let status: UnlockStatus;
 		try {
-			const status = await readUnlockStatus();
-			// The station's name rides along only once unlocked: it's the
-			// account row's title, and a visitor has no business reading it.
-			return {
-				...status,
-				siteName: status.unlocked ? await readSiteName() : "",
-			};
-		} catch {
-			// A missing or corrupt auth file must read as locked. Failing open here
-			// would hand out Settings to anyone who could corrupt the file.
-			return { unlocked: false, isDefaultPassword: false, siteName: "" };
+			status = await readUnlockStatus();
+		} catch (error) {
+			// Every page asks this, so an unforeseen failure reads as a broken
+			// station -- locked, and said so -- rather than a crashed page.
+			console.error("[auth] could not read the unlock status", error);
+			status = { unlocked: false, state: "misconfigured" };
 		}
+		// The station's name rides along only once unlocked: it's the
+		// account row's title, and a visitor has no business reading it.
+		return {
+			...status,
+			siteName: status.unlocked ? await readSiteName() : "",
+		};
 	},
 );
 

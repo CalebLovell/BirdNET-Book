@@ -43,9 +43,7 @@ function fetchStatus(): Promise<UnlockStatus> {
 }
 
 const sameStatus = (a: UnlockStatus, b: UnlockStatus) =>
-	a.unlocked === b.unlocked &&
-	a.isDefaultPassword === b.isDefaultPassword &&
-	a.siteName === b.siteName;
+	a.unlocked === b.unlocked && a.state === b.state && a.siteName === b.siteName;
 
 export async function unlockStatusForNavigation(): Promise<UnlockStatus> {
 	// On the server there is no "last answer" to keep: a module-level cache

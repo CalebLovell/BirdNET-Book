@@ -120,6 +120,40 @@ EOF
   systemctl enable birdnet_web_ui.service birdnet_update.timer
 }
 
+# The password file lives in a directory the web UI's account owns: every
+# write is a temp file renamed into place, and /etc/birdnet itself is root's.
+AUTH_DIR=/etc/birdnet/web-ui
+install_auth_dir() {
+  install -d -o "$USER" -g "$USER" -m 700 "$AUTH_DIR"
+  # Earlier versions kept the file directly in /etc/birdnet, where the service
+  # could read a password but never write one. Bring a set password along.
+  if [ -f /etc/birdnet/web-ui-auth.conf ] && [ ! -f "$AUTH_DIR/auth.conf" ]; then
+    mv /etc/birdnet/web-ui-auth.conf "$AUTH_DIR/auth.conf"
+    chown "$USER:$USER" "$AUTH_DIR/auth.conf"
+    chmod 600 "$AUTH_DIR/auth.conf"
+  fi
+  rm -f /etc/birdnet/web-ui-auth.conf /etc/birdnet/web-ui-auth.conf.throttle.json
+}
+
+# There is no default password, so until one is set nobody can sign in. Asked
+# here when someone is at the terminal; an unattended update only says so.
+# A file from the old shipped default (WEB_UI_PWD_IS_DEFAULT=1) counts as
+# unset -- the web UI no longer accepts that password.
+ensure_password() {
+  local file=$AUTH_DIR/auth.conf attempt
+  if [ -f "$file" ] && ! grep -q '^WEB_UI_PWD_IS_DEFAULT=1$' "$file"; then
+    return 0
+  fi
+  if { : < /dev/tty; } 2>/dev/null; then
+    echo "Choose a password for the web UI's Settings, Review and Species control."
+    for attempt in 1 2 3; do
+      "$my_dir/set_web_ui_password.sh" < /dev/tty && return 0
+    done
+  fi
+  echo "The web UI has no password yet, so nobody can sign in to it." >&2
+  echo "Set one with: sudo $my_dir/set_web_ui_password.sh" >&2
+}
+
 # The bundle for whatever is checked out: the release's own when HEAD is a
 # release tag, a local build otherwise.
 install_initial_bundle() {
@@ -146,6 +180,8 @@ install_initial_bundle() {
 
 install_node
 install_signers
+install_auth_dir
 install_units
 install_initial_bundle
+ensure_password
 systemctl restart birdnet_web_ui.service

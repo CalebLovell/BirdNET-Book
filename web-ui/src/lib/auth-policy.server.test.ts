@@ -1,10 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import {
-	defaultPasswordBlocksUnlock,
-	isPrivateAddress,
-} from "./auth-policy.server.ts";
+import { isPrivateAddress } from "./auth-policy.server.ts";
 
 test("recognises loopback and RFC1918 addresses as private", () => {
 	for (const ip of [
@@ -52,30 +49,4 @@ test("accepts .0 and .255 boundary octets where the prefix is private", () => {
 	assert.equal(isPrivateAddress("10.255.255.255"), true);
 	assert.equal(isPrivateAddress("192.168.0.0"), true);
 	assert.equal(isPrivateAddress("192.168.255.255"), true);
-});
-
-test("the default password may only be used from the local network", () => {
-	assert.equal(
-		defaultPasswordBlocksUnlock({ isDefault: true }, "192.168.1.20"),
-		false,
-	);
-	assert.equal(
-		defaultPasswordBlocksUnlock({ isDefault: true }, "8.8.8.8"),
-		true,
-	);
-	assert.equal(
-		defaultPasswordBlocksUnlock({ isDefault: true }, undefined),
-		true,
-	);
-});
-
-test("a real password may be used from anywhere", () => {
-	assert.equal(
-		defaultPasswordBlocksUnlock({ isDefault: false }, "8.8.8.8"),
-		false,
-	);
-	assert.equal(
-		defaultPasswordBlocksUnlock({ isDefault: false }, undefined),
-		false,
-	);
 });

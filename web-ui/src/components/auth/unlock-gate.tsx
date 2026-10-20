@@ -7,14 +7,8 @@ import { Button } from "~/components/ui/button.tsx";
 import { Input } from "~/components/ui/input.tsx";
 import { unlockFn } from "~/lib/auth.ts";
 import { SITE_NAME } from "~/lib/page-title.ts";
+import { messageForThrown, UNLOCK_MESSAGES } from "~/lib/unlock-messages.ts";
 import { forgetUnlockStatus } from "~/lib/unlock-status.ts";
-
-const MESSAGES = {
-	invalid: "That password is not right.",
-	throttled: "Too many attempts. Wait a few minutes and try again.",
-	"default-password-remote":
-		"This station still uses its default password, so it can only be unlocked from its own network. Run scripts/set_web_ui_password.sh on the Pi to set your own.",
-} as const;
 
 /**
  * The station's sign-in form, its own card under the Account masthead.
@@ -55,10 +49,17 @@ export function UnlockGate({
 				onUnlock?.();
 				return;
 			}
-			setError(MESSAGES[result.reason]);
+			setError(UNLOCK_MESSAGES[result.reason]);
+			// The station changed under this page -- its password was removed or
+			// its file broke since the page loaded. Refetching swaps the form for
+			// the card that explains it.
+			if (result.reason === "not-set-up" || result.reason === "misconfigured") {
+				forgetUnlockStatus();
+				await router.invalidate();
+			}
 		} catch (cause) {
 			console.error(cause);
-			setError("The station could not be reached.");
+			setError(messageForThrown(cause));
 		} finally {
 			setPending(false);
 		}

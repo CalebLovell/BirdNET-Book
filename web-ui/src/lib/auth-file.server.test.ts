@@ -1,12 +1,12 @@
 import assert from "node:assert/strict";
-import { mkdtemp, readFile, stat, writeFile } from "node:fs/promises";
+import { mkdtemp, readdir, readFile, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import test from "node:test";
 
 import {
 	AuthConfigError,
-	DEFAULT_PASSWORD,
+	changePassword,
 	hashPassword,
 	readAuthFile,
 	resolveAuthPath,
@@ -40,24 +40,42 @@ test("rejects rather than throws on a malformed stored hash", () => {
 	);
 });
 
-test("creates the file with the default password when absent", async () => {
-	const file = path.join(await fixtureDir(), "web-ui-auth.conf");
-	const auth = await readAuthFile(file);
+test("a missing file means no password is set, and reading writes nothing", async () => {
+	const dir = await fixtureDir();
+	const file = path.join(dir, "web-ui-auth.conf");
 
-	assert.equal(auth.isDefault, true);
-	assert.equal(verifyPassword(DEFAULT_PASSWORD, auth.hash), true);
-	assert.match(auth.nonce, /^[0-9a-f]{32}$/);
-
-	const written = await readFile(file, "utf8");
-	assert.match(written, /^WEB_UI_PWD_HASH=scrypt\$16384\$8\$1\$/m);
-	assert.match(written, /^WEB_UI_PWD_IS_DEFAULT=1$/m);
+	assert.equal(await readAuthFile(file), null);
+	assert.deepEqual(await readdir(dir), []);
 });
 
-test("created file is owner-read/write only", {
+test("a file left by the old shipped default reads as no password set", async () => {
+	const file = path.join(await fixtureDir(), "web-ui-auth.conf");
+	await writeFile(
+		file,
+		[
+			`WEB_UI_PWD_HASH=${hashPassword("birdnet")}`,
+			"WEB_UI_PWD_IS_DEFAULT=1",
+			`WEB_UI_SESSION_NONCE=${"a".repeat(32)}`,
+			"",
+		].join("\n"),
+		"utf8",
+	);
+
+	assert.equal(await readAuthFile(file), null);
+});
+
+test("an unreadable file is a config error, not an unset password", async () => {
+	// A directory where the file should be: readFile fails with EISDIR, the
+	// same branch a permissions error takes.
+	const file = await fixtureDir();
+	await assert.rejects(() => readAuthFile(file), AuthConfigError);
+});
+
+test("a written password file is owner-read/write only", {
 	skip: process.platform === "win32",
 }, async () => {
 	const file = path.join(await fixtureDir(), "web-ui-auth.conf");
-	await readAuthFile(file);
+	await changePassword("swifts-over-the-creek", file);
 	const mode = (await stat(file)).mode & 0o777;
 	assert.equal(mode, 0o600);
 });
@@ -65,17 +83,13 @@ test("created file is owner-read/write only", {
 test("reads an existing file without rewriting it", async () => {
 	const file = path.join(await fixtureDir(), "web-ui-auth.conf");
 	await writeAuthFile(
-		{
-			hash: hashPassword("a-real-long-password"),
-			isDefault: false,
-			nonce: "a".repeat(32),
-		},
+		{ hash: hashPassword("a-real-long-password"), nonce: "a".repeat(32) },
 		file,
 	);
 	const before = await readFile(file, "utf8");
 
 	const auth = await readAuthFile(file);
-	assert.equal(auth.isDefault, false);
+	assert.ok(auth);
 	assert.equal(auth.nonce, "a".repeat(32));
 	assert.equal(verifyPassword("a-real-long-password", auth.hash), true);
 	assert.equal(await readFile(file, "utf8"), before);
@@ -96,5 +110,5 @@ test("uses BIRDNET_AUTH_CONF before the production path", () => {
 		if (previous === undefined) delete process.env.BIRDNET_AUTH_CONF;
 		else process.env.BIRDNET_AUTH_CONF = previous;
 	}
-	assert.equal(resolveAuthPath(), "/etc/birdnet/web-ui-auth.conf");
+	assert.equal(resolveAuthPath(), "/etc/birdnet/web-ui/auth.conf");
 });

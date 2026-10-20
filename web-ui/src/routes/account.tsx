@@ -6,6 +6,7 @@ import {
 import { UserRound } from "lucide-react";
 
 import { SessionCard } from "~/components/auth/session-card.tsx";
+import { StationNotReadyCard } from "~/components/auth/station-not-ready-card.tsx";
 import { UnlockGate } from "~/components/auth/unlock-gate.tsx";
 import { PageHeaderCard } from "~/components/page-header-card.tsx";
 import { pageTitle } from "~/lib/page-title.ts";
@@ -48,7 +49,9 @@ function Account() {
 				}
 			/>
 			{auth.unlocked ? (
-				<SessionCard isDefaultPassword={auth.isDefaultPassword} />
+				<SessionCard />
+			) : auth.state !== "ready" ? (
+				<StationNotReadyCard state={auth.state} />
 			) : (
 				<UnlockGate
 					onUnlock={() => {

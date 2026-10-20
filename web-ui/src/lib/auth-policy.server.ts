@@ -27,15 +27,3 @@ export function isPrivateAddress(ip: string | undefined) {
 	if (a === 192 && b === 168) return true;
 	return false;
 }
-
-/**
- * A known default password is only tolerable while the station is unreachable
- * from outside. Rather than trusting the owner to remember to change it before
- * exposing the Pi, the default simply stops working off-LAN.
- */
-export function defaultPasswordBlocksUnlock(
-	auth: { isDefault: boolean },
-	ip: string | undefined,
-) {
-	return auth.isDefault && !isPrivateAddress(ip);
-}

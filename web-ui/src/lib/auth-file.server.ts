@@ -6,24 +6,25 @@ import path from "node:path";
 
 import { parseBirdnetConfig } from "~/lib/settings-config.server.ts";
 
-/** Shipped so a fresh install is usable without touching the Pi. Kept
- *  harmless by the remote-unlock refusal in `auth-policy.server.ts`. */
-export const DEFAULT_PASSWORD = "birdnet";
-
-/** Only applies to passwords the owner chooses; the default is exempt. */
 export const MIN_PASSWORD_LENGTH = 12;
 
 const SCRYPT = { N: 16384, r: 8, p: 1 } as const;
 const KEY_LENGTH = 32;
 
-export type AuthFile = { hash: string; isDefault: boolean; nonce: string };
+export type AuthFile = { hash: string; nonce: string };
 
-/** Thrown when the file exists but cannot be trusted. Callers must treat this
- *  as "locked", never as "no password configured". */
+/** Thrown when the file exists but cannot be read or trusted. Callers must
+ *  treat this as "locked", never as "no password configured". */
 export class AuthConfigError extends Error {}
 
+/**
+ * In a directory of its own, owned by the account the web UI runs as, because
+ * every write is a temp file renamed into place: the service has to be able to
+ * create files *next to* the password file, and `/etc/birdnet` itself is
+ * root's. `install_web_ui.sh` creates it.
+ */
 export function resolveAuthPath() {
-	return process.env.BIRDNET_AUTH_CONF ?? "/etc/birdnet/web-ui-auth.conf";
+	return process.env.BIRDNET_AUTH_CONF ?? "/etc/birdnet/web-ui/auth.conf";
 }
 
 export function hashPassword(password: string, salt = randomBytes(16)) {
@@ -67,7 +68,6 @@ function serialize(auth: AuthFile) {
 		"# BirdNET-Pi web UI password. Do not edit by hand --",
 		"# use scripts/set_web_ui_password.sh.",
 		`WEB_UI_PWD_HASH=${auth.hash}`,
-		`WEB_UI_PWD_IS_DEFAULT=${auth.isDefault ? "1" : "0"}`,
 		`WEB_UI_SESSION_NONCE=${auth.nonce}`,
 		"",
 	].join("\n");
@@ -93,8 +93,8 @@ export async function writeAuthFile(
 		await rename(temporaryPath, authPath);
 	} catch (error) {
 		// A failed rename would otherwise leave the temp file behind on every
-		// attempt. It is 0600 so nothing leaks, but they would accumulate in
-		// /etc/birdnet forever.
+		// attempt. It is 0600 so nothing leaks, but they would accumulate
+		// forever.
 		await rm(temporaryPath, { force: true });
 		throw error;
 	}
@@ -104,37 +104,35 @@ export function newNonce() {
 	return randomBytes(16).toString("hex");
 }
 
+/**
+ * `null` means no password has been set, so nobody can sign in. There is no
+ * shipped default: a password everyone knows can only be made safe by guessing
+ * whether a visitor is at home, and that guess fails both ways -- a home
+ * network on public IPv6 looks remote, and a tunnel to the internet makes
+ * every visitor look local.
+ *
+ * Reading never writes. An unreadable file is an AuthConfigError rather than
+ * `null`: "the station is broken" and "the station is not set up yet" need
+ * different fixes, and the owner should be told which.
+ */
 export async function readAuthFile(
 	authPath = resolveAuthPath(),
-): Promise<AuthFile> {
+): Promise<AuthFile | null> {
 	let text: string;
 	try {
 		text = await readFile(authPath, "utf8");
 	} catch (error) {
-		if ((error as NodeJS.ErrnoException).code !== "ENOENT") {
-			throw new AuthConfigError(
-				`Cannot read ${authPath}: ${(error as Error).message}`,
-			);
-		}
-		const created: AuthFile = {
-			hash: hashPassword(DEFAULT_PASSWORD),
-			isDefault: true,
-			nonce: newNonce(),
-		};
-		try {
-			await writeAuthFile(created, authPath);
-		} catch (cause) {
-			// An unwritable directory would otherwise throw a bare fs error out of
-			// a function whose callers only know to expect AuthConfigError, and
-			// would re-run scrypt on every single request while never succeeding.
-			throw new AuthConfigError(
-				`Cannot create ${authPath}: ${(cause as Error).message}`,
-			);
-		}
-		return created;
+		if ((error as NodeJS.ErrnoException).code === "ENOENT") return null;
+		throw new AuthConfigError(
+			`Cannot read ${authPath}: ${(error as Error).message}`,
+		);
 	}
 
 	const values = parseBirdnetConfig(text);
+	// Written by versions that shipped the password `birdnet`. That password is
+	// no longer accepted from anywhere, so such a station is simply unset.
+	if (values.WEB_UI_PWD_IS_DEFAULT === "1") return null;
+
 	const hash = values.WEB_UI_PWD_HASH ?? "";
 	const nonce = values.WEB_UI_SESSION_NONCE ?? "";
 	// A hash that verifies nothing would lock the owner out silently; a missing
@@ -148,15 +146,15 @@ export async function readAuthFile(
 		);
 	}
 
-	return { hash, isDefault: values.WEB_UI_PWD_IS_DEFAULT === "1", nonce };
+	return { hash, nonce };
 }
 
 /**
- * Both password mutations live here rather than in `auth.server.ts` so the
+ * The password mutation lives here rather than in `auth.server.ts` so the
  * command-line tool that sets the password can reach them without importing the
  * request and cookie helpers, which mean nothing outside a live HTTP request.
  *
- * Neither reads the existing file first. They replace it wholesale, and a
+ * It does not read the existing file first. It replaces it wholesale, and a
  * corrupt file is exactly when the owner most needs to be able to set a
  * password -- refusing to overwrite it would make the recovery tool useless in
  * the one situation it exists for.
@@ -171,20 +169,7 @@ export async function changePassword(
 		);
 	}
 	await writeAuthFile(
-		{ hash: hashPassword(password), isDefault: false, nonce: newNonce() },
-		authPath,
-	);
-}
-
-/** Restores the shipped default, which also re-imposes the local-network-only
- *  restriction on unlocking. */
-export async function resetPasswordToDefault(authPath = resolveAuthPath()) {
-	await writeAuthFile(
-		{
-			hash: hashPassword(DEFAULT_PASSWORD),
-			isDefault: true,
-			nonce: newNonce(),
-		},
+		{ hash: hashPassword(password), nonce: newNonce() },
 		authPath,
 	);
 }

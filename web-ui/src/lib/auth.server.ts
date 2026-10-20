@@ -9,6 +9,7 @@ import {
 } from "@tanstack/react-start/server";
 
 import {
+	AuthConfigError,
 	type AuthFile,
 	newNonce,
 	readAuthFile,
@@ -16,7 +17,6 @@ import {
 	verifyPassword,
 	writeAuthFile,
 } from "./auth-file.server.ts";
-import { defaultPasswordBlocksUnlock } from "./auth-policy.server.ts";
 import {
 	COOKIE_MAX_AGE_SECONDS,
 	signSessionToken,
@@ -25,14 +25,39 @@ import {
 } from "./auth-session.server.ts";
 import { UnlockThrottle } from "./auth-throttle.server.ts";
 
-export type UnlockStatus = { unlocked: boolean; isDefaultPassword: boolean };
+/**
+ * - `ready`: a password is set; `unlocked` says whether this browser has it.
+ * - `not-set-up`: no password yet, so nobody can sign in until the owner sets
+ *   one on the Pi.
+ * - `misconfigured`: the password file exists but can't be read or trusted.
+ *   Locked, and the owner needs the service log to see why.
+ */
+export type StationAuthState = "ready" | "not-set-up" | "misconfigured";
+export type UnlockStatus = { unlocked: boolean; state: StationAuthState };
 export type UnlockResult =
 	| { ok: true }
 	| {
 			ok: false;
-			reason: "invalid" | "throttled" | "default-password-remote";
+			reason: "invalid" | "throttled" | "not-set-up" | "misconfigured";
 			retryAfterMs?: number;
 	  };
+
+type LoadedAuth =
+	| { state: "ready"; auth: AuthFile }
+	| { state: "not-set-up" | "misconfigured" };
+
+/** The one place a broken password file is logged, with the reason, so the
+ *  page can say "see the log" and the log has something in it. */
+async function loadAuth(): Promise<LoadedAuth> {
+	try {
+		const auth = await readAuthFile();
+		return auth ? { state: "ready", auth } : { state: "not-set-up" };
+	} catch (error) {
+		if (!(error instanceof AuthConfigError)) throw error;
+		console.error(`[auth] ${error.message}`);
+		return { state: "misconfigured" };
+	}
+}
 
 // Lazy so the throttle's state path is resolved on first use, not at module
 // import time -- resolving eagerly at module scope would bake in whatever
@@ -85,25 +110,24 @@ function issueSession(auth: AuthFile) {
 }
 
 export async function readUnlockStatus(): Promise<UnlockStatus> {
-	// A malformed auth file throws out of readAuthFile; callers convert that to
-	// "locked", never to "open".
-	const auth = await readAuthFile();
+	const loaded = await loadAuth();
+	// Anything but a readable, set password is locked -- never open.
+	if (loaded.state !== "ready") return { unlocked: false, state: loaded.state };
+	const { auth } = loaded;
 	const unlocked = verifySessionToken(auth, getCookie(UNLOCK_COOKIE_NAME));
 	// Sliding renewal: every verified request pushes the expiry back out.
 	if (unlocked) issueSession(auth);
-	return { unlocked, isDefaultPassword: auth.isDefault };
+	return { unlocked, state: "ready" };
 }
 
 export async function attemptUnlock(password: string): Promise<UnlockResult> {
-	const auth = await readAuthFile();
-	const ip = resolveClientIp();
-	const client = ip ?? UNKNOWN_CLIENT;
+	const loaded = await loadAuth();
+	// Nothing to guess against, so these skip the throttle: a failure here
+	// says nothing about the password.
+	if (loaded.state !== "ready") return { ok: false, reason: loaded.state };
+	const { auth } = loaded;
+	const client = resolveClientIp() ?? UNKNOWN_CLIENT;
 	const throttle = getThrottle();
-
-	if (defaultPasswordBlocksUnlock(auth, ip)) {
-		console.warn(`[auth] refused default-password unlock from ${client}`);
-		return { ok: false, reason: "default-password-remote" };
-	}
 
 	const gate = await throttle.check(client);
 	if (!gate.allowed) {
@@ -125,11 +149,13 @@ export function clearSession() {
 	deleteCookie(UNLOCK_COOKIE_NAME, { path: "/" });
 }
 
+/** Only reachable signed in (`requireUnlocked`), so a password is set. */
 export async function rotateSessionNonce() {
 	const auth = await readAuthFile();
+	if (!auth) throw new AuthConfigError("No password is set.");
 	await writeAuthFile({ ...auth, nonce: newNonce() });
 }
 
-// `changePassword` and `resetPasswordToDefault` live in `auth-file.server.ts`,
-// alongside the file format they rewrite, so the password-setting CLI can use
-// them without pulling in this module's request-scoped helpers.
+// `changePassword` lives in `auth-file.server.ts`,
+// alongside the file format it rewrites, so the password-setting CLI can use
+// it without pulling in this module's request-scoped helpers.

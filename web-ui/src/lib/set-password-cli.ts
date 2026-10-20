@@ -1,4 +1,4 @@
-import { changePassword, resetPasswordToDefault } from "./auth-file.server.ts";
+import { changePassword } from "./auth-file.server.ts";
 
 /**
  * The hashing and the file format live in `auth-file.server.ts`, the same
@@ -33,13 +33,8 @@ function readPasswordFromStdin() {
 }
 
 try {
-	if (process.argv.includes("--clear")) {
-		await resetPasswordToDefault();
-		console.log("Reset to the default password. Remote unlock is now refused.");
-	} else {
-		await changePassword(await readPasswordFromStdin());
-		console.log("Password updated. All devices have been signed out.");
-	}
+	await changePassword(await readPasswordFromStdin());
+	console.log("Password updated. All devices have been signed out.");
 } catch (error) {
 	console.error((error as Error).message);
 	process.exit(1);
