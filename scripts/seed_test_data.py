@@ -65,11 +65,14 @@ Usage:
 import argparse
 import csv
 import gzip
+import importlib
 import math
 import os
 import random
 import shutil
+import site
 import sqlite3
+import subprocess
 import sys
 import zlib
 from collections import defaultdict
@@ -602,6 +605,33 @@ def _remove_last_seed(seed_root: str, extracted_dir: str):
     os.remove(manifest)
 
 
+def ensure_numpy():
+    """seed_calls renders the clips with numpy, which a dev machine's Python
+    may not have. Installs it (into the user site, outside a venv) rather
+    than failing after the detections are already written."""
+    try:
+        import numpy  # noqa: F401
+        return
+    except ImportError:
+        pass
+    print('numpy is needed to render the audio clips; installing it...')
+    in_venv = sys.prefix != sys.base_prefix
+    command = [
+        sys.executable, '-m', 'pip', 'install', '--quiet',
+        '--disable-pip-version-check', '--no-warn-script-location', 'numpy',
+    ]
+    if not in_venv:
+        command.insert(4, '--user')
+    if subprocess.run(command).returncode != 0:
+        sys.exit(
+            'Could not install numpy. Install it with '
+            f'"{sys.executable} -m pip install numpy", or rerun with --no-audio.'
+        )
+    site.main()  # pick up a user site that didn't exist when Python started
+    importlib.invalidate_caches()
+    import numpy  # noqa: F401
+
+
 def seed_audio(rows: list[tuple], extracted_dir: str, fresh: bool):
     """Links a synthesized call into place for every row, at By_Date/<date>/
     <species>/<File_Name>. Rows already carry their clip_file_name()."""
@@ -700,6 +730,10 @@ def main():
         args.days = 0
     elif args.years is not None:
         args.days = days_for_years(args.years)
+    # Checked before the database is touched, so a missing dependency never
+    # leaves detections behind with no clips to play.
+    if not args.no_audio:
+        ensure_numpy()
 
     con = sqlite3.connect(args.db)
     cur = con.cursor()
