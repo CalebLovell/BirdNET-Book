@@ -348,5 +348,51 @@ class SpeciesTest(unittest.TestCase):
         self.assertNotIn("colour", notes["cardinalis-cardinalis"])
 
 
+class AnatomyReferenceTest(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        root = Path(self.tmp.name)
+        self.saved = illustrate.REFERENCES_DIR, illustrate.WORK_DIR, illustrate.PHOTOS_PATH
+        illustrate.REFERENCES_DIR = root / "references"
+        illustrate.WORK_DIR = root / "work"
+        illustrate.PHOTOS_PATH = root / "photos.json"
+        illustrate.REFERENCES_DIR.mkdir()
+        self.addCleanup(self.restore)
+
+    def restore(self):
+        illustrate.REFERENCES_DIR, illustrate.WORK_DIR, illustrate.PHOTOS_PATH = self.saved
+
+    def list_photo(self):
+        illustrate.PHOTOS_PATH.write_text(json.dumps({"tringa-flavipes": {"url": "https://upload.wikimedia.org/x.jpg"}}))
+
+    def test_anatomy_reference_prefers_committed_file(self):
+        committed = illustrate.REFERENCES_DIR / "tringa-flavipes.jpg"
+        committed.write_bytes(b"jpg")
+        self.list_photo()
+        calls = []
+        self.assertEqual(illustrate.anatomy_reference("tringa-flavipes", fetch=calls.append), committed)
+        self.assertEqual(calls, [])
+
+    def test_anatomy_reference_downloads_from_photos_json(self):
+        self.list_photo()
+        calls = []
+
+        def fetch(url):
+            calls.append(url)
+            return b"jpg"
+
+        path = illustrate.anatomy_reference("tringa-flavipes", fetch=fetch)
+        self.assertEqual(path, illustrate.WORK_DIR / "references" / "tringa-flavipes.jpg")
+        self.assertEqual(path.read_bytes(), b"jpg")
+        self.assertEqual(illustrate.anatomy_reference("tringa-flavipes", fetch=fetch), path)
+        self.assertEqual(calls, ["https://upload.wikimedia.org/x.jpg"])
+
+    def test_anatomy_reference_none_without_either(self):
+        self.assertIsNone(illustrate.anatomy_reference("tringa-flavipes", fetch=lambda url: b"jpg"))
+        self.list_photo()
+        self.assertIsNone(illustrate.anatomy_reference("other-bird", fetch=lambda url: b"jpg"))
+
+
 if __name__ == "__main__":
     unittest.main()

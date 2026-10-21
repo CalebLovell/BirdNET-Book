@@ -37,12 +37,13 @@ them side by side before installing.
 From `tools/illustrate`, with `<slug>` from `python illustrate.py species`
 (for example `cardinalis-cardinalis`):
 
-0. Add a reference photo as `references/<slug>.jpg`: public domain or CC0
-   only (Wikimedia Commons filtered by licence; US Fish & Wildlife and
-   National Park Service photos are public domain). Pick a clear side view
-   showing every field mark, crop it to the bird, and log it in
-   `references/SOURCES.md`. `generate` refuses a species without one:
-   from memory alone the model drifts toward a generic bird.
+0. A species in `photos.json` already has its reference: `generate`
+   downloads it once into `work/references/<slug>.jpg`. For any other,
+   add `references/<slug>.jpg` yourself: public domain or CC0 only, a clear
+   side view showing every field mark, cropped to the bird, logged in
+   `references/SOURCES.md`. A file in `references/` wins over the list.
+   `generate` refuses a species with neither: from memory alone the model
+   drifts toward a generic bird.
 1. `python illustrate.py generate <slug>` paints one perched
    attempt into `work/<slug>/perched-NN.png`. Look at it. To paint another,
    add `--again`.
@@ -65,6 +66,42 @@ From `tools/illustrate`, with `<slug>` from `python illustrate.py species`
 contact sheet of every attempt) help when running many species at once.
 They're optional when going one bird at a time.
 
+## Reference photos
+
+`photos.py` builds `photos.json`: one public-domain or CC0 photo per
+species, used two ways. The painting tool sends it to Gemini as the
+anatomy reference, and the web UI shows it, square-cropped, wherever a
+species has no painting yet. The photos are linked, not stored: the file
+holds URLs (iNaturalist and Wikimedia Commons only) with the credit and
+licence, and no images are committed. Candidates download into
+`work/photos/`, which git ignores. Run from `tools/illustrate`:
+
+1. `python photos.py rank` lists the species worth covering: birds seen in
+   the US and Canada, top 300, plus everything in `scripts/birds.db`.
+2. `python photos.py candidates` fetches up to five CC0/PD photos per
+   species. It resumes where it stopped, and records species with none.
+   Eastern birds rank low, so the first run used `--top 500`.
+3. `python photos.py sheets` makes contact sheets (8 species per sheet,
+   `--per-sheet N` to change) in `work/photos/`.
+4. Pick. Sonnet subagents look at each sheet and choose one photo per
+   species, or `"n": null` with a reason (`close:` for a close call). The
+   rules: correct species; an adult in its most recognizable plumage
+   (breeding male unless the species is usually known otherwise); the bird
+   large, sharp and clearly the subject; a side or three-quarter view
+   showing field marks; no splash, silhouette, in-hand, dead, captive or
+   heavily cropped shots.
+5. `python photos.py review` writes `work/photos/review.html`. The owner
+   looks it over and approves it.
+6. `python photos.py adopt` merges the picks into `photos.json` and
+   regenerates `web-ui/src/lib/reference-photos.ts`. Commit both.
+7. `python photos.py check` confirms every URL still serves an image. Links
+   rot, so it's worth an occasional re-run.
+
+To grow the list, run `candidates --top 800` (or another N), or
+`candidates --db other.db` for another database, then `sheets` and on. Only
+new species need picking. A painting always wins: a painted species never
+shows its photo.
+
 ## What the pieces do
 
 - **`prompt.md`** is the style, in plain sections: `base`, then the kind
@@ -81,9 +118,10 @@ They're optional when going one bird at a time.
     rather than on a twig.
   - `"colour"`: saturation at cutout, for a species that comes back too
     vivid. 1 is as painted.
-- **`references/<slug>.jpg`** is required: a public-domain or CC0 photo of
-  the species, sent with every painting of it for anatomy and markings.
-  Sources are logged in `references/SOURCES.md`.
+- **`references/<slug>.jpg`** or an entry in **`photos.json`** is required:
+  a public-domain or CC0 photo of the species, sent with every painting of
+  it for anatomy and markings. Sources for the files are logged in
+  `references/SOURCES.md`.
 
 ## What we learned getting the style right
 

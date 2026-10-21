@@ -39,8 +39,11 @@ import shutil
 import sqlite3
 import sys
 import time
+import urllib.parse
+import urllib.request
 from contextlib import closing
 from pathlib import Path
+from typing import Callable
 
 HERE = Path(__file__).resolve().parent
 REPO_ROOT = HERE.parents[1]
@@ -50,6 +53,8 @@ PROMPT_PATH = HERE / 'prompt.md'
 NOTES_PATH = HERE / 'notes.json'
 STYLE_DIR = HERE / 'style'
 REFERENCES_DIR = HERE / 'references'
+PHOTOS_PATH = HERE / 'photos.json'
+PHOTO_HOSTS = {'inaturalist-open-data.s3.amazonaws.com', 'upload.wikimedia.org'}
 WORK_DIR = HERE / 'work'
 CUT_DIR = WORK_DIR / 'cut'
 PICKS_PATH = WORK_DIR / 'picks.json'
@@ -167,12 +172,40 @@ def style_plates(kind: str = 'bird') -> list[Path]:
     return plates[:MAX_STYLE_PLATES]
 
 
-def anatomy_reference(slug: str) -> Path | None:
+def _download(url: str) -> bytes:
+    # photos.py imports this module, so it can't be reused here. Same rules:
+    # its User-Agent, and only the hosts the photo list is allowed to use.
+    if urllib.parse.urlparse(url).hostname not in PHOTO_HOSTS:
+        raise ValueError(f'refusing to fetch from {url}')
+    request = urllib.request.Request(url, headers={'User-Agent': 'BirdNET-Pi-Live photos tool'})
+    with urllib.request.urlopen(request, timeout=30) as response:
+        return response.read()
+
+
+def anatomy_reference(slug: str, fetch: Callable[[str], bytes] = _download) -> Path | None:
+    """The reference photo for a species: a committed file, else the one in
+    photos.json (fetched once into work/references/), else None."""
     for ext in IMAGE_TYPES:
         path = REFERENCES_DIR / f'{slug}{ext}'
         if path.exists():
             return path
-    return None
+    cached = WORK_DIR / 'references' / f'{slug}.jpg'
+    if cached.exists():
+        return cached
+    try:
+        entry = json.loads(PHOTOS_PATH.read_text(encoding='utf-8')).get(slug)
+    except (OSError, ValueError):
+        return None
+    if not entry or not entry.get('url'):
+        return None
+    try:
+        data = fetch(entry['url'])
+    except (OSError, ValueError) as e:
+        print(f'Could not fetch the reference photo for {slug}: {e}', file=sys.stderr)
+        return None
+    cached.parent.mkdir(parents=True, exist_ok=True)
+    cached.write_bytes(data)
+    return cached
 
 
 def attachments(sp: dict, pose: str, picks: dict) -> list[tuple[str, Path]]:
@@ -443,8 +476,9 @@ def cmd_generate(args):
     missing = sorted({sp['slug'] for sp, _ in todo if not anatomy_reference(sp['slug'])})
     if missing and not args.no_reference:
         sys.exit(
-            f'No reference photo for: {", ".join(missing)}. Add references/<slug>.jpg '
-            '(public domain or CC0, logged in references/SOURCES.md) first.'
+            f'No reference photo for: {", ".join(missing)}. Add it to photos.json with '
+            'photos.py, or add references/<slug>.jpg (public domain or CC0, '
+            'logged in references/SOURCES.md), first.'
         )
     print(f'{len(todo)} paintings to make with {args.model}.')
     if args.dry_run:
