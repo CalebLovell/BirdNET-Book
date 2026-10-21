@@ -1,3 +1,4 @@
+import { Link } from "@tanstack/react-router";
 import {
 	ArrowRight,
 	Check,
@@ -5,7 +6,6 @@ import {
 	Search,
 	ShieldCheck,
 	Shuffle,
-	SkipForward,
 	Trash2,
 	X,
 } from "lucide-react";
@@ -17,10 +17,19 @@ import { IndexDot } from "~/components/index-dot.tsx";
 import { SpeciesImage } from "~/components/species-image.tsx";
 import { SpeciesThumbnail } from "~/components/species-row.tsx";
 import {
+	ClipMeta,
+	ClipMetaSkeleton,
 	SpectrogramPlayer,
 	SpectrogramPlayerSkeleton,
 } from "~/components/spectrogram-player.tsx";
 import { Button } from "~/components/ui/button.tsx";
+import {
+	ConfirmDialog,
+	MODAL_ACTIONS_CLASS,
+	MODAL_BACKDROP_CLASS,
+	MODAL_CARD_CLASS,
+	MODAL_TITLE_CLASS,
+} from "~/components/ui/confirm-dialog.tsx";
 import { Input } from "~/components/ui/input.tsx";
 import { PageStepper } from "~/components/ui/page-stepper.tsx";
 import { ShellBar, ShellSized, ShellText } from "~/components/ui/shell.tsx";
@@ -29,6 +38,7 @@ import { formatDate, formatDateTime } from "~/lib/date-format.ts";
 import { EMPTY } from "~/lib/empty-messages.ts";
 import type { ReviewCandidate, ReviewPage } from "~/lib/review.server.ts";
 import { REVIEW_PAGE_SIZE, type SpeciesOption } from "~/lib/review-data.ts";
+import { comNameToSlug } from "~/lib/species-slug.ts";
 
 /** A queue row's height: the 40px thumbnail and 7px above and below it. */
 const ROW_HEIGHT_PX = 54;
@@ -39,12 +49,23 @@ const REVIEW_GRID_CLASS =
 // The evidence spectrogram: taller than the quiz's, since here its detail is
 // the point.
 const REVIEW_PLOT_CLASS = "h-56 max-sm:h-40";
-const UNDER_REVIEW_CLASS = "feature-card flex flex-col gap-4 rounded-md p-4";
-const IDENTITY_ROW_CLASS = "flex items-center gap-4 max-[400px]:gap-3";
+const UNDER_REVIEW_CLASS =
+	"feature-card flex flex-col gap-(--page-gap) rounded-md p-4";
+// The name sits up by the portrait's top edge rather than floating in its
+// middle, with a little air before the binomial, so the pair fills the
+// portrait's height instead of huddling at its centre.
+const IDENTITY_ROW_CLASS = "flex items-start gap-(--page-gap)";
+const IDENTITY_TEXT_CLASS = "flex min-w-0 flex-1 flex-col gap-1.5 pt-2";
 const PORTRAIT_CLASS =
 	"flex size-20 shrink-0 items-center justify-center overflow-hidden max-[400px]:size-14";
-const EVIDENCE_LINE_CLASS =
-	"tabular-data flex flex-wrap items-center gap-x-3 gap-y-1 text-muted-foreground text-sm";
+// The verdict buttons' band, bled to the card's edges like the queue's pager.
+const ACTIONS_FOOTER_CLASS =
+	"-mx-(--page-gap) -mb-(--page-gap) flex flex-wrap items-center gap-2 border-t px-(--page-gap) py-3";
+// Delete as a tonal button -- a pale clay fill with clay text -- rather than a
+// solid block: the confirm dialog's own Delete stays solid, so the card's
+// button only opens the question.
+const DELETE_BUTTON_CLASS =
+	"bg-[color-mix(in_oklab,var(--clay)_14%,var(--paper-raised))] text-destructive hover:bg-[color-mix(in_oklab,var(--clay)_22%,var(--paper-raised))] hover:text-destructive";
 const QUEUE_CARD_CLASS = "@container feature-card flex flex-col rounded-md p-4";
 const QUEUE_HEADER_CLASS =
 	"-mx-(--page-gap) -mt-(--page-gap) flex min-h-[45px] items-center justify-between gap-2 border-b px-(--page-gap)";
@@ -58,10 +79,11 @@ const NAME_WIDTHS = ["w-36", "w-28", "w-40", "w-32"];
 
 /**
  * The workflow before its queue arrives, built from its own pieces: the
- * recording under review -- the portrait's square, bars for its kicker, name
- * and binomial, shells the size of the eBird link and the pill, the clip's
- * slot with the play button's circle, and its four action buttons as
- * themselves, disabled -- beside a full page of queue rows and the pager.
+ * recording under review -- its header band with a shell the size of the
+ * eBird link, the portrait's square, bars for its name and binomial, the
+ * clip's slot with the play button and the heard line's shells, and its three
+ * action buttons as themselves, disabled -- beside a full page of queue rows
+ * and the pager.
  */
 export function ReviewWorkflowSkeleton() {
 	return (
@@ -72,50 +94,48 @@ export function ReviewWorkflowSkeleton() {
 					aria-label="Detection under review"
 					className={UNDER_REVIEW_CLASS}
 				>
-					<div aria-hidden="true" className={IDENTITY_ROW_CLASS}>
-						<div className={PORTRAIT_CLASS}>
-							<ShellBar className="size-full rounded-md" />
-						</div>
-						<div className="min-w-0 flex-1">
-							<ShellText className="island-kicker" barClassName="w-32" />
-							<ShellText
-								className="display-title mt-1 font-bold text-2xl sm:text-3xl"
-								barClassName="w-56 max-w-full"
-							/>
-							<ShellText className="text-sm" barClassName="w-36" />
-						</div>
-						<ShellSized className="self-start rounded-md">
-							<Button variant="outline" size="xs">
+					<CardHeader title="Under review">
+						<ShellSized className="rounded-md">
+							<Button variant="outline">
 								<ExternalLink />
 								<span className="max-sm:hidden">eBird reference</span>
 							</Button>
 						</ShellSized>
+					</CardHeader>
+					<div aria-hidden="true" className={IDENTITY_ROW_CLASS}>
+						<div className={PORTRAIT_CLASS}>
+							<ShellBar className="size-full rounded-md" />
+						</div>
+						<div className={IDENTITY_TEXT_CLASS}>
+							<ShellText
+								className="display-title font-bold text-2xl sm:text-3xl"
+								barClassName="w-56 max-w-full"
+							/>
+							<ShellText className="text-sm" barClassName="w-36" />
+						</div>
 					</div>
-					<div aria-hidden="true" className={EVIDENCE_LINE_CLASS}>
-						<ShellSized className="rounded-full">
-							<ConfidencePill confidence={0.5} />
-						</ShellSized>
-						<ShellText className="w-28" barClassName="w-full" />
-						<ShellText className="w-40" barClassName="w-full" />
-					</div>
-					<SpectrogramPlayerSkeleton className={REVIEW_PLOT_CLASS} />
-					<div className="flex flex-wrap items-center gap-2">
-						<Button size="xs" disabled>
-							<ShieldCheck />
-							Correct
-						</Button>
-						<Button variant="outline" size="xs" disabled>
-							<Shuffle />
-							Recategorize
+					<SpectrogramPlayerSkeleton
+						className={REVIEW_PLOT_CLASS}
+						aside={<ClipMetaSkeleton />}
+					/>
+					<div className={ACTIONS_FOOTER_CLASS}>
+						<Button
+							variant="ghost"
+							size="default"
+							className={DELETE_BUTTON_CLASS}
+							disabled
+						>
+							<Trash2 />
+							Delete
 						</Button>
 						<div className="ml-auto flex items-center gap-2">
-							<Button variant="ghost" size="xs" disabled>
-								<SkipForward />
-								Skip
+							<Button variant="outline" size="default" disabled>
+								<Shuffle />
+								Recategorize
 							</Button>
-							<Button variant="destructive" size="xs" disabled>
-								<Trash2 />
-								Delete
+							<Button size="default" disabled>
+								<ShieldCheck />
+								Correct
 							</Button>
 						</div>
 					</div>
@@ -256,11 +276,6 @@ function formatRecorded(date: string, time: string) {
 	};
 }
 
-/** How established the species is here -- the reason it's in the queue. */
-function describeLifetime(count: number) {
-	return count <= 1 ? "First time heard here" : `Heard ${count} times here`;
-}
-
 export function ReviewWorkflow({
 	page,
 	species,
@@ -279,16 +294,14 @@ export function ReviewWorkflow({
 	onPageChange: (page: number) => void;
 }) {
 	const [index, setIndex] = useState(0);
-	const [skipped, setSkipped] = useState<Set<number>>(new Set());
 	const [action, setAction] = useState<Action | null>(null);
 	const [picker, setPicker] = useState<ReviewCandidate | null>(null);
 	const [query, setQuery] = useState("");
-	const rows = page.candidates.filter((row) => !skipped.has(row.rowId));
+	const rows = page.candidates;
 	const row = rows[Math.min(index, Math.max(0, rows.length - 1))];
 	const pageCount = Math.max(1, Math.ceil(page.total / page.pageSize));
 	const paged = pageCount > 1;
-	/** A recording's place in the whole queue, counted from one. Skipping a
-	    bird hides it without renumbering the rest. */
+	/** A recording's place in the whole queue, counted from one. */
 	const queueNumber = (item: ReviewCandidate) =>
 		(page.page - 1) * page.pageSize + page.candidates.indexOf(item) + 1;
 	/** The page's largest number, so every dot on it is the same width. */
@@ -330,7 +343,12 @@ export function ReviewWorkflow({
 			/>
 		);
 	}
-	const position = rows.indexOf(row);
+	const heard = (
+		<ClipMeta
+			heardAt={formatDateTime(row.date, row.time)}
+			confidence={row.confidence}
+		/>
+	);
 	return (
 		<>
 			{/* The recording under review takes the width; the rest of the queue sits
@@ -344,31 +362,10 @@ export function ReviewWorkflow({
 						aria-label="Detection under review"
 						className={UNDER_REVIEW_CLASS}
 					>
-						<div className={IDENTITY_ROW_CLASS}>
-							<div className={PORTRAIT_CLASS}>
-								<SpeciesImage
-									imageUrl={row.imageUrl}
-									alt={row.comName}
-									glyphClassName="size-10"
-								/>
-							</div>
-							<div className="min-w-0 flex-1">
-								<div className="island-kicker">
-									Recording {queueNumber(row)} of {page.total}
-								</div>
-								<h2 className="display-title mt-1 font-bold text-2xl text-[var(--moss)] sm:text-3xl">
-									{row.comName}
-								</h2>
-								<p className="text-[var(--bark)] text-sm italic">
-									{row.sciName}
-								</p>
-							</div>
-							<Button
-								asChild
-								variant="outline"
-								size="xs"
-								className="self-start"
-							>
+						{/* Its place in the queue is already the queue's highlighted row,
+						    so the header carries the species' eBird page instead. */}
+						<CardHeader title="Under review">
+							<Button asChild variant="outline">
 								<a
 									href={row.ebirdUrl}
 									target="_blank"
@@ -379,72 +376,93 @@ export function ReviewWorkflow({
 									<span className="max-sm:hidden">eBird reference</span>
 								</a>
 							</Button>
+						</CardHeader>
+						<div className={IDENTITY_ROW_CLASS}>
+							<div className={PORTRAIT_CLASS}>
+								<SpeciesImage
+									imageUrl={row.imageUrl}
+									alt={row.comName}
+									glyphClassName="size-10"
+								/>
+							</div>
+							<div className={IDENTITY_TEXT_CLASS}>
+								{/* One line each, cut short with an ellipsis, so a long name
+								    never grows the card; the full name is in the tooltip.
+								    The name opens the bird's page, as the species hero's
+								    does -- moss set on the heading, not the anchor. */}
+								<h2
+									title={row.comName}
+									className="display-title truncate font-bold text-2xl text-[var(--moss)] sm:text-3xl"
+								>
+									<Link
+										to="/birds/$comName"
+										params={{ comName: comNameToSlug(row.comName) }}
+										className="no-underline hover:underline"
+									>
+										{row.comName}
+									</Link>
+								</h2>
+								<p
+									title={row.sciName}
+									className="truncate text-[var(--bark)] text-sm italic"
+								>
+									{row.sciName}
+								</p>
+							</div>
 						</div>
 
-						{/* What the verdict rests on, in one line rather than a row of stat
-					    tiles: the score, how new the bird is here, and when it was heard. */}
-						<div className={EVIDENCE_LINE_CLASS}>
-							<ConfidencePill confidence={row.confidence} />
-							<span>{describeLifetime(row.lifetimeCount)}</span>
-							<span>{formatDateTime(row.date, row.time)}</span>
-						</div>
-
-						{/* The evidence itself: hear the call and see its shape. */}
+						{/* The evidence itself: hear the call and see its shape. What the
+						    verdict rests on -- when it was heard and its score -- sits
+						    across from the play button, as on every spectrogram card. */}
 						{row.audioAvailable ? (
 							<SpectrogramPlayer
 								key={row.rowId}
 								audioUrl={row.audioUrl}
 								speciesName={row.comName}
 								className={REVIEW_PLOT_CLASS}
+								aside={heard}
 							/>
 						) : (
-							<p className="grid h-40 place-items-center rounded-md border border-[var(--line)] border-dashed px-4 text-center text-destructive text-sm">
-								Audio unavailable. You can delete or skip this orphaned entry.
-							</p>
+							<div>
+								<p className="grid h-40 place-items-center rounded-md border border-[var(--line)] border-dashed px-4 text-center text-destructive text-sm">
+									Audio unavailable. You can delete or skip this orphaned entry.
+								</p>
+								<div className="mt-(--page-gap) flex flex-wrap items-center justify-end gap-2">
+									{heard}
+								</div>
+							</div>
 						)}
 
-						{/* The verdict pair reads left to right, and the two ways out sit
-					    apart from them on the right. */}
-						<div className="flex flex-wrap items-center gap-2">
+						{/* The verdict in a footer band: Delete held apart on the left,
+						    and the two keeps on the right, ending on Correct. */}
+						<div className={ACTIONS_FOOTER_CLASS}>
 							<Button
-								size="xs"
-								disabled={!row.audioAvailable || busy}
-								onClick={() => setAction({ kind: "correct", row })}
+								variant="ghost"
+								size="default"
+								className={DELETE_BUTTON_CLASS}
+								disabled={busy}
+								onClick={() => setAction({ kind: "delete", row })}
 							>
-								<ShieldCheck />
-								Correct
-							</Button>
-							<Button
-								variant="outline"
-								size="xs"
-								disabled={!row.audioAvailable || busy}
-								onClick={() => setPicker(row)}
-							>
-								<Shuffle />
-								Recategorize
+								<Trash2 />
+								Delete
 							</Button>
 							<div className="ml-auto flex items-center gap-2">
 								<Button
-									variant="ghost"
-									size="xs"
-									disabled={busy}
-									onClick={() => {
-										setSkipped(new Set(skipped).add(row.rowId));
-										// The next bird slides into this slot.
-										setIndex(position);
-									}}
+									variant="outline"
+									size="default"
+									disabled={!row.audioAvailable || busy}
+									onClick={() => setPicker(row)}
 								>
-									<SkipForward />
-									Skip
+									<Shuffle />
+									Recategorize
 								</Button>
 								<Button
-									variant="destructive"
-									size="xs"
-									disabled={busy}
-									onClick={() => setAction({ kind: "delete", row })}
+									size="default"
+									disabled={!row.audioAvailable || busy}
+									onClick={() => setAction({ kind: "correct", row })}
 								>
-									<Trash2 />
-									Delete
+									<ShieldCheck />
+									Correct
 								</Button>
 							</div>
 						</div>
@@ -532,16 +550,13 @@ export function ReviewWorkflow({
 					role="dialog"
 					aria-modal="true"
 					aria-labelledby="recategorize-review-title"
-					className="fixed inset-0 z-50 grid place-items-center bg-black/20 p-4"
+					className={MODAL_BACKDROP_CLASS}
 				>
-					<div className="feature-card flex max-h-[80vh] w-full max-w-xl flex-col rounded-md p-4 shadow-xl">
-						<h2
-							id="recategorize-review-title"
-							className="font-semibold text-lg"
-						>
+					<div className={`${MODAL_CARD_CLASS} max-h-[80vh] max-w-xl`}>
+						<h2 id="recategorize-review-title" className={MODAL_TITLE_CLASS}>
 							Choose the correct species
 						</h2>
-						<div className="relative mt-4">
+						<div className="relative">
 							<Search
 								aria-hidden="true"
 								className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground"
@@ -556,9 +571,9 @@ export function ReviewWorkflow({
 						</div>
 						{/* p-1 gives the full-width rows' focus rings room inside the
 						    scrollport instead of letting it shave them; -m-1 takes it back
-						    so the rows still line up with the search box, and mt-2 + the
-						    1 of padding restores the original mt-3 gap above the list. */}
-						<div className="-m-1 mt-2 min-h-0 flex-1 space-y-1 overflow-auto p-1">
+						    so the rows still line up with the search box and the list
+						    still sits the dialog's gap from it and the buttons. */}
+						<div className="-m-1 min-h-0 flex-1 space-y-1 overflow-auto p-1">
 							{matches.map((item) => (
 								<button
 									type="button"
@@ -582,11 +597,17 @@ export function ReviewWorkflow({
 									</span>
 								</button>
 							))}
+							{matches.length === 0 ? (
+								<p className="px-3 py-2 text-foreground text-sm">
+									{EMPTY.filter.recategorizeSearch(query.trim())}
+								</p>
+							) : null}
 						</div>
-						<div className="mt-4 flex justify-end">
+						<div className={MODAL_ACTIONS_CLASS}>
 							<Button
 								icon={X}
 								variant="outline"
+								size="default"
 								onClick={() => setPicker(null)}
 							>
 								Cancel
@@ -596,49 +617,29 @@ export function ReviewWorkflow({
 				</div>
 			) : null}
 			{action ? (
-				<div
-					role="alertdialog"
-					aria-modal="true"
-					aria-labelledby="confirm-review-title"
-					className="fixed inset-0 z-50 grid place-items-center bg-black/20 p-4"
-				>
-					<div className="feature-card w-full max-w-md rounded-md p-4 shadow-xl">
-						<h2 id="confirm-review-title" className="font-semibold text-lg">
-							{action.kind === "delete"
-								? "Delete this detection?"
-								: "Confirm correction"}
-						</h2>
-						<p className="mt-2 text-muted-foreground text-sm">
-							{action.kind === "correct"
-								? `Sign off on this ${action.row.comName}? It leaves the queue, and BirdNET's ${formatConfidence(action.row.confidence)} score is kept as recorded.`
-								: action.kind === "delete"
-									? `This permanently removes the ${action.row.comName} record and its unreferenced audio. This cannot be undone.`
-									: `Change this ${action.row.comName} to ${action.species.comName}? The recording is renamed to match and leaves the queue.`}
-						</p>
-						<div className="mt-4 flex justify-end gap-2">
-							<Button
-								variant="outline"
-								icon={X}
-								disabled={busy}
-								onClick={() => setAction(null)}
-							>
-								Cancel
-							</Button>
-							<Button
-								variant={action.kind === "delete" ? "destructive" : "default"}
-								icon={action.kind === "delete" ? Trash2 : Check}
-								disabled={busy}
-								onClick={confirm}
-							>
-								{busy
-									? "Saving…"
-									: action.kind === "delete"
-										? "Delete detection"
-										: "Confirm correction"}
-							</Button>
-						</div>
-					</div>
-				</div>
+				<ConfirmDialog
+					title={
+						action.kind === "delete"
+							? "Delete this detection?"
+							: "Confirm correction"
+					}
+					description={
+						action.kind === "correct"
+							? `Sign off on this ${action.row.comName}? It leaves the queue, and BirdNET's ${formatConfidence(action.row.confidence)} score is kept as recorded.`
+							: action.kind === "delete"
+								? `This permanently removes the ${action.row.comName} record and its unreferenced audio. This cannot be undone.`
+								: `Change this ${action.row.comName} to ${action.species.comName}? The recording is renamed to match and leaves the queue.`
+					}
+					cancelIcon={X}
+					confirmIcon={action.kind === "delete" ? Trash2 : Check}
+					confirmLabel={
+						action.kind === "delete" ? "Delete detection" : "Confirm correction"
+					}
+					destructive={action.kind === "delete"}
+					pending={busy}
+					onCancel={() => setAction(null)}
+					onConfirm={confirm}
+				/>
 			) : null}
 		</>
 	);

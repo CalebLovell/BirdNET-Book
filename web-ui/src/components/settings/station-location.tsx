@@ -2,6 +2,12 @@ import { Check, Crosshair, X } from "lucide-react";
 import { useState } from "react";
 
 import { Button } from "~/components/ui/button.tsx";
+import {
+	MODAL_ACTIONS_CLASS,
+	MODAL_BACKDROP_CLASS,
+	MODAL_CARD_CLASS,
+	MODAL_TITLE_CLASS,
+} from "~/components/ui/confirm-dialog.tsx";
 
 /**
  * birdnet.conf asks for four decimal places, which is roughly 11 metres -- past
@@ -108,17 +114,17 @@ export function StationLocation({
 					role="dialog"
 					aria-modal="true"
 					aria-labelledby="station-location-title"
-					className="fixed inset-0 z-50 grid place-items-center bg-black/20 p-(--page-gap)"
+					className={MODAL_BACKDROP_CLASS}
 				>
-					<div className="feature-card w-full max-w-md rounded-md p-4 text-left shadow-xl">
-						<h2 id="station-location-title" className="font-semibold text-lg">
+					<div className={`${MODAL_CARD_CLASS} max-w-md`}>
+						<h2 id="station-location-title" className={MODAL_TITLE_CLASS}>
 							{state.kind === "found"
 								? "Use this location?"
 								: "Location unavailable"}
 						</h2>
 						{state.kind === "found" ? (
 							<>
-								<dl className="tabular-data mt-4 grid grid-cols-2 gap-4 rounded-md bg-muted p-(--page-gap) text-sm">
+								<dl className="tabular-data grid grid-cols-2 gap-(--page-gap) rounded-md bg-muted p-(--page-gap) text-sm">
 									<div>
 										<dt className="island-kicker">Latitude</dt>
 										<dd className="mt-1 font-semibold">
@@ -132,13 +138,13 @@ export function StationLocation({
 										</dd>
 									</div>
 								</dl>
-								<p className="mt-4 text-muted-foreground text-sm leading-relaxed">
+								<p className="text-muted-foreground text-sm leading-relaxed">
 									This replaces {current.latitude}, {current.longitude} in the
 									form. Nothing is written to the station until you save the
 									Station card.
 								</p>
 								{state.accuracy !== null ? (
-									<p className="mt-4 text-muted-foreground text-xs leading-relaxed">
+									<p className="text-muted-foreground text-xs leading-relaxed">
 										Your browser puts this within about {state.accuracy} m. It
 										reports the location of the device you are reading this on,
 										which may not be where the microphone is.
@@ -146,13 +152,14 @@ export function StationLocation({
 								) : null}
 							</>
 						) : (
-							<p className="mt-2 text-muted-foreground text-sm leading-relaxed">
+							<p className="text-muted-foreground text-sm leading-relaxed">
 								{state.message}
 							</p>
 						)}
-						<div className="mt-4 flex justify-end gap-2">
+						<div className={MODAL_ACTIONS_CLASS}>
 							<Button
 								type="button"
+								size="default"
 								variant="outline"
 								icon={X}
 								onClick={() => setState({ kind: "idle" })}
@@ -162,6 +169,7 @@ export function StationLocation({
 							{state.kind === "found" ? (
 								<Button
 									type="button"
+									size="default"
 									icon={Check}
 									onClick={() => {
 										onApply(state.coordinates);

@@ -607,8 +607,8 @@ export function SpeciesControlPage({
 				<SpeciesControlDialog
 					title={`Set ${dialog.count} species to ${dialog.label}?`}
 					description="The selected species will use this status immediately."
-					cancelIcon={<X />}
-					confirmIcon={<Check />}
+					cancelIcon={X}
+					confirmIcon={Check}
 					confirmLabel={`Apply ${dialog.label}`}
 					pending={pending}
 					onCancel={() => setDialog(null)}
@@ -628,8 +628,8 @@ export function SpeciesControlPage({
 				<SpeciesControlDialog
 					title="Import these species lists?"
 					description="The imported statuses will replace the current lists immediately."
-					cancelIcon={<X />}
-					confirmIcon={<Check />}
+					cancelIcon={X}
+					confirmIcon={Check}
 					confirmLabel="Import lists"
 					pending={pending}
 					onCancel={() => setDialog(null)}
@@ -649,8 +649,8 @@ export function SpeciesControlPage({
 				<SpeciesControlDialog
 					title="Remove this unmatched entry?"
 					description={`${dialog.raw} will be removed from its species list immediately.`}
-					cancelIcon={<X />}
-					confirmIcon={<Trash2 />}
+					cancelIcon={X}
+					confirmIcon={Trash2}
 					confirmLabel="Remove entry"
 					destructive
 					pending={pending}
@@ -668,8 +668,8 @@ export function SpeciesControlPage({
 				<SpeciesControlDialog
 					title="Reset all species lists?"
 					description="This immediately clears the Custom, Never detect, and Always detect lists. This action cannot be undone."
-					cancelIcon={<X />}
-					confirmIcon={<RotateCcw />}
+					cancelIcon={X}
+					confirmIcon={RotateCcw}
 					confirmLabel="Reset lists"
 					destructive
 					pending={pending}
