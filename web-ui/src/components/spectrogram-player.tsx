@@ -27,7 +27,12 @@ const DEFAULT_HEIGHT = "h-36 max-[400px]:h-28";
 // The controls sit the card's own padding below the plot -- the same gap the
 // card leaves above the plot and below the controls -- so the plot reads as
 // evenly framed rather than with its controls crowded up against it.
-const CONTROLS_CLASS = "mt-(--page-gap) flex flex-wrap items-center gap-2";
+// A container, so a narrow player (a 320px phone) can drop the clip's total
+// length -- the least needed part of the row -- and keep the clip's date and
+// score on the same line instead of wrapping them under it.
+const CONTROLS_CLASS =
+	"@container/controls mt-(--page-gap) flex flex-wrap items-center gap-2";
+const TOTAL_CLASS = "@max-[22rem]/controls:hidden";
 const SCRUBBER_CLASS =
 	"cursor-pointer touch-none select-none rounded-md focus-visible:outline-2 focus-visible:outline-[var(--focus-ring)] focus-visible:outline-offset-2";
 const TIME_CLASS = "tabular-data text-muted-foreground text-xs";
@@ -324,7 +329,8 @@ export function SpectrogramPlayer({
 				/>
 				<span className={TIME_CLASS}>
 					{/* Written each frame by `paint`, never by React after mount. */}
-					<span ref={timeRef}>0:00.0</span> / {total}
+					<span ref={timeRef}>0:00.0</span>
+					<span className={TOTAL_CLASS}> / {total}</span>
 				</span>
 				{aside ? (
 					<div className="ml-auto flex flex-wrap items-center gap-2">
@@ -377,7 +383,10 @@ export function SpectrogramPlayerSkeleton({
 				<ShellSized className="rounded-md">
 					<Button type="button" size="icon-sm" icon={Play} disabled />
 				</ShellSized>
-				<ShellText className={`w-24 ${TIME_CLASS}`} barClassName="w-full" />
+				<ShellText
+					className={`w-24 @max-[22rem]/controls:w-10 ${TIME_CLASS}`}
+					barClassName="w-full"
+				/>
 				{aside ? (
 					<div className="ml-auto flex flex-wrap items-center gap-2">
 						{aside}

@@ -4,9 +4,11 @@ import {
 	Footprints,
 	Gem,
 	Infinity as InfinityIcon,
+	RotateCcw,
 } from "lucide-react";
 import type { ComponentType } from "react";
 
+import { Button } from "~/components/ui/button.tsx";
 import { ShellFigure } from "~/components/ui/shell.tsx";
 import { ToggleGroup, ToggleGroupItem } from "~/components/ui/toggle-group.tsx";
 import {
@@ -32,13 +34,18 @@ export function LearnPoolSelector({
 	pool,
 	poolCounts,
 	onPoolChange,
+	onNewRound,
 }: {
 	pool: LearnPool;
 	poolCounts: PoolCounts;
 	onPoolChange: (pool: LearnPool) => void;
+	/** Starts the pool's round over; the button is left out while there's no
+	    round to start over. */
+	onNewRound?: () => void;
 }) {
 	return (
-		<div className="mt-(--page-gap)">
+		// The pool on the left, starting it over on the right.
+		<div className="mt-(--page-gap) flex items-center justify-between gap-2">
 			{/* Joined segments want about 520px, and a segmented control can't
 			    wrap without breaking its own shape -- so below 640px the same choice
 			    becomes a dropdown, as the timeline's period and the species sort do. */}
@@ -68,6 +75,25 @@ export function LearnPoolSelector({
 					})}
 				</ToggleGroup>
 			</div>
+			{onNewRound ? (
+				// The toggles' height and side padding, so it reads as one of the
+				// row's controls rather than a wider call to action. Where the row
+				// is tight it drops to its icon, a 36px square: on the narrowest
+				// phones beside the pool menu, and from 640px, where the toggles
+				// take over, until 768px gives them room for the label too. The
+				// label stays for screen readers.
+				<Button
+					variant="outline"
+					size="lg"
+					icon={RotateCcw}
+					className="px-3 max-[400px]:w-9 max-[400px]:px-0 sm:max-md:w-9 sm:max-md:px-0"
+					onClick={onNewRound}
+				>
+					<span className="max-[400px]:sr-only sm:max-md:sr-only">
+						New Round
+					</span>
+				</Button>
+			) : null}
 		</div>
 	);
 }
@@ -84,7 +110,9 @@ export function LearnPoolSelector({
 function PoolCount({ count }: { count: number | undefined }) {
 	return (
 		<span className="count-figure inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-foreground/8 in-data-[state=on]:bg-primary-foreground/20 px-1.5 in-data-[state=on]:text-primary-foreground! leading-5">
-			{count === undefined ? <ShellFigure /> : count}
+			{/* Nearly two digits wide while loading: most pools land at two, so
+			    the pill barely moves when the count arrives. */}
+			{count === undefined ? <ShellFigure className="w-[1.6ch]!" /> : count}
 		</span>
 	);
 }

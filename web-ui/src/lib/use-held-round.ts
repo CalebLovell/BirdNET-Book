@@ -28,9 +28,19 @@ export function shouldAdoptRound(
  * HMR update to the route. Handing each of those straight to the game swapped
  * the birds mid-question. So the page holds on to the round it has and adopts a
  * newer one from the loader only after a pool switch or a "play again".
+ *
+ * `savedRound`, a round this tab was already playing in the pool, is held from
+ * the start in place of the loader's, so coming back to a pool resumes it.
  */
-export function useHeldRound(round: LearnRound, pool: LearnPool) {
-	const [held, setHeld] = useState<HeldRound>({ round, pool });
+export function useHeldRound(
+	round: LearnRound,
+	pool: LearnPool,
+	savedRound?: LearnRound,
+) {
+	const [held, setHeld] = useState<HeldRound>({
+		round: savedRound ?? round,
+		pool,
+	});
 	const [wantsNextRound, setWantsNextRound] = useState(false);
 	const requestNextRound = () => setWantsNextRound(true);
 

@@ -18,13 +18,13 @@ export const LEARN_POOL_LABELS: Record<LearnPool, string> = {
 	all: "All",
 };
 
-/** Detections all-time a species needs before it counts as common. */
-export const COMMON_SPECIES_THRESHOLD = 25;
+/** A species heard more than this many times all-time counts as common. */
+export const COMMON_SPECIES_OVER = 100;
 
-/** The fewest detections that make a species common. Never at or below the
-    rare cutoff, so an owner who raises it past 25 can't make a bird both. */
-function commonMin(rareMax: number) {
-	return Math.max(COMMON_SPECIES_THRESHOLD, rareMax + 1);
+/** The count a species has to beat to be common. Never below the rare
+    cutoff, so an owner who raises that past 100 can't make a bird both. */
+function commonOver(rareMax: number) {
+	return Math.max(COMMON_SPECIES_OVER, rareMax);
 }
 
 /**
@@ -38,17 +38,17 @@ export function familiarityPool(
 	rareMax: number,
 ): FamiliarityPool {
 	if (detections <= rareMax) return "rare";
-	if (detections >= commonMin(rareMax)) return "common";
+	if (detections > commonOver(rareMax)) return "common";
 	return "uncommon";
 }
 
 /** What puts a species in each pool, for the quiz's info tip, from the same
     cutoffs as `familiarityPool`. */
 export function learnPoolMeanings(rareMax: number): Record<LearnPool, string> {
-	const common = commonMin(rareMax);
+	const common = commonOver(rareMax);
 	return {
-		common: `species heard ${common} or more times.`,
-		uncommon: `species heard ${rareMax + 1} to ${common - 1} times.`,
+		common: `species heard more than ${common} times.`,
+		uncommon: `species heard ${rareMax + 1} to ${common} times.`,
 		rare: `species heard ${rareMax} or fewer times.`,
 		all: "every species with a clip to play.",
 	};

@@ -31,11 +31,13 @@ import {
 	type QuestionResult,
 	scoreRound,
 } from "~/lib/learn-round.ts";
+import { FRESH_PROGRESS, type GameProgress } from "~/lib/learn-saved-game.ts";
 
 /**
  * The quiz itself: play a clip, pick the bird, keep going until the round is
- * done. All of the round's state lives here and nowhere else, so the page
- * starts a fresh round simply by giving this component a new `key`.
+ * done. The round's progress lives here, starting from `initialProgress` and
+ * reported through `onProgressChange` so the page can save it; the page starts
+ * a fresh round by giving this component a new `key`.
  */
 // Shared by the game and its skeleton, so the two are one shape.
 const QUIZ_GRID_CLASS =
@@ -235,20 +237,32 @@ export function LearnGameEmpty({ message }: { message: string }) {
 export function LearnGame({
 	round,
 	rareMax,
+	initialProgress = FRESH_PROGRESS,
+	onProgressChange,
 	onPlayAgain,
 	isLoadingNextRound,
+	isPaused = false,
 }: {
 	round: LearnRound;
 	rareMax: number;
+	/** Where to pick the round up, for a game resumed from a save. */
+	initialProgress?: GameProgress;
+	/** Called with every change of progress, the starting point included. */
+	onProgressChange?: (progress: GameProgress) => void;
 	onPlayAgain: () => void;
 	isLoadingNextRound: boolean;
+	/** True while a dialog is over the game, e.g. the page's new-round
+	    confirmation: its keys are held off so they can't answer behind it. */
+	isPaused?: boolean;
 }) {
-	const [index, setIndex] = useState(0);
-	// Species already ruled out on the current question, in the order guessed.
-	const [wrongGuesses, setWrongGuesses] = useState<string[]>([]);
-	const [isSolved, setIsSolved] = useState(false);
-	const [results, setResults] = useState<QuestionResult[]>([]);
-	const [isFinished, setIsFinished] = useState(false);
+	// One object rather than a state per field, so the whole of it can be
+	// saved and handed back as it was.
+	const [progress, setProgress] = useState(initialProgress);
+	const { index, wrongGuesses, isSolved, results, isFinished } = progress;
+
+	useEffect(() => {
+		onProgressChange?.(progress);
+	}, [progress, onProgressChange]);
 
 	const question = round.questions[index];
 	const runningScore = scoreRound(results);
@@ -259,15 +273,21 @@ export function LearnGame({
 				return;
 
 			if (choice.sciName === question.answerSciName) {
-				setResults((previous) => [
+				setProgress((previous) => ({
 					...previous,
-					{ attempts: wrongGuesses.length + 1 },
-				]);
-				setIsSolved(true);
+					results: [
+						...previous.results,
+						{ attempts: previous.wrongGuesses.length + 1 },
+					],
+					isSolved: true,
+				}));
 				return;
 			}
 
-			setWrongGuesses((previous) => [...previous, choice.sciName]);
+			setProgress((previous) => ({
+				...previous,
+				wrongGuesses: [...previous.wrongGuesses, choice.sciName],
+			}));
 		},
 		[question, isSolved, wrongGuesses],
 	);
@@ -275,18 +295,21 @@ export function LearnGame({
 	const advance = useCallback(() => {
 		if (!isSolved) return;
 		if (index + 1 >= round.questions.length) {
-			setIsFinished(true);
+			setProgress((previous) => ({ ...previous, isFinished: true }));
 			return;
 		}
-		setIndex((previous) => previous + 1);
-		setWrongGuesses([]);
-		setIsSolved(false);
+		setProgress((previous) => ({
+			...previous,
+			index: previous.index + 1,
+			wrongGuesses: [],
+			isSolved: false,
+		}));
 	}, [isSolved, index, round.questions.length]);
 
 	// Number keys pick a bird, Enter moves on -- the round is a rhythm of
 	// listen/answer/next, and reaching for the mouse each time interrupts it.
 	useEffect(() => {
-		if (isFinished) return;
+		if (isFinished || isPaused) return;
 
 		function onKeyDown(event: KeyboardEvent) {
 			if (event.metaKey || event.ctrlKey || event.altKey) return;
@@ -300,7 +323,7 @@ export function LearnGame({
 
 		window.addEventListener("keydown", onKeyDown);
 		return () => window.removeEventListener("keydown", onKeyDown);
-	}, [question, guess, advance, isFinished]);
+	}, [question, guess, advance, isFinished, isPaused]);
 
 	if (!question) return null;
 
