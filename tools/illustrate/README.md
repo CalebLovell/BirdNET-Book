@@ -76,13 +76,13 @@ holds URLs (iNaturalist and Wikimedia Commons only) with the credit and
 licence, and no images are committed. Candidates download into
 `work/photos/`, which git ignores. Run from `tools/illustrate`:
 
-1. `python photos.py rank` lists the species worth covering: birds seen in
-   the US and Canada, top 300, plus everything in `scripts/birds.db`.
-2. `python photos.py candidates` fetches up to five CC0/PD photos per
-   species. It resumes where it stopped, and records species with none.
+1. `python photos.py rank` ranks the birds seen in the US and Canada.
+2. `python photos.py candidates` takes the top 300 of that ranking
+   (`--top`), plus everything in `scripts/birds.db` (`--db`), minus painted
+   species, and fetches up to five CC0/PD photos per species. It resumes where it stopped, and records species with none.
    Eastern birds rank low, so the first run used `--top 500`.
 3. `python photos.py sheets` makes contact sheets (8 species per sheet,
-   `--per-sheet N` to change) in `work/photos/`.
+   `--per-sheet N` to change) in `work/photos/sheets/`, leaving out species already adopted or painted.
 4. Pick. Sonnet subagents look at each sheet and choose one photo per
    species, or `"n": null` with a reason (`close:` for a close call). The
    rules: correct species; an adult in its most recognizable plumage

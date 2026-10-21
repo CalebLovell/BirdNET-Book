@@ -88,6 +88,12 @@ class CandidateTests(unittest.TestCase):
         self.assertEqual([s["slug"] for s in out], ["a", "d"])
         self.assertEqual(set(out[0]), {"slug", "sci_name", "com_name"})
 
+    def test_target_species_drops_painted_db_species(self):
+        def row(slug):
+            return {"slug": slug, "sci_name": slug, "com_name": slug.upper()}
+        out = photos.target_species([row("a")], [row("p"), row("d")], {"p"}, top=5)
+        self.assertEqual([s["slug"] for s in out], ["a", "d"])
+
     def test_candidates_keyed_by_birdnet_name(self):
         sp = {"slug": "regulus-calendula", "sci_name": "Regulus calendula", "com_name": "Ruby-crowned Kinglet"}
         get = stub({"/taxa": inat_taxon("Corthylio calendula", term="Regulus calendula"), "/observations": inat_obs(5)})
@@ -251,6 +257,21 @@ class SheetTests(unittest.TestCase):
         rows = json.loads((photos.PHOTOS_DIR / "sheets" / "sheet-01.json").read_text(encoding="utf-8"))
         self.assertEqual(rows[0]["candidates"], [2])
 
+    def test_sheets_leave_out_skipped_slugs(self):
+        state = sheet_state(3)
+        photos.download_candidates(state, lambda url: tiny_jpeg())
+        photos.build_sheets(state, skip={"sp-01"})
+        rows = json.loads((photos.PHOTOS_DIR / "sheets" / "sheet-01.json").read_text(encoding="utf-8"))
+        self.assertEqual([r["slug"] for r in rows], ["sp-00", "sp-02"])
+
+    def test_sheets_remove_stale_sheet_files(self):
+        state = sheet_state(45)
+        photos.download_candidates(state, lambda url: tiny_jpeg())
+        photos.build_sheets(state)
+        photos.build_sheets(state, skip={f"sp-{i:02d}" for i in range(45) if i >= 5})
+        names = sorted(p.name for p in (photos.PHOTOS_DIR / "sheets").iterdir())
+        self.assertEqual(names, ["sheet-01.jpg", "sheet-01.json"])
+
     def test_review_page_lists_every_pick(self):
         state = sheet_state(2)
         picks = {"sp-00": {"n": 2, "reason": "clear side view"}, "sp-01": {"n": None, "reason": "all blurry"}}
@@ -268,7 +289,7 @@ class SheetTests(unittest.TestCase):
 def adopt_state():
     def cand(slug, n):
         return {"n": n, "url": f"https://upload.wikimedia.org/{slug}/{n}.jpg", "page": f"https://example.org/{slug}/{n}",
-                "license": "cc0" if n == 1 else "pd", "credit": f"someone {n}", "source": "inaturalist"}
+                "license": "cc0" if n == 1 else "public domain", "credit": f"someone {n}", "source": "inaturalist"}
     return {
         slug: {"slug": slug, "sci_name": f"Genus {slug}", "com_name": f"Bird {slug}", "taxon_ok": True,
                "inat_name": f"Genus {slug}", "candidates": [cand(slug, 1), cand(slug, 2)]}
@@ -282,7 +303,7 @@ class AdoptTests(unittest.TestCase):
         self.assertEqual(out["aa"], {
             "sci_name": "Genus aa", "com_name": "Bird aa",
             "url": "https://upload.wikimedia.org/aa/2.jpg", "page": "https://example.org/aa/2",
-            "license": "pd", "credit": "someone 2", "source": "inaturalist",
+            "license": "public domain", "credit": "someone 2", "source": "inaturalist",
         })
 
     def test_adopt_null_pick_leaves_species_out(self):
@@ -295,6 +316,23 @@ class AdoptTests(unittest.TestCase):
         self.assertIn("zz", out)
         self.assertIn("aa", out)
         self.assertNotIn("aa", existing)
+
+    def test_adopt_refuses_url_off_allowed_hosts(self):
+        for url in ("https://evil.example.com/x.jpg", "http://upload.wikimedia.org/x.jpg"):
+            state = adopt_state()
+            state["aa"]["candidates"][0]["url"] = url
+            with self.assertRaisesRegex(ValueError, "aa"):
+                photos.adopt({"aa": {"n": 1, "reason": "ok"}}, state, {})
+
+    def test_adopt_refuses_non_free_licence(self):
+        state = adopt_state()
+        state["aa"]["candidates"][0]["license"] = "cc-by"
+        with self.assertRaisesRegex(ValueError, "aa"):
+            photos.adopt({"aa": {"n": 1, "reason": "ok"}}, state, {})
+
+    def test_adopt_names_slug_and_n_when_pick_is_not_a_candidate(self):
+        with self.assertRaisesRegex(ValueError, "aa.*9"):
+            photos.adopt({"aa": {"n": 9, "reason": "ok"}}, adopt_state(), {})
 
     def test_render_ts_is_sorted_and_parseable(self):
         text = photos.render_ts({"b": {"url": "https://x/b.jpg"}, "a": {"url": 'https://x/a"q.jpg'}})

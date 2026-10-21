@@ -169,13 +169,13 @@ def load_labels() -> list[str]:
 
 def target_species(ranking: list[dict], db_species: list[dict], painted: set[str],
                    top: int = 300) -> list[dict]:
-    """The top `top` ranked species minus painted ones, then every station
-    species, deduped by slug."""
+    """The top `top` ranked species, then every station species, deduped by
+    slug, with painted species removed from both."""
     out: list[dict] = []
     seen: set[str] = set()
-    pool = [r for r in ranking[:top] if r['slug'] not in painted] + list(db_species)
+    pool = list(ranking[:top]) + list(db_species)
     for sp in pool:
-        if sp['slug'] not in seen:
+        if sp['slug'] not in seen and sp['slug'] not in painted:
             seen.add(sp['slug'])
             out.append({'slug': sp['slug'], 'sci_name': sp['sci_name'], 'com_name': sp['com_name']})
     return out
@@ -213,8 +213,12 @@ def http_get_bytes(url: str) -> bytes:
     return _throttled_get(url, lambda response: response.read())
 
 
+ADOPTABLE_LICENSES = {'cc0', 'public domain'}
+
+
 def _allowed_host(url: str) -> bool:
-    return urllib.parse.urlparse(url).hostname in PHOTO_HOSTS
+    parsed = urllib.parse.urlparse(url)
+    return parsed.scheme == 'https' and parsed.hostname in PHOTO_HOSTS
 
 
 def _matching_taxon(results: list[dict], sci_name: str) -> dict | None:
@@ -369,19 +373,25 @@ def download_candidates(state: dict, fetch: Callable[[str], bytes]) -> None:
                 print(f'  {slug}/{cand["n"]}: skipped ({e})')
 
 
-def build_sheets(state: dict, per_sheet: int = 20) -> list[Path]:
+def build_sheets(state: dict, per_sheet: int = 20, skip: Iterable[str] = frozenset()) -> list[Path]:
     """Tile downloaded candidates into numbered contact sheets, one species
     per row, with a matching sheet-NN.json listing what each holds. Species
     with no downloaded candidates are left out. Rows shrink below 240px only
-    to keep a sheet near 2000px on its long side."""
+    to keep a sheet near 2000px on its long side. Species in `skip` are left
+    out, and sheets from an earlier run are removed first."""
+    skip = set(skip)
     rows = []
     for slug, entry in state.items():
+        if slug in skip:
+            continue
         have = [c['n'] for c in entry['candidates'] if _photo_path(slug, c['n']).exists()]
         if have:
             rows.append({'slug': slug, 'com_name': entry['com_name'], 'sci_name': entry['sci_name'],
                          'candidates': have})
     out_dir = PHOTOS_DIR / 'sheets'
     out_dir.mkdir(parents=True, exist_ok=True)
+    for stale in [*out_dir.glob('sheet-*.jpg'), *out_dir.glob('sheet-*.json')]:
+        stale.unlink()
     paths = []
     for index, start in enumerate(range(0, len(rows), per_sheet), 1):
         chunk = rows[start:start + per_sheet]
@@ -472,7 +482,13 @@ def adopt(picks: dict, state: dict, existing: dict) -> dict:
         if pick.get('n') is None:
             continue
         entry = state[slug]
-        chosen = next(c for c in entry['candidates'] if c['n'] == pick['n'])
+        chosen = next((c for c in entry['candidates'] if c['n'] == pick['n']), None)
+        if chosen is None:
+            raise ValueError(f'{slug}: pick {pick["n"]} is not among the candidates')
+        if not _allowed_host(chosen['url']):
+            raise ValueError(f'{slug}: photo {pick["n"]} is not an https URL on an allowed host: {chosen["url"]}')
+        if chosen['license'] not in ADOPTABLE_LICENSES:
+            raise ValueError(f'{slug}: photo {pick["n"]} is licensed {chosen["license"]!r}, not CC0 or public domain')
         merged[slug] = {
             'sci_name': entry['sci_name'],
             'com_name': entry['com_name'],
@@ -554,8 +570,9 @@ def cmd_check(args) -> None:
 
 def cmd_sheets(args) -> None:
     state = json.loads(CANDIDATES_JSON.read_text(encoding='utf-8'))
-    download_candidates(state, http_get_bytes)
-    paths = build_sheets(state, args.per_sheet)
+    skip = set(_read_json(PHOTOS_LIST, {})) | set(installed_slugs(PUBLIC_DIR)[0])
+    download_candidates({k: v for k, v in state.items() if k not in skip}, http_get_bytes)
+    paths = build_sheets(state, args.per_sheet, skip)
     print(f'{len(paths)} sheets -> {PHOTOS_DIR / "sheets"}')
 
 
