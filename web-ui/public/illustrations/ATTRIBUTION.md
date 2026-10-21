@@ -8,3 +8,8 @@ resting state when nothing has been heard for over an hour.
 
 The species illustrations live in `../illustrations-new/`, painted with
 `tools/illustrate` from public-domain and CC0 reference photos.
+
+Species without a painting fall back to a reference photo. These are CC0 or
+public-domain only, hotlinked from iNaturalist and Wikimedia Commons rather
+than bundled; the per-photo source and credit are in
+`tools/illustrate/photos.json`.

@@ -1,20 +1,25 @@
 import { Bird } from "lucide-react";
 
-import { paintedBoundsFor } from "~/lib/illustrations.ts";
+import { useEffect, useState } from "react";
+
+import { isPhotoUrl, paintedBoundsFor } from "~/lib/illustrations.ts";
 import { cn } from "~/lib/utils.ts";
 
 /**
- * A species' picture, or the stand-in when it has none. There are exactly two
- * looks: the bundled illustration, and the plain muted bird glyph -- no photos,
- * no initials, no tinted box -- so a missing illustration reads the same on
- * every page. The caller sizes the slot; the illustration fits inside it and
- * the glyph takes `glyphClassName` (a size, usually half the slot's).
+ * A species' picture, or the stand-in when it has none. There are exactly three
+ * looks: the bundled illustration; a hotlinked reference photo (an `https://`
+ * URL), square-cropped to fill the slot; and the plain muted bird glyph -- no
+ * initials, no tinted box. A photo that can't load (offline, host down) falls
+ * back to the glyph rather than a broken-image icon. The caller sizes the slot;
+ * the illustration fits inside it, the photo fills it, and the glyph takes
+ * `glyphClassName` (a size, usually half the slot's).
  *
  * `cropToPainting` fits the animal itself rather than its whole canvas, so a
  * large slot isn't left holding each bird at a different size in a different
  * amount of empty margin. An SVG viewBox does the crop, and the SVG takes the
  * bird's own shape -- the slot's full height, as wide as that makes it, no
  * wider than the slot -- so the slot's flex alignment places the bird itself.
+ * Photos ignore it: they are always a plain fill.
  */
 export function SpeciesImage({
 	imageUrl,
@@ -31,7 +36,27 @@ export function SpeciesImage({
 	loading?: "lazy" | "eager";
 	cropToPainting?: boolean;
 }) {
-	const bounds = imageUrl && cropToPainting ? paintedBoundsFor(imageUrl) : null;
+	const [photoFailed, setPhotoFailed] = useState(false);
+	// A new URL is a new photo; give it its own chance to load.
+	// biome-ignore lint/correctness/useExhaustiveDependencies: reset keyed on the URL
+	useEffect(() => setPhotoFailed(false), [imageUrl]);
+
+	const isPhoto = imageUrl ? isPhotoUrl(imageUrl) : false;
+	if (imageUrl && isPhoto && !photoFailed) {
+		return (
+			<img
+				src={imageUrl}
+				alt={alt}
+				title={title}
+				loading={loading}
+				referrerPolicy="no-referrer"
+				className="size-full rounded-md object-cover"
+				onError={() => setPhotoFailed(true)}
+			/>
+		);
+	}
+	const bounds =
+		imageUrl && !isPhoto && cropToPainting ? paintedBoundsFor(imageUrl) : null;
 	if (imageUrl && bounds) {
 		return (
 			<svg
@@ -46,7 +71,7 @@ export function SpeciesImage({
 			</svg>
 		);
 	}
-	if (imageUrl) {
+	if (imageUrl && !isPhoto) {
 		return (
 			<img
 				src={imageUrl}
