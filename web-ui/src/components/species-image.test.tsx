@@ -26,6 +26,8 @@ test("a photo URL renders a square-cropped, referrer-free img", () => {
 	assert.match(html, /<img /);
 	assert.match(html, /object-cover/);
 	assert.match(html, /rounded-md/);
+	assert.match(html, /aspect-square/);
+	assert.doesNotMatch(html, /size-full/);
 	assert.match(html, /referrerpolicy="no-referrer"/i);
 });
 
