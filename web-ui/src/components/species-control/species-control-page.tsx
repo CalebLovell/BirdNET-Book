@@ -520,13 +520,25 @@ export function SpeciesControlPage({
 							selected.size > 0 ? (
 								<>
 									<InfoTip label="Species statuses">
-										<p>
-											<strong>Automatic</strong> uses BirdNET's usual species
-											rules. <strong>Custom</strong> adds the species to your
-											custom list. <strong>Always detect</strong> skips its
-											species-frequency check, and <strong>Never detect</strong>{" "}
-											excludes it outright.
-										</p>
+										{/* One status a line, its name first, as the quiz's tip
+										    lists its pools. */}
+										<ul className="space-y-1">
+											<li>
+												<strong>Automatic:</strong> uses BirdNET's usual species
+												rules.
+											</li>
+											<li>
+												<strong>Custom:</strong> adds the species to your custom
+												list.
+											</li>
+											<li>
+												<strong>Always detect:</strong> skips its
+												species-frequency check.
+											</li>
+											<li>
+												<strong>Never detect:</strong> excludes it outright.
+											</li>
+										</ul>
 									</InfoTip>
 									<SpeciesSelectionBar
 										count={selected.size}
