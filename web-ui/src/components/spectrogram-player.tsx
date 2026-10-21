@@ -390,28 +390,20 @@ export function SpectrogramPlayerSkeleton({
 
 /**
  * What a clip is, for a player's `aside`: when it was heard, then its score.
- * Every spectrogram card ends its controls row this way. `concealConfidence`
- * keeps the pill's room but not the pill -- the quiz hides the score until
- * the bird is named -- so the date doesn't shift when it appears.
+ * Every spectrogram card ends its controls row this way.
  */
 export function ClipMeta({
 	heardAt,
 	confidence,
-	concealConfidence = false,
 }: {
 	/** Already formatted (`formatDateTime`). */
 	heardAt: string;
 	confidence: number | null;
-	concealConfidence?: boolean;
 }) {
 	return (
 		<>
 			<span className={META_DATE_CLASS}>{heardAt}</span>
-			{confidence !== null ? (
-				<span className={concealConfidence ? "invisible" : "contents"}>
-					<ConfidencePill confidence={confidence} />
-				</span>
-			) : null}
+			{confidence !== null ? <ConfidencePill confidence={confidence} /> : null}
 		</>
 	);
 }

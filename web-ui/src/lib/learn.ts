@@ -8,6 +8,7 @@ import { resolveDetectionClipPath } from "~/lib/detection-file-path.server.ts";
 import { illustrationUrlFor } from "~/lib/illustrations.ts";
 import {
 	FREQUENT_SPECIES_THRESHOLD,
+	LEARN_POOLS,
 	type LearnPool,
 } from "~/lib/learn-pools.ts";
 import {
@@ -40,23 +41,14 @@ type ClipRow = {
 
 /**
  * One window-function query beats a per-species round trip here: it takes an
- * even slice of every species in the pool in a single pass. Drizzle's
- * sqlite-proxy driver hands back positional rows, which makes a raw statement on
- * the shared handle the clearer way to express this particular shape.
+ * even slice of every species in a single pass. Drizzle's sqlite-proxy driver
+ * hands back positional rows, which makes a raw statement on the shared handle
+ * the clearer way to express this particular shape.
+ *
+ * Always the whole station: the pools are cut from the result afterwards (see
+ * `inPool`), so one pass can count every pool as well as deal the round.
  */
-function bestClipsPerSpecies(pool: LearnPool): ClipRow[] {
-	const conditions = ["Confidence >= ?"];
-	const params: (string | number)[] = [MINIMUM_CLIP_CONFIDENCE];
-
-	// Regulars and rare split the station's species on one line, so between
-	// them they cover exactly what "all" does.
-	if (pool !== "all") {
-		conditions.push(
-			`Com_Name IN (SELECT Com_Name FROM detections GROUP BY Com_Name HAVING COUNT(*) ${pool === "regulars" ? ">=" : "<"} ?)`,
-		);
-		params.push(FREQUENT_SPECIES_THRESHOLD);
-	}
-
+function bestClipsPerSpecies(): ClipRow[] {
 	const statement = sqlite.prepare(`
 		SELECT date, comName, sciName, fileName, confidence, detectedAt
 		FROM (
@@ -71,13 +63,40 @@ function bestClipsPerSpecies(pool: LearnPool): ClipRow[] {
 				-- that clip is likeliest to still be on disk.
 				ROW_NUMBER() OVER (PARTITION BY Com_Name ORDER BY Confidence DESC, Date DESC, Time DESC) AS rn
 			FROM detections
-			WHERE ${conditions.join(" AND ")}
+			WHERE Confidence >= ?
 		)
 		WHERE rn <= ?
 		ORDER BY comName, rn
 	`);
 
-	return statement.all(...params, CANDIDATE_CLIPS_PER_SPECIES) as ClipRow[];
+	return statement.all(
+		MINIMUM_CLIP_CONFIDENCE,
+		CANDIDATE_CLIPS_PER_SPECIES,
+	) as ClipRow[];
+}
+
+/** Every species' all-time detection count, weak ones included -- what makes
+    a species a regular or rare here. */
+function allTimeDetections(): Map<string, number> {
+	const rows = sqlite
+		.prepare(
+			"SELECT Com_Name AS comName, COUNT(*) AS detections FROM detections GROUP BY Com_Name",
+		)
+		.all() as { comName: string; detections: number }[];
+	return new Map(rows.map((row) => [row.comName, row.detections]));
+}
+
+// Regulars and rare split the station's species on one line, so between them
+// they cover exactly what "all" does.
+function inPool(
+	pool: LearnPool,
+	species: PoolSpecies,
+	detections: Map<string, number>,
+): boolean {
+	if (pool === "all") return true;
+	const isRegular =
+		(detections.get(species.comName) ?? 0) >= FREQUENT_SPECIES_THRESHOLD;
+	return pool === "regulars" ? isRegular : !isRegular;
 }
 
 // A clip whose file has been cleaned off disk would leave a question with
@@ -170,18 +189,29 @@ export type LearnRoundData = {
 	 * switcher -- switching pools is the fix for the former.
 	 */
 	hasAnyDetections: boolean;
+	/** How many species each pool can quiz on: those with a clip still on
+	    disk, so what the game actually picks from, not the whole life list. */
+	poolCounts: Record<LearnPool, number>;
 };
 
 export const getLearnRound = createServerFn({ method: "GET" })
 	.validator((pool: LearnPool) => pool)
 	.handler(async ({ data: pool }): Promise<LearnRoundData> => {
-		const species = bestPlayableClipPerSpecies(bestClipsPerSpecies(pool));
-		const round = addSpeciesStats(buildRound(species));
+		const playable = bestPlayableClipPerSpecies(bestClipsPerSpecies());
+		const detections = allTimeDetections();
+		const poolCounts = Object.fromEntries(
+			LEARN_POOLS.map((option) => [
+				option,
+				playable.filter((species) => inPool(option, species, detections))
+					.length,
+			]),
+		) as Record<LearnPool, number>;
 
-		// A playable round is proof enough; only an empty one pays for the probe.
-		const hasAnyDetections =
-			round.questions.length > 0 ||
-			sqlite.prepare("SELECT 1 FROM detections LIMIT 1").get() !== undefined;
+		const round = addSpeciesStats(
+			buildRound(
+				playable.filter((species) => inPool(pool, species, detections)),
+			),
+		);
 
-		return { round, hasAnyDetections };
+		return { round, hasAnyDetections: detections.size > 0, poolCounts };
 	});

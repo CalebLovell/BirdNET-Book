@@ -1,6 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { ArrowRight, Check, RotateCcw, Trophy, X } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { type ReactNode, useCallback, useEffect, useState } from "react";
 import { CardHeader } from "~/components/card-header.tsx";
 import { RecordingButton } from "~/components/recording-button.tsx";
 import { SpeciesImage } from "~/components/species-image.tsx";
@@ -11,8 +11,14 @@ import {
 	SpectrogramPlayerSkeleton,
 } from "~/components/spectrogram-player.tsx";
 import { Button } from "~/components/ui/button.tsx";
+import { InfoTip } from "~/components/ui/info-tip.tsx";
 import { ShellBar, ShellText } from "~/components/ui/shell.tsx";
 import { formatDateTime } from "~/lib/date-format.ts";
+import {
+	LEARN_POOL_LABELS,
+	LEARN_POOL_MEANINGS,
+	LEARN_POOLS,
+} from "~/lib/learn-pools.ts";
 import {
 	CHOICES_PER_QUESTION,
 	type LearnChoice,
@@ -22,7 +28,6 @@ import {
 	pointsForAttempt,
 	QUESTIONS_PER_ROUND,
 	type QuestionResult,
-	roundVerdict,
 	scoreRound,
 } from "~/lib/learn-round.ts";
 
@@ -38,10 +43,17 @@ const GAME_CARD_CLASS =
 	"@container/game feature-card flex min-w-0 flex-col gap-(--page-gap) rounded-md p-4";
 const GAME_HEADER_CLASS =
 	"-mx-(--page-gap) -mt-(--page-gap) flex min-h-[45px] flex-wrap items-center justify-between gap-x-2 border-b px-(--page-gap) py-2";
+// Equal rows: a name that wraps to two lines makes its row taller, and every
+// other card stretches to match rather than reading as a smaller button.
 const CHOICES_CLASS =
-	"grid min-w-0 @xl/game:grid-cols-2 grid-cols-1 gap-4 max-[400px]:gap-2";
+	"grid min-w-0 @xl/game:grid-cols-2 grid-cols-1 auto-rows-fr gap-4 max-[400px]:gap-2";
 const CHOICE_CLASS =
 	"@container/choice flex items-center gap-4 rounded-md border px-4 py-2 text-left max-[400px]:gap-2 max-[400px]:px-2";
+// Always tall enough for a two-line name over the Latin one (snug base or sm
+// lines, plus a 16px xs line), so a choice is the same height whatever bird it
+// holds and the grid doesn't change size from one question to the next.
+const CHOICE_TEXT_CLASS =
+	"flex min-h-[calc(2*1.375rem+1rem)] min-w-0 flex-1 flex-col justify-center @max-[20rem]/choice:min-h-[calc(2*1.203125rem+1rem)]";
 const RAIL_CLASS = "feature-card @3xl/quiz:flex hidden flex-col rounded-md p-4";
 const RAIL_HEADER_CLASS =
 	"-mx-(--page-gap) -mt-(--page-gap) flex min-h-[45px] items-center justify-between gap-2 border-b px-(--page-gap)";
@@ -49,17 +61,77 @@ const RAIL_ROW_CLASS =
 	"flex min-h-[54px] items-center gap-3 px-(--page-gap) py-1.75";
 const RAIL_FOOTER_CLASS =
 	"-mx-(--page-gap) mt-auto -mb-(--page-gap) flex items-baseline justify-between gap-2 border-t px-(--page-gap) py-3";
+// The game's status line under the choices, with no rule above it: as tall as
+// the Next button from the start, so the card doesn't grow when it arrives.
+const GAME_FOOTER_CLASS =
+	"flex min-h-8 flex-wrap items-center justify-between gap-x-4 gap-y-2 text-sm";
 
-/** The line under the choices before a guess. Needs no data, so the skeleton
+/** How to play, behind the header's info icon. Needs no data, so the skeleton
     draws it as itself. */
-function Instructions() {
+function GameInfo() {
 	return (
-		<p className="text-center text-muted-foreground text-sm">
-			Listen, then pick the bird. {POINTS_BY_ATTEMPT[0]} points first try,{" "}
-			{POINTS_BY_ATTEMPT[1]} on the second
+		<InfoTip label="the quiz" size="default">
+			<p>
+				Listen to the clip, then pick the bird. {POINTS_BY_ATTEMPT[0]} points
+				first try, {POINTS_BY_ATTEMPT[1]} on the second.
+			</p>
 			{/* No keyboard to speak of on a touch screen. */}
-			<span className="pointer-coarse:hidden"> — keys 1–4 work too</span>.
-		</p>
+			<p className="pointer-coarse:hidden">
+				Keys 1–4 pick a bird; Enter moves on.
+			</p>
+			<ul className="space-y-1">
+				{LEARN_POOLS.map((pool) => (
+					<li key={pool}>
+						<strong>{LEARN_POOL_LABELS[pool]}:</strong>{" "}
+						{LEARN_POOL_MEANINGS[pool]}
+					</li>
+				))}
+			</ul>
+		</InfoTip>
+	);
+}
+
+/** A figure in the game's running text: bold, in the text's own colour, as on
+    the round's summary. */
+function Figure({ children }: { children: ReactNode }) {
+	return <strong className="tabular-data font-semibold">{children}</strong>;
+}
+
+function points(count: number) {
+	return (
+		<>
+			<Figure>{count}</Figure> {count === 1 ? "point" : "points"}
+		</>
+	);
+}
+
+/** The footer's sentence: what this guess is worth, then what the answer
+    scored once the bird is named. */
+function GuessStatus({
+	wrongGuesses,
+	isSolved,
+}: {
+	wrongGuesses: number;
+	isSolved: boolean;
+}) {
+	const attempt = wrongGuesses + 1;
+	const worth = points(pointsForAttempt(attempt));
+
+	if (isSolved) {
+		return attempt === 1 ? (
+			<span>Got it on the first try for {worth}.</span>
+		) : (
+			<span>
+				Got it in <Figure>{attempt}</Figure> guesses for {worth}.
+			</span>
+		);
+	}
+	return attempt === 1 ? (
+		<span>Your first guess is worth {worth}.</span>
+	) : (
+		<span>
+			Guess <Figure>{attempt}</Figure> is worth {worth}.
+		</span>
 	);
 }
 
@@ -67,8 +139,8 @@ function Instructions() {
  * The game before its round arrives, built from the game's own pieces: the
  * quiz card -- its header, the pip track a narrow card shows, the clip's
  * spectrogram slot with the play button's circle, four choices at their real
- * size, and the instructions as themselves -- beside the round's rail of
- * numbered rows and its score.
+ * size, and the info icon and footer as themselves -- beside the round's
+ * rail of numbered rows and its score.
  */
 export function LearnGameSkeleton() {
 	return (
@@ -81,6 +153,7 @@ export function LearnGameSkeleton() {
 				>
 					<header className={GAME_HEADER_CLASS}>
 						<h2 className="island-kicker">Mystery call</h2>
+						<GameInfo />
 					</header>
 
 					<div
@@ -119,29 +192,34 @@ export function LearnGameSkeleton() {
 								>
 									<ShellBar className="size-full rounded-md" />
 								</span>
-								<span className="min-w-0 flex-1">
+								<span className={CHOICE_TEXT_CLASS}>
 									<ShellText
 										className="font-medium @max-[20rem]/choice:text-sm leading-snug"
 										barClassName={choice % 2 ? "w-28" : "w-36"}
 									/>
 									<ShellText className="text-xs" barClassName="w-24" />
 								</span>
+								<span className="size-4 shrink-0" />
 							</div>
 						))}
 					</div>
 
-					<div className="border-[var(--line)] border-t pt-(--page-gap)">
-						<Instructions />
+					<div className={GAME_FOOTER_CLASS}>
+						<GuessStatus wrongGuesses={0} isSolved={false} />
+						<Button
+							size="default"
+							icon={ArrowRight}
+							iconPosition="end"
+							disabled
+						>
+							Next bird
+						</Button>
 					</div>
 				</section>
 
 				<aside aria-busy="true" aria-label="This round" className={RAIL_CLASS}>
 					<div className={RAIL_HEADER_CLASS}>
 						<div className="island-kicker">This round</div>
-						<ShellText
-							className="w-20 text-xs"
-							barClassName="right-0 left-auto w-full"
-						/>
 					</div>
 					<ol aria-hidden="true" className="-mx-(--page-gap) divide-y">
 						{Array.from({ length: QUESTIONS_PER_ROUND }, (_, position) => (
@@ -275,10 +353,6 @@ export function LearnGame({
 		);
 	}
 
-	const answer = question.choices.find(
-		(choice) => choice.sciName === question.answerSciName,
-	);
-
 	return (
 		// Game card on the left, the round so far in a card of its own on the
 		// right. Once the page is too narrow for both, the rail card drops out
@@ -295,6 +369,7 @@ export function LearnGame({
 				<section aria-label="Bird call quiz" className={GAME_CARD_CLASS}>
 					<header className={GAME_HEADER_CLASS}>
 						<h2 className="island-kicker">Mystery call</h2>
+						<GameInfo />
 					</header>
 
 					<div className="flex @3xl/quiz:hidden flex-col gap-2">
@@ -316,13 +391,10 @@ export function LearnGame({
 						<SpectrogramPlayer
 							key={question.id}
 							audioUrl={question.audioUrl}
-							// The score stays hidden until the bird is named: a 98% clip
-							// is a hint toward the common birds.
 							aside={
 								<ClipMeta
 									heardAt={formatDateTime(question.detectedAt)}
 									confidence={question.confidence}
-									concealConfidence={!isSolved}
 								/>
 							}
 						/>
@@ -349,48 +421,34 @@ export function LearnGame({
 						))}
 					</fieldset>
 
-					{/* No reserved height -- this strip is only ever as tall as whatever it
-				    is currently saying. */}
-					<div className="border-[var(--line)] border-t pt-(--page-gap)">
-						{isSolved && answer ? (
-							<div className="flex flex-wrap items-center justify-center gap-4 max-[400px]:gap-2">
-								{/* Wraps on a phone rather than pushing the species link off the
-							    card's edge. */}
-								<div className="flex flex-wrap items-center justify-center gap-2 text-sm">
-									<span className="font-semibold">
-										{wrongGuesses.length === 0
-											? "First try —"
-											: `Got it in ${wrongGuesses.length + 1} —`}
-									</span>
-									<span className="tabular-data">
-										+{pointsForAttempt(wrongGuesses.length + 1)} pts
-									</span>
-									<Link
-										to="/birds/$comName"
-										params={{ comName: answer.speciesSlug }}
-										className="text-sm no-underline hover:underline"
-									>
-										About the {answer.comName}
-									</Link>
-								</div>
-								<Button onClick={advance}>
-									{index + 1 >= round.questions.length ? (
-										<>
-											<Trophy className="size-4" />
-											See your score
-										</>
-									) : (
-										// Trailing, unlike the leading icons elsewhere: the arrow is
-										// pointing at where the button takes you.
-										<>
-											Next bird
-											<ArrowRight className="size-4" />
-										</>
-									)}
-								</Button>
-							</div>
+					<div className={GAME_FOOTER_CLASS}>
+						<GuessStatus
+							wrongGuesses={wrongGuesses.length}
+							isSolved={isSolved}
+						/>
+						{/* Always there, out of service until the bird is named, so the
+						    footer keeps one layout through the whole question. */}
+						{index + 1 >= round.questions.length ? (
+							<Button
+								size="default"
+								icon={Trophy}
+								onClick={advance}
+								disabled={!isSolved}
+							>
+								See your score
+							</Button>
 						) : (
-							<Instructions />
+							// Trailing, unlike the leading icons elsewhere: the arrow is
+							// pointing at where the button takes you.
+							<Button
+								size="default"
+								icon={ArrowRight}
+								iconPosition="end"
+								onClick={advance}
+								disabled={!isSolved}
+							>
+								Next bird
+							</Button>
 						)}
 					</div>
 				</section>
@@ -433,9 +491,6 @@ function RoundRail({
 		<aside aria-label="This round" className={RAIL_CLASS}>
 			<div className={RAIL_HEADER_CLASS}>
 				<div className="island-kicker">This round</div>
-				<div className="tabular-data text-muted-foreground text-xs">
-					Bird {current + 1} of {questions.length}
-				</div>
 			</div>
 
 			<ol className="-mx-(--page-gap) divide-y">
@@ -465,12 +520,19 @@ function RoundRail({
 									attempts={result.attempts}
 									question={question}
 								/>
+							) : isCurrent ? (
+								// An empty frame where the bird's picture lands once it's named.
+								<>
+									<span
+										aria-hidden="true"
+										className={`flex shrink-0 items-center justify-center rounded-md border border-[var(--line)] border-dashed text-muted-foreground text-sm ${THUMBNAIL_SIZES.md}`}
+									>
+										?
+									</span>
+									<span className="text-sm italic">Mystery bird</span>
+								</>
 							) : (
-								<span
-									className={`text-sm ${isCurrent ? "" : "text-muted-foreground"}`}
-								>
-									{isCurrent ? "Listening…" : "—"}
-								</span>
+								<span className="text-muted-foreground text-sm">—</span>
 							)}
 						</li>
 					);
@@ -643,7 +705,7 @@ function ChoiceButton({
 				{shortcut}
 			</span>
 			<ChoiceThumbnail choice={choice} size="lg" />
-			<span className="min-w-0 flex-1">
+			<span className={CHOICE_TEXT_CLASS}>
 				{/* Two lines before it truncates: "Yellow-rumped Warbler" wraps
 				    rather than losing the half that tells it apart. */}
 				<span className="line-clamp-2 font-medium @max-[20rem]/choice:text-sm leading-snug">
@@ -653,11 +715,15 @@ function ChoiceButton({
 					{choice.sciName}
 				</span>
 			</span>
-			{state === "correct" ? (
-				<Check className="size-4 shrink-0 text-[var(--moss)]" />
-			) : state === "wrong" ? (
-				<X className="size-4 shrink-0 text-[var(--clay)]" />
-			) : null}
+			{/* The mark's slot is held from the start: a tick or cross arriving
+			    mid-question would otherwise narrow the name and rewrap it. */}
+			<span className="size-4 shrink-0">
+				{state === "correct" ? (
+					<Check className="size-4 text-[var(--moss)]" />
+				) : state === "wrong" ? (
+					<X className="size-4 text-[var(--clay)]" />
+				) : null}
+			</span>
 		</button>
 	);
 }
@@ -716,33 +782,21 @@ function RoundSummary({
 	return (
 		<section
 			aria-label="Round results"
-			className="feature-card rise-in rounded-md p-4"
+			// One gap between every block, the game card's: 16px, 8px on a phone.
+			className="feature-card rise-in flex flex-col gap-(--page-gap) rounded-md p-4"
 		>
-			<CardHeader title="Round complete" />
+			{/* The score alone, written the way the rail's footer wrote it. */}
+			<CardHeader title="Round complete">
+				<span className="tabular-data text-sm">
+					<strong className="font-semibold">{score.score}</strong> of{" "}
+					<strong className="font-semibold">{score.maxScore}</strong> pts
+				</span>
+			</CardHeader>
 
-			<div className="mt-(--page-gap) flex flex-wrap items-baseline gap-x-4 gap-y-1 max-[400px]:gap-x-2">
-				<div className="tabular-data font-semibold text-4xl leading-none">
-					{score.score}
-					<span className="text-muted-foreground text-xl">
-						/{score.maxScore}
-					</span>
-				</div>
-				<div className="display-title text-xl">{roundVerdict(score)}</div>
-			</div>
-
-			<dl className="mt-(--page-gap) grid grid-cols-3 gap-2 text-center">
-				<SummaryStat
-					label="First try"
-					value={`${score.firstTry}/${score.answered}`}
-				/>
-				<SummaryStat label="Best streak" value={score.bestStreak} />
-				<SummaryStat
-					label="Accuracy"
-					value={`${Math.round((score.firstTry / Math.max(score.answered, 1)) * 100)}%`}
-				/>
-			</dl>
-
-			<ol className="mt-3 space-y-0.5">
+			{/* Rows run to the card's edges and start right under the header's
+			    hairline, as the rail's do, so their content sits on the card's own
+			    16px inset instead of a second one inside it. */}
+			<ol className="-mx-(--page-gap) -mt-(--page-gap)">
 				{questions.map((question, position) => {
 					const result = results[position];
 					const answer = question.choices.find(
@@ -753,7 +807,9 @@ function RoundSummary({
 					return (
 						<li
 							key={question.id}
-							className="flex items-center gap-4 rounded-md px-4 py-2 odd:bg-[var(--meadow)] max-[400px]:gap-2 max-[400px]:px-2"
+							// 54px like the rail's rows and recent activity's: the 40px
+							// thumbnail and 7px either side.
+							className="flex items-center gap-4 px-(--page-gap) py-1.75 odd:bg-[var(--meadow)] max-[400px]:gap-2"
 						>
 							<ChoiceThumbnail choice={answer} />
 							<div className="min-w-0 flex-1">
@@ -782,29 +838,25 @@ function RoundSummary({
 				})}
 			</ol>
 
-			<div className="mt-(--page-gap) flex justify-end">
-				<Button onClick={onPlayAgain} disabled={isLoadingNextRound}>
-					<RotateCcw className="size-4" />
+			{/* A footer band: the rows run straight into its hairline, and its
+			    contents keep the card's standard 16px on every side. */}
+			<div className="-mx-(--page-gap) -mt-(--page-gap) -mb-(--page-gap) flex items-center justify-between gap-4 border-t p-(--page-gap) max-[400px]:gap-2">
+				{/* Wraps within itself on a phone rather than pushing the button
+				    onto a line of its own: the two stay across from each other. */}
+				<span className="tabular-data min-w-0 text-sm">
+					You named <strong className="font-semibold">{score.firstTry}</strong>{" "}
+					of <strong className="font-semibold">{score.answered}</strong> species
+					on the first try.
+				</span>
+				<Button
+					size="default"
+					icon={RotateCcw}
+					onClick={onPlayAgain}
+					disabled={isLoadingNextRound}
+				>
 					{isLoadingNextRound ? "Dealing a new round…" : "Play again"}
 				</Button>
 			</div>
 		</section>
-	);
-}
-
-function SummaryStat({
-	label,
-	value,
-}: {
-	label: string;
-	value: string | number;
-}) {
-	return (
-		<div className="rounded-md border border-[var(--line)] p-4 max-[400px]:p-2">
-			<dt className="island-kicker">{label}</dt>
-			<dd className="tabular-data mt-1 font-semibold text-2xl leading-none">
-				{value}
-			</dd>
-		</div>
 	);
 }

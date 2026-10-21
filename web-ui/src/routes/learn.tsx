@@ -80,6 +80,9 @@ function Learn() {
 			    URL, and the page keeps the shape its loading state promised. */}
 			<LearnPoolSelector
 				pool={pool}
+				// The counts don't depend on the pool, so any round that has
+				// arrived can supply them -- switching pools keeps them on screen.
+				poolCounts={loaded?.data.poolCounts ?? null}
 				onPoolChange={(value) => {
 					navigate({
 						search: (previous) => ({ ...previous, pool: value }),

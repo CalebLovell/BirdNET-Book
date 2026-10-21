@@ -6,6 +6,7 @@ import {
 } from "lucide-react";
 import type { ComponentType } from "react";
 
+import { ShellFigure } from "~/components/ui/shell.tsx";
 import { ToggleGroup, ToggleGroupItem } from "~/components/ui/toggle-group.tsx";
 import {
 	LEARN_POOL_LABELS,
@@ -22,15 +23,22 @@ export const LEARN_POOL_ICONS: Record<
 	all: InfinityIcon,
 };
 
+/** Species each pool can quiz on, or null until the first round arrives. */
+type PoolCounts = Record<LearnPool, number> | null;
+
 export function LearnPoolSelector({
 	pool,
+	poolCounts,
 	onPoolChange,
 }: {
 	pool: LearnPool;
+	poolCounts: PoolCounts;
 	onPoolChange: (pool: LearnPool) => void;
 }) {
 	return (
-		<div className="mt-(--page-gap) flex justify-start">
+		// The choice on the left, what it means on the right; on a phone the
+		// line drops under the control instead.
+		<div className="mt-(--page-gap) flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
 			{/* Joined segments want about 300px, and a segmented control can't
 			    wrap without breaking its own shape -- so below 640px the same choice
 			    becomes a dropdown, as the timeline's period and the species sort do. */}
@@ -55,6 +63,20 @@ export function LearnPoolSelector({
 					})}
 				</ToggleGroup>
 			</div>
+
+			{/* How many the chosen pool picks from. What makes a species a regular
+			    is the quiz's info tip's to explain, not this line's. */}
+			<p className="text-sm">
+				Picking from{" "}
+				{poolCounts ? (
+					<strong className="tabular-data font-semibold">
+						{poolCounts[pool]}
+					</strong>
+				) : (
+					<ShellFigure />
+				)}{" "}
+				species.
+			</p>
 		</div>
 	);
 }

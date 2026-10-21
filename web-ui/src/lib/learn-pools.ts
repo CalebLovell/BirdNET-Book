@@ -17,8 +17,9 @@ export const LEARN_POOL_LABELS: Record<LearnPool, string> = {
     it, the species is rare here. */
 export const FREQUENT_SPECIES_THRESHOLD = 25;
 
-export const LEARN_POOL_DESCRIPTIONS: Record<LearnPool, string> = {
-	regulars: `Species heard at least ${FREQUENT_SPECIES_THRESHOLD} times — the regulars worth knowing cold.`,
-	rare: `Species heard fewer than ${FREQUENT_SPECIES_THRESHOLD} times — the visitors that are easy to miss.`,
-	all: "Every species this station has ever recorded.",
+/** What puts a species in each pool, for the quiz's info tip. */
+export const LEARN_POOL_MEANINGS: Record<LearnPool, string> = {
+	regulars: `species heard at least ${FREQUENT_SPECIES_THRESHOLD} times.`,
+	rare: `species heard fewer than ${FREQUENT_SPECIES_THRESHOLD} times.`,
+	all: "every species with a clip to play.",
 };
