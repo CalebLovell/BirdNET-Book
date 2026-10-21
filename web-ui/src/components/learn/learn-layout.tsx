@@ -1,8 +1,9 @@
 import {
+	Binoculars,
 	ChevronDown,
+	Footprints,
 	Gem,
 	Infinity as InfinityIcon,
-	Repeat2,
 } from "lucide-react";
 import type { ComponentType } from "react";
 
@@ -18,7 +19,8 @@ export const LEARN_POOL_ICONS: Record<
 	LearnPool,
 	ComponentType<{ className?: string }>
 > = {
-	regulars: Repeat2,
+	common: Footprints,
+	uncommon: Binoculars,
 	rare: Gem,
 	all: InfinityIcon,
 };
@@ -36,13 +38,15 @@ export function LearnPoolSelector({
 	onPoolChange: (pool: LearnPool) => void;
 }) {
 	return (
-		// The choice on the left, what it means on the right; on a phone the
-		// line drops under the control instead.
-		<div className="mt-(--page-gap) flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
-			{/* Joined segments want about 300px, and a segmented control can't
+		<div className="mt-(--page-gap)">
+			{/* Joined segments want about 520px, and a segmented control can't
 			    wrap without breaking its own shape -- so below 640px the same choice
 			    becomes a dropdown, as the timeline's period and the species sort do. */}
-			<PoolSelect pool={pool} onPoolChange={onPoolChange} />
+			<PoolSelect
+				pool={pool}
+				poolCounts={poolCounts}
+				onPoolChange={onPoolChange}
+			/>
 			<div className="hidden sm:block">
 				<ToggleGroup
 					type="single"
@@ -58,26 +62,30 @@ export function LearnPoolSelector({
 							<ToggleGroupItem key={option} value={option}>
 								<Icon className="size-4" />
 								{LEARN_POOL_LABELS[option]}
+								<PoolCount count={poolCounts?.[option]} />
 							</ToggleGroupItem>
 						);
 					})}
 				</ToggleGroup>
 			</div>
-
-			{/* How many the chosen pool picks from. What makes a species a regular
-			    is the quiz's info tip's to explain, not this line's. */}
-			<p className="text-sm">
-				Picking from{" "}
-				{poolCounts ? (
-					<strong className="tabular-data font-semibold">
-						{poolCounts[pool]}
-					</strong>
-				) : (
-					<ShellFigure />
-				)}{" "}
-				species.
-			</p>
 		</div>
+	);
+}
+
+/**
+ * How many species a pool picks from, as a small round pill after its label.
+ * A fixed 20px tall, so it sits inside the 36px segment without making it any
+ * taller, and with a line box that full height: the count's Georgia figures
+ * are old-style and dip below the baseline, so a tighter line lets them spill
+ * out of the pill. A faint ink wash on the other segments; on the chosen one
+ * a white wash under white figures, strong enough to read on the dark fill
+ * without the glare of a solid white pill.
+ */
+function PoolCount({ count }: { count: number | undefined }) {
+	return (
+		<span className="count-figure inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-foreground/8 in-data-[state=on]:bg-primary-foreground/20 px-1.5 in-data-[state=on]:text-primary-foreground! leading-5">
+			{count === undefined ? <ShellFigure /> : count}
+		</span>
 	);
 }
 
@@ -89,9 +97,11 @@ export function LearnPoolSelector({
  */
 function PoolSelect({
 	pool,
+	poolCounts,
 	onPoolChange,
 }: {
 	pool: LearnPool;
+	poolCounts: PoolCounts;
 	onPoolChange: (pool: LearnPool) => void;
 }) {
 	const Icon = LEARN_POOL_ICONS[pool];
@@ -109,7 +119,11 @@ function PoolSelect({
 			>
 				{LEARN_POOLS.map((option) => (
 					<option key={option} value={option}>
-						{LEARN_POOL_LABELS[option]}
+						{/* A native option holds only text, so its count rides along
+						    in parentheses where the segments draw a pill. */}
+						{poolCounts
+							? `${LEARN_POOL_LABELS[option]} (${poolCounts[option]})`
+							: LEARN_POOL_LABELS[option]}
 					</option>
 				))}
 			</select>

@@ -20,7 +20,7 @@ import { PAGE_HEADERS } from "~/lib/page-headers.ts";
 import { pageTitle } from "~/lib/page-title.ts";
 import { useHeldRound } from "~/lib/use-held-round.ts";
 
-const DEFAULT_POOL: LearnPool = "regulars";
+const DEFAULT_POOL: LearnPool = "common";
 
 const learnSearchSchema = z.object({
 	pool: z.enum(LEARN_POOLS).default(DEFAULT_POOL).catch(DEFAULT_POOL),
@@ -130,6 +130,7 @@ function LearnRoundView({
 		<LearnGame
 			key={round.id}
 			round={round}
+			rareMax={loaded.rareMax}
 			onPlayAgain={() => {
 				requestNextRound();
 				router.invalidate();

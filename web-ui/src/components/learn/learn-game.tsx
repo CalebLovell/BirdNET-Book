@@ -1,6 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { ArrowRight, Check, RotateCcw, Trophy, X } from "lucide-react";
-import { type ReactNode, useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { CardHeader } from "~/components/card-header.tsx";
 import { RecordingButton } from "~/components/recording-button.tsx";
 import { SpeciesImage } from "~/components/species-image.tsx";
@@ -14,10 +14,11 @@ import { Button } from "~/components/ui/button.tsx";
 import { InfoTip } from "~/components/ui/info-tip.tsx";
 import { ShellBar, ShellText } from "~/components/ui/shell.tsx";
 import { formatDateTime } from "~/lib/date-format.ts";
+import { HIGHLIGHT_THRESHOLDS } from "~/lib/highlight-thresholds.ts";
 import {
 	LEARN_POOL_LABELS,
-	LEARN_POOL_MEANINGS,
 	LEARN_POOLS,
+	learnPoolMeanings,
 } from "~/lib/learn-pools.ts";
 import {
 	CHOICES_PER_QUESTION,
@@ -61,14 +62,19 @@ const RAIL_ROW_CLASS =
 	"flex min-h-[54px] items-center gap-3 px-(--page-gap) py-1.75";
 const RAIL_FOOTER_CLASS =
 	"-mx-(--page-gap) mt-auto -mb-(--page-gap) flex items-baseline justify-between gap-2 border-t px-(--page-gap) py-3";
-// The game's status line under the choices, with no rule above it: as tall as
-// the Next button from the start, so the card doesn't grow when it arrives.
-const GAME_FOOTER_CLASS =
-	"flex min-h-8 flex-wrap items-center justify-between gap-x-4 gap-y-2 text-sm";
+// The game's footer under the choices, with no rule above it: just the Next
+// button, at the right, as tall as itself from the start.
+const GAME_FOOTER_CLASS = "flex min-h-8 items-center justify-end";
 
-/** How to play, behind the header's info icon. Needs no data, so the skeleton
-    draws it as itself. */
-function GameInfo() {
+/** How to play, behind the header's info icon. Its one figure from the
+    station, the rare cutoff, falls back to the default, so the skeleton can
+    draw it as itself. */
+function GameInfo({
+	rareMax = HIGHLIGHT_THRESHOLDS.rareMax,
+}: {
+	rareMax?: number;
+}) {
+	const meanings = learnPoolMeanings(rareMax);
 	return (
 		<InfoTip label="the quiz" size="default">
 			<p>
@@ -82,56 +88,11 @@ function GameInfo() {
 			<ul className="space-y-1">
 				{LEARN_POOLS.map((pool) => (
 					<li key={pool}>
-						<strong>{LEARN_POOL_LABELS[pool]}:</strong>{" "}
-						{LEARN_POOL_MEANINGS[pool]}
+						<strong>{LEARN_POOL_LABELS[pool]}:</strong> {meanings[pool]}
 					</li>
 				))}
 			</ul>
 		</InfoTip>
-	);
-}
-
-/** A figure in the game's running text: bold, in the text's own colour, as on
-    the round's summary. */
-function Figure({ children }: { children: ReactNode }) {
-	return <strong className="tabular-data font-semibold">{children}</strong>;
-}
-
-function points(count: number) {
-	return (
-		<>
-			<Figure>{count}</Figure> {count === 1 ? "point" : "points"}
-		</>
-	);
-}
-
-/** The footer's sentence: what this guess is worth, then what the answer
-    scored once the bird is named. */
-function GuessStatus({
-	wrongGuesses,
-	isSolved,
-}: {
-	wrongGuesses: number;
-	isSolved: boolean;
-}) {
-	const attempt = wrongGuesses + 1;
-	const worth = points(pointsForAttempt(attempt));
-
-	if (isSolved) {
-		return attempt === 1 ? (
-			<span>Got it on the first try for {worth}.</span>
-		) : (
-			<span>
-				Got it in <Figure>{attempt}</Figure> guesses for {worth}.
-			</span>
-		);
-	}
-	return attempt === 1 ? (
-		<span>Your first guess is worth {worth}.</span>
-	) : (
-		<span>
-			Guess <Figure>{attempt}</Figure> is worth {worth}.
-		</span>
 	);
 }
 
@@ -205,7 +166,6 @@ export function LearnGameSkeleton() {
 					</div>
 
 					<div className={GAME_FOOTER_CLASS}>
-						<GuessStatus wrongGuesses={0} isSolved={false} />
 						<Button
 							size="default"
 							icon={ArrowRight}
@@ -274,10 +234,12 @@ export function LearnGameEmpty({ message }: { message: string }) {
 
 export function LearnGame({
 	round,
+	rareMax,
 	onPlayAgain,
 	isLoadingNextRound,
 }: {
 	round: LearnRound;
+	rareMax: number;
 	onPlayAgain: () => void;
 	isLoadingNextRound: boolean;
 }) {
@@ -369,7 +331,7 @@ export function LearnGame({
 				<section aria-label="Bird call quiz" className={GAME_CARD_CLASS}>
 					<header className={GAME_HEADER_CLASS}>
 						<h2 className="island-kicker">Mystery call</h2>
-						<GameInfo />
+						<GameInfo rareMax={rareMax} />
 					</header>
 
 					<div className="flex @3xl/quiz:hidden flex-col gap-2">
@@ -422,10 +384,6 @@ export function LearnGame({
 					</fieldset>
 
 					<div className={GAME_FOOTER_CLASS}>
-						<GuessStatus
-							wrongGuesses={wrongGuesses.length}
-							isSolved={isSolved}
-						/>
 						{/* Always there, out of service until the bird is named, so the
 						    footer keeps one layout through the whole question. */}
 						{index + 1 >= round.questions.length ? (

@@ -47,7 +47,7 @@ export const PAGE_HEADERS = {
 	},
 	learn: {
 		title: "Learn the calls",
-		description: "Practice recognizing birds by ear.",
+		description: "Calls recorded at this station are played to be identified.",
 	},
 	speciesControl: {
 		title: "Species Control",

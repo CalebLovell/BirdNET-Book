@@ -7,7 +7,7 @@ import { extractedDir } from "~/lib/audio.server.ts";
 import { resolveDetectionClipPath } from "~/lib/detection-file-path.server.ts";
 import { illustrationUrlFor } from "~/lib/illustrations.ts";
 import {
-	FREQUENT_SPECIES_THRESHOLD,
+	familiarityPool,
 	LEARN_POOLS,
 	type LearnPool,
 } from "~/lib/learn-pools.ts";
@@ -16,6 +16,7 @@ import {
 	type LearnRound,
 	type PoolSpecies,
 } from "~/lib/learn-round.ts";
+import { readHighlightThresholds } from "~/lib/settings-config.server.ts";
 import { comNameToSlug } from "~/lib/species-slug.ts";
 
 // A weak detection is usually a smear of wind or traffic that happens to score
@@ -86,17 +87,18 @@ function allTimeDetections(): Map<string, number> {
 	return new Map(rows.map((row) => [row.comName, row.detections]));
 }
 
-// Regulars and rare split the station's species on one line, so between them
-// they cover exactly what "all" does.
+// Common, uncommon and rare split the station's species between them, so
+// together they cover exactly what "all" does.
 function inPool(
 	pool: LearnPool,
 	species: PoolSpecies,
 	detections: Map<string, number>,
+	rareMax: number,
 ): boolean {
 	if (pool === "all") return true;
-	const isRegular =
-		(detections.get(species.comName) ?? 0) >= FREQUENT_SPECIES_THRESHOLD;
-	return pool === "regulars" ? isRegular : !isRegular;
+	return (
+		familiarityPool(detections.get(species.comName) ?? 0, rareMax) === pool
+	);
 }
 
 // A clip whose file has been cleaned off disk would leave a question with
@@ -192,6 +194,8 @@ export type LearnRoundData = {
 	/** How many species each pool can quiz on: those with a clip still on
 	    disk, so what the game actually picks from, not the whole life list. */
 	poolCounts: Record<LearnPool, number>;
+	/** Records or fewer that make a species rare, as the owner set it. */
+	rareMax: number;
 };
 
 export const getLearnRound = createServerFn({ method: "GET" })
@@ -199,19 +203,28 @@ export const getLearnRound = createServerFn({ method: "GET" })
 	.handler(async ({ data: pool }): Promise<LearnRoundData> => {
 		const playable = bestPlayableClipPerSpecies(bestClipsPerSpecies());
 		const detections = allTimeDetections();
+		const { rareMax } = await readHighlightThresholds();
 		const poolCounts = Object.fromEntries(
 			LEARN_POOLS.map((option) => [
 				option,
-				playable.filter((species) => inPool(option, species, detections))
-					.length,
+				playable.filter((species) =>
+					inPool(option, species, detections, rareMax),
+				).length,
 			]),
 		) as Record<LearnPool, number>;
 
 		const round = addSpeciesStats(
 			buildRound(
-				playable.filter((species) => inPool(pool, species, detections)),
+				playable.filter((species) =>
+					inPool(pool, species, detections, rareMax),
+				),
 			),
 		);
 
-		return { round, hasAnyDetections: detections.size > 0, poolCounts };
+		return {
+			round,
+			hasAnyDetections: detections.size > 0,
+			poolCounts,
+			rareMax,
+		};
 	});
