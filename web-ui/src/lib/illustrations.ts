@@ -4,11 +4,12 @@ import {
 	PAINTED_BOUNDS,
 	type PaintedBounds,
 } from "~/lib/illustrations-new.ts";
+import { REFERENCE_PHOTOS } from "~/lib/reference-photos.ts";
 
 // The kachō-e style illustrations painted with tools/illustrate
 // (public/illustrations-new/, listed in illustrations-new.ts). A species
-// without one shows the generic bird glyph (see SpeciesImage) -- never a
-// photo from elsewhere.
+// without one shows its CC0 reference photo (reference-photos.ts), and
+// without that the generic bird glyph (see SpeciesImage).
 
 /**
  * "perched" reads clearly at thumbnail size, so it stays the default for
@@ -21,17 +22,25 @@ function slugify(sciName: string): string {
 }
 
 /**
- * The species' picture, or null when it has none. A species painted perched
- * only shows that pose in the flight slot too.
+ * The species' picture, or null when it has none: its painting, else its
+ * reference photo. A species painted perched only shows that pose in the
+ * flight slot too; a photo has one pose and serves both. `photos` is a
+ * parameter only so tests can inject entries.
  */
 export function illustrationUrlFor(
 	sciName: string,
 	pose: IllustrationPose = "perched",
+	photos: Record<string, string> = REFERENCE_PHOTOS,
 ): string | null {
 	const slug = slugify(sciName);
-	if (!NEW_SLUGS.has(slug)) return null;
+	if (!NEW_SLUGS.has(slug)) return photos[slug] ?? null;
 	const flight = pose === "flight" && NEW_FLIGHT_SLUGS.has(slug);
 	return `/illustrations-new/${slug}${flight ? "-2" : ""}.png`;
+}
+
+/** True for a hotlinked reference photo, false for one of our paintings. */
+export function isPhotoUrl(url: string): boolean {
+	return url.startsWith("https://");
 }
 
 /**

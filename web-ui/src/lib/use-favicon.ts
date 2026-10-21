@@ -1,7 +1,14 @@
 import { useEffect } from "react";
 
+import { isPhotoUrl } from "~/lib/illustrations.ts";
+
 /** What the tab shows on any page that cannot name a bird of its own. */
 export const DEFAULT_FAVICON = "/illustrations/nest.webp";
+
+/** The icon for `href`: a reference photo is never a favicon, so it gets the default. */
+export function faviconHref(href: string | null): string {
+	return href && !isPhotoUrl(href) ? href : DEFAULT_FAVICON;
+}
 
 /**
  * Points the tab icon at `href` while the calling component is mounted, and
@@ -22,7 +29,7 @@ export function useFavicon(href: string | null) {
 		const link = document.querySelector<HTMLLinkElement>('link[rel~="icon"]');
 		if (!link) return;
 
-		link.setAttribute("href", href ?? DEFAULT_FAVICON);
+		link.setAttribute("href", faviconHref(href));
 		return () => link.setAttribute("href", DEFAULT_FAVICON);
 	}, [href]);
 }
