@@ -268,6 +268,24 @@ test("returned is silent for the whole lookback and back now", () => {
 	assert.deepEqual(named(highlights, "returned"), ["Veery"]);
 });
 
+test("a rare bird back after a silence is rare, never returned", () => {
+	const { flags, highlights } = judge({
+		window: [day({ Robin: 5, Osprey: 1 })],
+		before: daysBefore(3, { Robin: 5 }),
+		lifetime: new Map([
+			["Robin", 500],
+			["Osprey", 2],
+		]),
+		heardBefore: new Set(["Robin", "Osprey"]),
+		awayDays: new Map([["Osprey", 40]]),
+	});
+	assert.equal(flags.get("Osprey")?.isRare, true);
+	assert.equal(flags.get("Osprey")?.isReturned, false);
+	assert.equal(flags.get("Osprey")?.away, null);
+	assert.deepEqual(named(highlights, "returned"), []);
+	assert.deepEqual(named(highlights, "rare"), ["Osprey"]);
+});
+
 test("vocal needs the ratio, the detections and the presence", () => {
 	// Usual is 2 a day on every one of the three days; the window heard 30.
 	const loud = judge({
@@ -283,7 +301,9 @@ test("vocal needs the ratio, the detections and the presence", () => {
 	assert.deepEqual(line(loud.highlights, "vocal"), {
 		kind: "vocal",
 		total: 1,
-		birds: [{ comName: "Robin", note: "30 today, usually 2" }],
+		birds: [
+			{ comName: "Robin", note: "30 today, usually 2", shareNote: "15× usual" },
+		],
 	});
 
 	const few = judge({

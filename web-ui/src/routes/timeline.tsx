@@ -8,6 +8,8 @@ import {
 } from "~/components/detections-by-hour-card.tsx";
 import { HighlightsCard } from "~/components/highlights-card.tsx";
 import { PageHeaderCard } from "~/components/page-header-card.tsx";
+import { ShareButton, useShare } from "~/components/share-button.tsx";
+import { InMenuBar } from "~/components/sidebar/mobile-nav.tsx";
 import {
 	SpeciesByHourCard,
 	SpeciesByHourCardSkeleton,
@@ -22,7 +24,6 @@ import { PeriodToolbar } from "~/components/timeline/period-toolbar.tsx";
 import { ButtonLink } from "~/components/ui/button-link.tsx";
 import { ShellFigure } from "~/components/ui/shell.tsx";
 import { TooltipProvider } from "~/components/ui/tooltip.tsx";
-import { useShareCard } from "~/components/use-share-card.tsx";
 import { getDayShareCard } from "~/lib/day-share.ts";
 import { formatDayTitle } from "~/lib/day-title.ts";
 import { EMPTY } from "~/lib/empty-messages.ts";
@@ -309,54 +310,65 @@ function TimelineHeader({
 	// loaded for its own Highlights card, so the share says what the page says.
 	// Until this window's page is in, there is nothing true to share: the rows
 	// and window label below would still be empty.
-	const share = useShareCard({
-		subject: data ? `${period}:${anchor}` : null,
-		load: async () =>
-			period === "day"
-				? formatShareCard({
-						...(await getDayShareCard({ data: anchor })),
-						highlights,
-					})
-				: formatTimelineShareCard({
-						period,
-						windowLabel: data?.window?.label ?? null,
-						rows,
-						highlights,
-					}),
-	});
+	const shareSubject = data ? `${period}:${anchor}` : null;
+	const loadShare = async () =>
+		period === "day"
+			? formatShareCard({
+					...(await getDayShareCard({ data: anchor })),
+					highlights,
+					heading: headerLines(period, anchor),
+				})
+			: formatTimelineShareCard({
+					period,
+					heading: headerLines(period, anchor),
+					rows,
+					highlights,
+				});
+	const share = useShare({ subject: shareSubject, load: loadShare });
+	const canShare = data?.hasAnyDetections ?? false;
 
 	return (
-		<PageHeaderCard
-			icon={CalendarRange}
-			title={headerTitle(period, anchor)}
-			description={PAGE_HEADERS.timeline.description}
-			action={data?.hasAnyDetections ? share.trigger : undefined}
-			// Between the title and the body card, so the window it picks reads as
-			// steering the figures and body beneath it. Gated on the station rather
-			// than the window: an empty week still needs the switcher to reach a
-			// window with something in it.
-			//
-			// Drawn at once: the period and the window come from the URL. While
-			// this window's page is on its way it draws from the last one to
-			// arrive (or from nothing, on the first), and what it can't know yet
-			// -- where the arrows lead, the station's first and last days -- waits
-			// for the data. A station that has recorded nothing keeps it too, so
-			// the page reads the same before and after its first bird.
-			afterHeader={
-				<PeriodToolbar
-					period={period}
-					anchor={anchor}
-					window={data ? data.window : safeWindow(period, anchor)}
-					prevAnchor={data?.prevAnchor ?? null}
-					nextAnchor={data?.nextAnchor ?? null}
-					lastActiveDay={data?.lastActiveDay ?? null}
-					stationRange={toolbarData?.stationRange ?? null}
-					onChange={onChange}
-				/>
-			}
-		>
-			{share.summary}
-		</PageHeaderCard>
+		<>
+			{canShare && (
+				<InMenuBar>
+					<ShareButton state={share} shape="plain" />
+				</InMenuBar>
+			)}
+			<PageHeaderCard
+				icon={CalendarRange}
+				title={headerTitle(period, anchor)}
+				description={PAGE_HEADERS.timeline.description}
+				// Below `xl` the menu bar carries it instead, where it has room.
+				action={
+					canShare ? (
+						<ShareButton state={share} className="h-10 max-xl:hidden" />
+					) : undefined
+				}
+				// Between the title and the body card, so the window it picks reads as
+				// steering the figures and body beneath it. Gated on the station rather
+				// than the window: an empty week still needs the switcher to reach a
+				// window with something in it.
+				//
+				// Drawn at once: the period and the window come from the URL. While
+				// this window's page is on its way it draws from the last one to
+				// arrive (or from nothing, on the first), and what it can't know yet
+				// -- where the arrows lead, the station's first and last days -- waits
+				// for the data. A station that has recorded nothing keeps it too, so
+				// the page reads the same before and after its first bird.
+				afterHeader={
+					<PeriodToolbar
+						period={period}
+						anchor={anchor}
+						window={data ? data.window : safeWindow(period, anchor)}
+						prevAnchor={data?.prevAnchor ?? null}
+						nextAnchor={data?.nextAnchor ?? null}
+						lastActiveDay={data?.lastActiveDay ?? null}
+						stationRange={toolbarData?.stationRange ?? null}
+						onChange={onChange}
+					/>
+				}
+			/>
+		</>
 	);
 }
 
@@ -368,19 +380,24 @@ function TimelineHeader({
  * already says what kind of window this is.
  */
 function headerTitle(period: TimelinePeriod, anchor: string): string {
+	return headerLines(period, anchor).join(" — ");
+}
+
+/**
+ * The header title's two halves -- the period, then the window it names -- so
+ * the share card can stack them on their own lines and still match the page.
+ */
+function headerLines(period: TimelinePeriod, anchor: string): string[] {
 	const scope = TIMELINE_PERIOD_LABELS[period];
-	if (period === "all") return scope;
+	if (period === "all") return [scope];
 	// Worked out here from the URL rather than waiting on the server's window,
 	// so the title is right the moment the period or date changes. A Daily
 	// anchor that isn't a date at all is shown as typed; the page beneath
 	// explains it once the server has judged it.
 	if (period === "day") {
-		return isValidAnchor("day", anchor)
-			? `${scope} — ${spelledDate(anchor)}`
-			: `${scope} — ${anchor}`;
+		return [scope, isValidAnchor("day", anchor) ? spelledDate(anchor) : anchor];
 	}
-	const window = safeWindow(period, anchor)?.label ?? anchor;
-	return `${scope} — ${window}`;
+	return [scope, safeWindow(period, anchor)?.label ?? anchor];
 }
 
 /** The window an anchor names, or null for one that names none. */

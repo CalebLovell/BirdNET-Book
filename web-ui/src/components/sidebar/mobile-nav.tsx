@@ -1,6 +1,7 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import { Menu, X } from "lucide-react";
-import { useEffect, useState } from "react";
+import { type ReactNode, useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 
 import { SidebarBody } from "~/components/sidebar/site-sidebar.tsx";
 
@@ -54,6 +55,9 @@ export function MobileNav() {
 					<Menu className="size-5" aria-hidden="true" />
 				</button>
 				<SiteName />
+				{/* Where a page puts its own control for the narrow screen, against
+				    the bar's right edge (see InMenuBar). */}
+				<div id={MENU_BAR_SLOT_ID} className="ml-auto flex items-center" />
 			</div>
 
 			{/* Always mounted so it can slide both ways: closed, the panel waits
@@ -109,6 +113,23 @@ export function MobileNav() {
 			</div>
 		</>
 	);
+}
+
+const MENU_BAR_SLOT_ID = "menu-bar-actions";
+
+/**
+ * Draws its children at the right end of the menu bar, for a page whose one
+ * control has no room in its header on a narrow screen. The bar only shows
+ * below `xl`, so the page keeps its own copy for wider screens and hides it
+ * there. Nothing renders until mounted: the slot is found in the document,
+ * which the server doesn't have.
+ */
+export function InMenuBar({ children }: { children: ReactNode }) {
+	const [slot, setSlot] = useState<HTMLElement | null>(null);
+	useEffect(() => {
+		setSlot(document.getElementById(MENU_BAR_SLOT_ID));
+	}, []);
+	return slot ? createPortal(children, slot) : null;
 }
 
 // Shared by the bar and the drawer's top row so the two stay the same size.

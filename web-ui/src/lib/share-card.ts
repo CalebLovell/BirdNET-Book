@@ -1,23 +1,19 @@
-// The Today page as one block of pasteable text: a Wordle-style card where the
-// shape of the sparkline carries the day and the emoji lines fill in the story.
+// A day as one block of pasteable text. Every line is short and stands on its
+// own, so the card still reads on a phone that wraps anything wide.
 //
 // Pure by design -- the caller supplies the numbers, the clock and the window.
 // Every formatting rule lives here so it can be read and tested in one place.
 
 import type { Highlight } from "~/lib/highlights-data.ts";
-import { formatHighlightLines } from "~/lib/highlights-share.ts";
-import { ordinal, plural } from "~/lib/number-format.ts";
+import {
+	formatActivityLines,
+	formatHighlightLines,
+} from "~/lib/highlights-share.ts";
 import { hourLabel } from "~/lib/time-ago.ts";
 
-/** Species heard this often all-time are too familiar to call rare. */
-const RARITY_THRESHOLD = 10;
-
-const LEVELS = ["▁", "▂", "▃", "▄", "▅", "▆", "▇", "█"] as const;
-
 /**
- * Which stretch of time the card covers. "rolling" is the Today page's
- * trailing 24 hours, whose axis runs into "now"; "day" is one calendar day,
- * which is finished and so ends at an hour rather than at the present.
+ * Which stretch of time the card covers: the Today page's trailing 24 hours,
+ * or one calendar day.
  */
 export type ShareWindow = "rolling" | "day";
 
@@ -26,42 +22,21 @@ export type ShareCard = {
 	date: string;
 	/** Defaults to the rolling window the Today page shares. */
 	window?: ShareWindow;
-	/** Hour of day the oldest bucket covers, 0-23. */
-	startHour: number;
-	/** 24 hourly counts, oldest first, ending with the current hour. */
-	hourlyCounts: number[];
 	species: number;
 	detections: number;
-	visits: number;
 	topSpecies: { comName: string; count: number }[];
 	busiestHour: { hour: number; count: number } | null;
-	/** Species whose all-time first detection landed inside the window. */
-	firstEver: string[];
-	/** The species heard in the window with the fewest all-time detections. */
-	rarest: { comName: string; allTimeCount: number } | null;
 	/**
 	 * The page's own Highlights for the same window (lib/highlights-data.ts),
-	 * when it has them. They name a first-ever bird themselves, so the card's
-	 * own first-ever line steps aside for theirs.
+	 * when it has them: the source of the card's New, Returned and Rare lines.
 	 */
 	highlights?: Highlight[];
+	/**
+	 * The page header's title in pieces, its period and date, e.g. ["Daily",
+	 * "Monday, October 19, 2026"]. Defaults to the past day and its short date.
+	 */
+	heading?: string[];
 };
-
-/**
- * Hourly counts as block characters. A silent hour sits on the baseline and
- * every other hour is scaled across the seven remaining heights, so an hour
- * with a single detection can never be mistaken for one with none.
- */
-export function sparkline(counts: number[]): string {
-	const peak = Math.max(0, ...counts);
-
-	return counts
-		.map((count) => {
-			if (count <= 0 || peak <= 0) return LEVELS[0];
-			return LEVELS[Math.max(1, Math.ceil((count / peak) * 7))];
-		})
-		.join("");
-}
 
 /** "Jul 25", read off the date parts so no timezone can shift the day. */
 function dateLabel(date: string): string {
@@ -72,107 +47,81 @@ function dateLabel(date: string): string {
 	});
 }
 
-/** The axis's compact hour: "12am", "9pm". */
-export function axisHour(hour: number): string {
-	return hourLabel(hour).replace(" ", "").toLowerCase();
+/**
+ * The card's opening lines: the app's name, what kind of summary it is
+ * ("Daily Summary"), then the window's date. All time has no date, so its
+ * card skips that last line.
+ */
+export function shareHeader([period, date]: string[]): string {
+	return [
+		"📖  BirdNET-Book",
+		`📊  ${period} Summary`,
+		...(date ? [`📅  ${date}`] : []),
+	].join("\n");
 }
 
 /**
- * The axis under the sparkline, stretched so its right-hand label lands beneath
- * the final cell. A rolling window names its own starting hour and runs into
- * "now"; a calendar day runs from midnight to the last hour it holds.
+ * The headline figures, one per line, then the hour that heard the most and
+ * how the window compares to the one before.
  */
-function axisLine(
-	startHour: number,
-	width: number,
-	window: ShareWindow,
-): string {
-	const start = axisHour(startHour);
-	const end = window === "day" ? axisHour((startHour + 23) % 24) : "now";
-	const dashes = Math.max(1, width - start.length - end.length - 2);
-	return `${start} ${"─".repeat(dashes)} ${end}`;
+export function shareTotals({
+	species,
+	detections,
+	peakHour,
+	highlights,
+}: {
+	species: number;
+	detections: number;
+	/** Null when no hour heard anything. */
+	peakHour: number | null;
+	highlights: Highlight[];
+}): string[] {
+	return [
+		`🐦  Species · ${species.toLocaleString()}`,
+		`🎙️  Detections · ${detections.toLocaleString()}`,
+		...(peakHour === null ? [] : [`🌅  Peak hour · ${hourLabel(peakHour)}`]),
+		...formatActivityLines(highlights),
+	];
 }
 
 const MEDALS = ["🥇", "🥈", "🥉"] as const;
 
 export function formatShareCard(card: ShareCard): string {
 	const window = card.window ?? "rolling";
-	const header = `🐦 BirdNET-Book · ${dateLabel(card.date)}`;
+	const header = shareHeader(
+		card.heading ?? ["Last 24 hours", dateLabel(card.date)],
+	);
 
 	if (card.detections === 0) {
 		const quiet =
 			window === "day"
 				? "Nothing heard all day."
 				: "Nothing heard in the last 24 hours.";
-		return `${header}\n🤫 ${quiet}`;
+		return `${header}\n🤫  ${quiet}`;
 	}
 
-	const totals = [
-		`${card.species.toLocaleString()} species`,
-		plural(card.detections, "detection"),
-		plural(card.visits, "visit"),
-	].join(" · ");
+	const totals = shareTotals({
+		species: card.species,
+		detections: card.detections,
+		peakHour: card.busiestHour?.hour ?? null,
+		highlights: card.highlights ?? [],
+	});
 
-	const chart = sparkline(card.hourlyCounts);
 	const leaderboard = card.topSpecies
 		.slice(0, MEDALS.length)
 		.map(
 			(species, index) =>
-				`${MEDALS[index]} ${species.comName} ×${species.count.toLocaleString()}`,
+				`${MEDALS[index]}  ${species.comName} · ${species.count.toLocaleString()}`,
 		);
 
 	// Highlights earn their place: a line is printed only when it has something
 	// to say, so a quiet day produces a visibly shorter card than a good one.
-	const highlights: string[] = [];
-
-	if (card.busiestHour) {
-		highlights.push(
-			`🌅 Peak hour: ${hourLabel(card.busiestHour.hour)} · ${plural(
-				card.busiestHour.count,
-				"detection",
-			)}`,
-		);
-	}
-
-	const pageHighlights = card.highlights ?? [];
-	const namedByHighlights = new Set(
-		pageHighlights.flatMap((highlight) =>
-			"birds" in highlight ? highlight.birds.map((bird) => bird.comName) : [],
-		),
-	);
-	const highlightsNameNewcomers = pageHighlights.some(
-		(highlight) => highlight.kind === "new",
-	);
-
-	const [newcomer, ...otherNewcomers] = card.firstEver;
-	if (newcomer && !highlightsNameNewcomers) {
-		const more =
-			otherNewcomers.length > 0 ? ` +${otherNewcomers.length} more` : "";
-		highlights.push(`🐣 New: ${newcomer}${more}`);
-	}
-
-	// A first-ever bird is by definition the rarest one, and saying so twice
-	// wastes the line -- as does naming a bird the highlights already call out.
-	const rarest = card.rarest;
-	if (
-		rarest &&
-		rarest.allTimeCount <= RARITY_THRESHOLD &&
-		!card.firstEver.includes(rarest.comName) &&
-		!namedByHighlights.has(rarest.comName)
-	) {
-		highlights.push(
-			`💎 Rarest: ${rarest.comName} (${ordinal(rarest.allTimeCount)} ever)`,
-		);
-	}
-
-	highlights.push(...formatHighlightLines(pageHighlights));
+	const highlights = formatHighlightLines(card.highlights ?? []);
 
 	return [
 		header,
-		totals,
 		"",
-		chart,
-		axisLine(card.startHour, chart.length, window),
+		...totals,
 		...(leaderboard.length > 0 ? ["", ...leaderboard] : []),
 		...(highlights.length > 0 ? ["", ...highlights] : []),
 	].join("\n");

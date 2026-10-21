@@ -174,7 +174,7 @@ export function highlightGuide(
 		{
 			kind: "returned",
 			name: "Returned",
-			meaning: `Silent ${past(thresholds.returned)}, back ${unit.this}.`,
+			meaning: `Silent ${past(thresholds.returned)}, back ${unit.this}; not rare.`,
 		},
 		{
 			kind: "consistent",

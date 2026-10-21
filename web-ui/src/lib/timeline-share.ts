@@ -1,28 +1,18 @@
 // The Timeline page as one block of pasteable text, the period-scoped
 // counterpart to share-card.ts. Where that card summarises a day, this one
 // summarises whichever window the switcher is showing -- a day, a week, a
-// month, a year or the whole station -- and the sparkline is the page's own
-// subject: the shape of the day, hour by hour, across that window.
+// month, a year or the whole station. Every line is short and stands on its
+// own, so the card still reads on a phone that wraps anything wide.
 //
 // Pure by design: every figure comes from the rows the page already has, so
 // sharing costs no extra round trip.
 
 import type { Highlight } from "~/lib/highlights-data.ts";
 import { formatHighlightLines } from "~/lib/highlights-share.ts";
-import { plural } from "~/lib/number-format.ts";
-import { axisHour, sparkline } from "~/lib/share-card.ts";
-import { hourLabel } from "~/lib/time-ago.ts";
+import { shareHeader, shareTotals } from "~/lib/share-card.ts";
 import type { TimelinePeriod } from "~/lib/timeline-periods.ts";
 
 const HOURS = 24;
-
-const PERIOD_EMOJI: Record<TimelinePeriod, string> = {
-	day: "🕐",
-	week: "📅",
-	month: "🗓️",
-	year: "📆",
-	all: "♾️",
-};
 
 /** How each period names its own stretch of time in prose. */
 const PERIOD_NOUN: Record<TimelinePeriod, string> = {
@@ -42,26 +32,17 @@ export type TimelineShareRow = {
 
 export type TimelineShareCard = {
 	period: TimelinePeriod;
-	/** The window's own label, e.g. "July 2026". Null on all time. */
-	windowLabel: string | null;
+	/**
+	 * The page header's title in pieces, e.g. ["Monthly", "October 2026"], or
+	 * just ["All Time"]. See shareHeader for how the card prints them.
+	 */
+	heading: string[];
 	rows: TimelineShareRow[];
 	/** The page's own Highlights for the window -- see lib/highlights-data.ts. */
 	highlights: Highlight[];
 };
 
 const MEDALS = ["🥇", "🥈", "🥉"] as const;
-
-/**
- * The axis under the sparkline, stretched so its right-hand label lands beneath
- * the final cell. A timeline window always reads as a whole clock day, however
- * many calendar days are stacked into it.
- */
-function axisLine(width: number): string {
-	const start = axisHour(0);
-	const end = axisHour(HOURS - 1);
-	const dashes = Math.max(1, width - start.length - end.length - 2);
-	return `${start} ${"─".repeat(dashes)} ${end}`;
-}
 
 /** Sums the window's rows into one 24-hour profile. */
 function hourTotals(rows: TimelineShareRow[]): number[] {
@@ -76,27 +57,26 @@ function hourTotals(rows: TimelineShareRow[]): number[] {
 
 export function formatTimelineShareCard(card: TimelineShareCard): string {
 	const { period, rows } = card;
-	const header = "🐦 BirdNET-Book · Timeline";
-	const scope = `${PERIOD_EMOJI[period]} ${card.windowLabel ?? "All time"}`;
+	const header = shareHeader(card.heading);
 
 	if (rows.length === 0) {
-		return `${header}\n${scope}\n🤫 Nothing heard ${PERIOD_NOUN[period]}.`;
+		return `${header}\n🤫  Nothing heard ${PERIOD_NOUN[period]}.`;
 	}
 
 	const detections = rows.reduce((sum, row) => sum + row.totalDetections, 0);
-	const totals = [
-		scope,
-		`${rows.length.toLocaleString()} species`,
-		plural(detections, "detection"),
-	].join(" · ");
-
 	const byHour = hourTotals(rows);
-	const chart = sparkline(byHour);
 
 	const peakHour = byHour.reduce(
 		(best, count, hour) => (count > byHour[best] ? hour : best),
 		0,
 	);
+
+	const totals = shareTotals({
+		species: rows.length,
+		detections,
+		peakHour: byHour[peakHour] > 0 ? peakHour : null,
+		highlights: card.highlights,
+	});
 
 	// Ranked by the loader already, but sorting here keeps the card correct for
 	// any caller and costs nothing at these sizes.
@@ -105,32 +85,21 @@ export function formatTimelineShareCard(card: TimelineShareCard): string {
 		.slice(0, MEDALS.length)
 		.map(
 			(row, index) =>
-				`${MEDALS[index]} ${row.comName} ×${row.totalDetections.toLocaleString()}`,
+				`${MEDALS[index]}  ${row.comName} · ${row.totalDetections.toLocaleString()}`,
 		);
 
 	// Highlights earn their place: a line is printed only when it has something
 	// to say, so a quiet month produces a visibly shorter card than a good one.
 	const highlights: string[] = [];
 
-	if (byHour[peakHour] > 0) {
-		highlights.push(
-			`🌅 Peak hour: ${hourLabel(peakHour)} · ${plural(
-				byHour[peakHour],
-				"detection",
-			)}`,
-		);
-	}
-
-	// What the page's Highlights card found worth saying: the pace against the
-	// stretch before, and the arrivals, returns, rarities and absences.
+	// What the page's Highlights card found worth saying: the arrivals,
+	// returns, rarities and absences.
 	highlights.push(...formatHighlightLines(card.highlights));
 
 	return [
 		header,
-		totals,
 		"",
-		chart,
-		axisLine(chart.length),
+		...totals,
 		"",
 		...leaderboard,
 		...(highlights.length > 0 ? ["", ...highlights] : []),
