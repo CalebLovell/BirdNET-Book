@@ -98,16 +98,12 @@ export function StationLocation({
 			<Button
 				type="button"
 				variant="outline"
+				size="default"
 				icon={Crosshair}
 				loading={state.kind === "locating"}
 				onClick={locate}
-				// Icon-only on the smallest phones: beside it, the label squeezed
-				// the card's title to a word per line.
-				className="max-[400px]:w-6 max-[400px]:px-0"
 			>
-				<span className="max-[400px]:sr-only">
-					{state.kind === "locating" ? "Locating…" : "Use my location"}
-				</span>
+				{state.kind === "locating" ? "Locating…" : "Use my location"}
 			</Button>
 			{open ? (
 				<div

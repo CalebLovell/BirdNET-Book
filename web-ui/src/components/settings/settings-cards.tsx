@@ -200,7 +200,7 @@ function Field({
 	const field = { id, labelId: `${id}-label` };
 	const Name = readOnly ? "span" : "label";
 	return (
-		<div className="grid gap-x-8 gap-y-2 border-t py-(--page-gap) sm:grid-cols-[minmax(0,1fr)_minmax(0,20rem)]">
+		<div className="grid gap-x-8 gap-y-2 border-t py-(--page-gap) sm:grid-cols-[minmax(0,1fr)_minmax(0,20rem)] sm:items-center">
 			<div className="min-w-0">
 				<div className="flex items-center gap-1.5">
 					<Name
@@ -420,17 +420,6 @@ function StationCard({
 			onSave={() => void form.submit()}
 			restart={restartControl(form)}
 			saveDisabled={form.saveDisabled}
-			action={
-				<StationLocation
-					current={{
-						latitude: form.values.latitude,
-						longitude: form.values.longitude,
-					}}
-					onApply={(coordinates) =>
-						form.setValues({ ...form.values, ...coordinates })
-					}
-				/>
-			}
 		>
 			<Field label="Station name" hint="What this station is called.">
 				<FieldInput
@@ -472,6 +461,21 @@ function StationCard({
 							...form.values,
 							longitude: numberOr(event, form.values.longitude),
 						})
+					}
+				/>
+			</Field>
+			<Field
+				label="Your location"
+				readOnly
+				hint="Fill the latitude and longitude from this device's location."
+			>
+				<StationLocation
+					current={{
+						latitude: form.values.latitude,
+						longitude: form.values.longitude,
+					}}
+					onApply={(coordinates) =>
+						form.setValues({ ...form.values, ...coordinates })
 					}
 				/>
 			</Field>
@@ -1258,18 +1262,6 @@ function UpdatesSettingsCard({
 			confirmDescription="This writes the values in this card to the station's configuration. Nothing restarts."
 			onSave={() => void form.submit()}
 			saveDisabled={form.saveDisabled}
-			action={
-				<Button
-					type="button"
-					variant="outline"
-					icon={RefreshCw}
-					loading={updates?.state === "checking"}
-					disabled={!managed || busy || !onCheck}
-					onClick={() => void run(onCheck, "Couldn't look for updates.")}
-				>
-					Check now
-				</Button>
-			}
 		>
 			<Field
 				label="This station"
@@ -1338,6 +1330,7 @@ function UpdatesSettingsCard({
 				) : offered ? (
 					<Button
 						type="button"
+						size="default"
 						icon={Download}
 						disabled={busy || !onInstall}
 						onClick={() => setConfirming(true)}
@@ -1353,6 +1346,23 @@ function UpdatesSettingsCard({
 								: "Not available"}
 					</p>
 				)}
+			</Field>
+			<Field
+				label="Check for updates"
+				readOnly
+				hint="Ask GitHub for the newest release now instead of waiting for tonight's check."
+			>
+				<Button
+					type="button"
+					variant="outline"
+					size="default"
+					icon={RefreshCw}
+					loading={updates?.state === "checking"}
+					disabled={!managed || busy || !onCheck}
+					onClick={() => void run(onCheck, "Couldn't look for updates.")}
+				>
+					Check now
+				</Button>
 			</Field>
 			<Field
 				label="Automatic updates"

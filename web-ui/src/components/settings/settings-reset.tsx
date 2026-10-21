@@ -32,7 +32,12 @@ export function SettingsReset({ onReset }: { onReset: () => Promise<void> }) {
 
 	return (
 		<>
-			<Button variant="outline" icon={RotateCcw} onClick={() => setOpen(true)}>
+			<Button
+				variant="outline"
+				size="default"
+				icon={RotateCcw}
+				onClick={() => setOpen(true)}
+			>
 				Reset to defaults
 			</Button>
 			{open ? (

@@ -27,6 +27,7 @@ export function RestartButton({
 		<Button
 			type="button"
 			variant="outline"
+			size="default"
 			icon={RefreshCw}
 			loading={busy}
 			title="Briefly interrupts recording while BirdNET reloads its settings"

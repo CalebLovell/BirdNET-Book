@@ -20,7 +20,6 @@ export function SettingsCard({
 	description,
 	onSave,
 	confirmDescription = DEFAULT_CONFIRM_DESCRIPTION,
-	action,
 	restart,
 	saveDisabled,
 	children,
@@ -35,12 +34,6 @@ export function SettingsCard({
 	onSave: () => void;
 	/** Overrides the standing warning for a card whose save costs something else. */
 	confirmDescription?: string;
-	/**
-	 * A control for the card as a whole, set against its title. It sits inside
-	 * the card's form, so anything interactive here needs `type="button"` --
-	 * a bare button would submit the card.
-	 */
-	action?: ReactNode;
 	/** Offered beside Save while the saved values are not the running ones. */
 	restart?: ReactNode;
 	/**
@@ -73,11 +66,9 @@ export function SettingsCard({
 					setConfirming(true);
 				}}
 			>
-				{/* The band every card on the site is titled with, the card's own
-				    control held against its right edge. */}
-				<CardHeader as="h2" titleId={headingId} title={title}>
-					{action}
-				</CardHeader>
+				{/* The band every card on the site is titled with. No controls in
+				    it: a card's own actions sit in its rows. */}
+				<CardHeader as="h2" titleId={headingId} title={title} />
 
 				<p className="py-(--page-gap) text-muted-foreground text-sm leading-relaxed">
 					{description}
@@ -90,7 +81,12 @@ export function SettingsCard({
 				    toast, so the row holds only the controls. */}
 				<div className="flex flex-wrap items-center justify-end gap-2 border-t pt-(--page-gap)">
 					{restart}
-					<Button type="submit" icon={Save} disabled={saveDisabled}>
+					<Button
+						type="submit"
+						size="default"
+						icon={Save}
+						disabled={saveDisabled}
+					>
 						Save
 					</Button>
 				</div>
