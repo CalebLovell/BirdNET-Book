@@ -10,6 +10,7 @@ import {
 	ReviewWorkflowSkeleton,
 } from "~/components/review/review-workflow.tsx";
 import { Button } from "~/components/ui/button.tsx";
+import { PAGE_HEADERS } from "~/lib/page-headers.ts";
 import { pageTitle } from "~/lib/page-title.ts";
 import { requireUnlocked } from "~/lib/require-unlocked.ts";
 import {
@@ -24,8 +25,6 @@ import {
 	type SpeciesOption,
 } from "~/lib/review-data.ts";
 import { useSettled } from "~/lib/use-settled.ts";
-
-const REVIEW_PAGE_TITLE = "Review detections";
 
 export const Route = createFileRoute("/review")({
 	head: () => ({ meta: [{ title: pageTitle("Review") }] }),
@@ -80,10 +79,8 @@ function Review() {
 		<div className="page-wrap space-y-(--page-gap) py-4">
 			<PageHeaderCard
 				icon={SearchCheck}
-				title={REVIEW_PAGE_TITLE}
-				// Fixed, so it is there from the first frame. The threshold that
-				// makes a species "rare" is set on the Settings page.
-				description="Low-confidence recordings of the station's rarest species, to confirm, correct or delete."
+				title={PAGE_HEADERS.review.title}
+				description={PAGE_HEADERS.review.description}
 			/>
 			{error ? (
 				<p className="flex items-center gap-2 text-destructive text-sm">

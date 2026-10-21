@@ -9,6 +9,7 @@ import { SessionCard } from "~/components/auth/session-card.tsx";
 import { StationNotReadyCard } from "~/components/auth/station-not-ready-card.tsx";
 import { UnlockGate } from "~/components/auth/unlock-gate.tsx";
 import { PageHeaderCard } from "~/components/page-header-card.tsx";
+import { PAGE_HEADERS } from "~/lib/page-headers.ts";
 import { pageTitle } from "~/lib/page-title.ts";
 import { safeNext } from "~/lib/require-unlocked.ts";
 
@@ -41,8 +42,8 @@ function Account() {
 			    browser stands is the card's job beneath it. */}
 			<PageHeaderCard
 				icon={UserRound}
-				title="Account"
-				description="Manage access to your station."
+				title={PAGE_HEADERS.account.title}
+				description={PAGE_HEADERS.account.description}
 			/>
 			{auth.unlocked ? (
 				<SessionCard />

@@ -17,6 +17,7 @@ import { InfoTip } from "~/components/ui/info-tip.tsx";
 import { SearchInput } from "~/components/ui/search-input.tsx";
 import { destructiveToast, toast } from "~/components/ui/toaster.tsx";
 import { EMPTY } from "~/lib/empty-messages.ts";
+import { PAGE_HEADERS } from "~/lib/page-headers.ts";
 import {
 	type SpeciesControlPageData,
 	type SpeciesControlSaveInput,
@@ -37,10 +38,6 @@ import {
 	sortSpeciesControlRows,
 } from "./species-control-table.tsx";
 import { SpeciesControlTools } from "./species-control-tools.tsx";
-
-export const SPECIES_CONTROL_PAGE_TITLE = "Species Control";
-export const SPECIES_CONTROL_PAGE_DESCRIPTION =
-	"Decide which installed species BirdNET may detect. Every change is confirmed before it takes effect.";
 
 // Shared by the page and its skeleton, so the two are one shape.
 const TOOLBAR_CLASS =
@@ -65,8 +62,8 @@ export function SpeciesControlPageSkeleton({
 			<div className="@container shrink-0 space-y-(--page-gap)">
 				<PageHeaderCard
 					icon={SlidersHorizontal}
-					title={SPECIES_CONTROL_PAGE_TITLE}
-					description={SPECIES_CONTROL_PAGE_DESCRIPTION}
+					title={PAGE_HEADERS.speciesControl.title}
+					description={PAGE_HEADERS.speciesControl.description}
 				/>
 				<div inert className={TOOLBAR_CLASS}>
 					<SearchInput
@@ -453,8 +450,8 @@ export function SpeciesControlPage({
 			<div className="@container shrink-0 space-y-(--page-gap)">
 				<PageHeaderCard
 					icon={SlidersHorizontal}
-					title={SPECIES_CONTROL_PAGE_TITLE}
-					description={SPECIES_CONTROL_PAGE_DESCRIPTION}
+					title={PAGE_HEADERS.speciesControl.title}
+					description={PAGE_HEADERS.speciesControl.description}
 				/>
 
 				<div data-layout="species-control-toolbar" className={TOOLBAR_CLASS}>

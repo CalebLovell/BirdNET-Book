@@ -24,6 +24,7 @@ import {
 } from "~/lib/detection-workspace.ts";
 import { deleteDetections, getDetectionsPage } from "~/lib/detections.ts";
 import { EMPTY } from "~/lib/empty-messages.ts";
+import { PAGE_HEADERS } from "~/lib/page-headers.ts";
 import { pageTitle } from "~/lib/page-title.ts";
 import { useSettled } from "~/lib/use-settled.ts";
 
@@ -107,8 +108,8 @@ function Detections() {
 			<div className="shrink-0 space-y-(--page-gap)">
 				<PageHeaderCard
 					icon={AudioWaveform}
-					title="Detections"
-					description="Browse, filter, and manage every individual detection."
+					title={PAGE_HEADERS.detections.title}
+					description={PAGE_HEADERS.detections.description}
 				/>
 
 				<DetectionsFilters

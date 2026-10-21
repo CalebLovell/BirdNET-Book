@@ -27,6 +27,7 @@ import { getDayShareCard } from "~/lib/day-share.ts";
 import { formatDayTitle } from "~/lib/day-title.ts";
 import { EMPTY } from "~/lib/empty-messages.ts";
 import type { HighlightThresholds } from "~/lib/highlight-thresholds.ts";
+import { PAGE_HEADERS } from "~/lib/page-headers.ts";
 import { pageTitle } from "~/lib/page-title.ts";
 import { formatShareCard } from "~/lib/share-card.ts";
 import type { HourActivity } from "~/lib/stats-data.ts";
@@ -328,7 +329,7 @@ function TimelineHeader({
 		<PageHeaderCard
 			icon={CalendarRange}
 			title={headerTitle(period, anchor)}
-			description={TIMELINE_DESCRIPTION}
+			description={PAGE_HEADERS.timeline.description}
 			action={data?.hasAnyDetections ? share.trigger : undefined}
 			// Between the title and the body card, so the window it picks reads as
 			// steering the figures and body beneath it. Gated on the station rather
@@ -580,15 +581,6 @@ function TimelineCards({
 // anything, so its cards drop beneath the body instead.
 const BODY_CARD_WIDTH = "min-w-0 min-[1800px]:w-[72rem] min-[1800px]:flex-none";
 
-/**
- * The masthead subtitle -- one line for every period and both bodies. The view
- * toggle and the bodies themselves show *how* the detections are drawn, so the
- * subtitle stays fixed and just says what the page is: every detection, grouped
- * by species, across whatever window the toolbar has selected.
- */
-const TIMELINE_DESCRIPTION =
-	"Every detection, by species, over the selected time period";
-
 const VIEW_META: Record<
 	TimelineView,
 	{
@@ -660,10 +652,6 @@ function ViewToggle({
 	);
 }
 
-const TIMELINE_SECTION = "Timeline";
-const TIMELINE_SECTION_DESCRIPTION =
-	"What this station heard, at whatever scale you ask for.";
-
 /**
  * A date outside the station's history. Not a page with empty cards on it: the
  * window itself is the thing that does not exist, so there is nothing to scope
@@ -681,8 +669,8 @@ function OutOfRangeDay({
 			return (
 				<StatusPage
 					icon={CalendarRange}
-					section={TIMELINE_SECTION}
-					sectionDescription={TIMELINE_SECTION_DESCRIPTION}
+					section={PAGE_HEADERS.timeline.missingSection}
+					sectionDescription={PAGE_HEADERS.timeline.missingDescription}
 					tone="missing"
 					title="That day hasn't happened yet"
 				>
@@ -694,8 +682,8 @@ function OutOfRangeDay({
 			return (
 				<StatusPage
 					icon={CalendarRange}
-					section={TIMELINE_SECTION}
-					sectionDescription={TIMELINE_SECTION_DESCRIPTION}
+					section={PAGE_HEADERS.timeline.missingSection}
+					sectionDescription={PAGE_HEADERS.timeline.missingDescription}
 					tone="missing"
 					title="Before this station started listening"
 				>
@@ -707,8 +695,8 @@ function OutOfRangeDay({
 			return (
 				<StatusPage
 					icon={CalendarRange}
-					section={TIMELINE_SECTION}
-					sectionDescription={TIMELINE_SECTION_DESCRIPTION}
+					section={PAGE_HEADERS.timeline.missingSection}
+					sectionDescription={PAGE_HEADERS.timeline.missingDescription}
 					tone="missing"
 					title="That isn't a date"
 				>

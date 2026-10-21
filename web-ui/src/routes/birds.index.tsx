@@ -37,6 +37,7 @@ import { ToggleGroup, ToggleGroupItem } from "~/components/ui/toggle-group.tsx";
 import { formatDateTime } from "~/lib/date-format.ts";
 import { getLifeListCards, type LifeListCard } from "~/lib/detections.ts";
 import { EMPTY } from "~/lib/empty-messages.ts";
+import { PAGE_HEADERS } from "~/lib/page-headers.ts";
 import { pageTitle } from "~/lib/page-title.ts";
 import { comNameToSlug } from "~/lib/species-slug.ts";
 import { useSettled } from "~/lib/use-settled.ts";
@@ -103,7 +104,7 @@ function Species() {
 		<div className="page-wrap flex min-h-full flex-col gap-(--page-gap) py-4">
 			<PageHeaderCard
 				icon={Feather}
-				title="All Birds"
+				title={PAGE_HEADERS.birds.title}
 				description={<LifeListSummary cards={cards} />}
 			/>
 
@@ -127,22 +128,18 @@ function LifeListSummary({ cards }: { cards: Promise<LifeListCard[]> }) {
 	const settled = useSettled(cards);
 	const loaded = settled?.value ?? null;
 	const detections = loaded?.reduce((sum, card) => sum + card.allTimeCount, 0);
-	return (
-		<>
-			This station has recorded{" "}
-			{detections === undefined ? (
-				<ShellFigure />
-			) : (
-				<span className="count-figure">{detections.toLocaleString()}</span>
-			)}{" "}
-			total {detections === 1 ? "detection" : "detections"} from{" "}
-			{loaded ? (
-				<span className="count-figure">{loaded.length.toLocaleString()}</span>
-			) : (
-				<ShellFigure />
-			)}{" "}
-			species.
-		</>
+	return PAGE_HEADERS.birds.description(
+		detections === undefined ? (
+			<ShellFigure />
+		) : (
+			<span className="count-figure">{detections.toLocaleString()}</span>
+		),
+		loaded ? (
+			<span className="count-figure">{loaded.length.toLocaleString()}</span>
+		) : (
+			<ShellFigure />
+		),
+		detections === 1,
 	);
 }
 

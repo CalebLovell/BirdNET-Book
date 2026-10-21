@@ -4,6 +4,7 @@ import { useState } from "react";
 import { PageHeaderCard } from "~/components/page-header-card.tsx";
 import { destructiveToast, toast } from "~/components/ui/toaster.tsx";
 import type { StationHealth } from "~/lib/health-data.ts";
+import { PAGE_HEADERS } from "~/lib/page-headers.ts";
 import type { SettingsPageData } from "~/lib/settings-data.ts";
 import type { UpdateState } from "~/lib/updates-data.ts";
 import { RestartButton } from "./restart-button.tsx";
@@ -18,10 +19,6 @@ import { healthStats, healthStatsSkeleton } from "./station-health.tsx";
 
 /** A reset that stored its values without getting BirdNET onto them. */
 type ResetOutcome = { message: string; needsRestart: boolean };
-
-export const SETTINGS_PAGE_TITLE = "Settings";
-export const SETTINGS_PAGE_DESCRIPTION =
-	"Configure this station without editing birdnet.conf. Each card validates and saves independently.";
 
 export function SettingsPage({
 	data,
@@ -71,8 +68,8 @@ export function SettingsPage({
 		<div className="page-wrap space-y-(--page-gap) py-4">
 			<PageHeaderCard
 				icon={Settings}
-				title={SETTINGS_PAGE_TITLE}
-				description={SETTINGS_PAGE_DESCRIPTION}
+				title={PAGE_HEADERS.settings.title}
+				description={PAGE_HEADERS.settings.description}
 				stats={health ? healthStats(health) : healthStatsSkeleton()}
 				action={
 					onReset ? (
@@ -140,8 +137,8 @@ export function SettingsPageSkeleton() {
 		<div className="page-wrap space-y-(--page-gap) py-4">
 			<PageHeaderCard
 				icon={Settings}
-				title={SETTINGS_PAGE_TITLE}
-				description={SETTINGS_PAGE_DESCRIPTION}
+				title={PAGE_HEADERS.settings.title}
+				description={PAGE_HEADERS.settings.description}
 				stats={healthStatsSkeleton()}
 				action={
 					<div inert className="flex flex-wrap items-center justify-end gap-2">

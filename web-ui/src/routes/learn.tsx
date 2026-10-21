@@ -16,6 +16,7 @@ import { PageHeaderCard } from "~/components/page-header-card.tsx";
 import { EMPTY } from "~/lib/empty-messages.ts";
 import { getLearnRound } from "~/lib/learn.ts";
 import { LEARN_POOLS, type LearnPool } from "~/lib/learn-pools.ts";
+import { PAGE_HEADERS } from "~/lib/page-headers.ts";
 import { pageTitle } from "~/lib/page-title.ts";
 import { useHeldRound } from "~/lib/use-held-round.ts";
 
@@ -72,8 +73,8 @@ function Learn() {
 		<div className="page-wrap py-4">
 			<PageHeaderCard
 				icon={Lightbulb}
-				title="Learn the calls"
-				description="Ear training on the recordings your own station captured."
+				title={PAGE_HEADERS.learn.title}
+				description={PAGE_HEADERS.learn.description}
 			/>
 
 			{/* Always drawn, an empty station included: the pool comes from the
