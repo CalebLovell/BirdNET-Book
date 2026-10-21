@@ -265,5 +265,65 @@ class SheetTests(unittest.TestCase):
         self.assertIn("#fbfdf6", html)
 
 
+def adopt_state():
+    def cand(slug, n):
+        return {"n": n, "url": f"https://upload.wikimedia.org/{slug}/{n}.jpg", "page": f"https://example.org/{slug}/{n}",
+                "license": "cc0" if n == 1 else "pd", "credit": f"someone {n}", "source": "inaturalist"}
+    return {
+        slug: {"slug": slug, "sci_name": f"Genus {slug}", "com_name": f"Bird {slug}", "taxon_ok": True,
+               "inat_name": f"Genus {slug}", "candidates": [cand(slug, 1), cand(slug, 2)]}
+        for slug in ("aa", "bb")
+    }
+
+
+class AdoptTests(unittest.TestCase):
+    def test_adopt_takes_chosen_candidate(self):
+        out = photos.adopt({"aa": {"n": 2, "reason": "clear"}}, adopt_state(), {})
+        self.assertEqual(out["aa"], {
+            "sci_name": "Genus aa", "com_name": "Bird aa",
+            "url": "https://upload.wikimedia.org/aa/2.jpg", "page": "https://example.org/aa/2",
+            "license": "pd", "credit": "someone 2", "source": "inaturalist",
+        })
+
+    def test_adopt_null_pick_leaves_species_out(self):
+        out = photos.adopt({"aa": {"n": None, "reason": "blurry"}}, adopt_state(), {})
+        self.assertEqual(out, {})
+
+    def test_adopt_keeps_existing_entries(self):
+        existing = {"zz": {"url": "https://upload.wikimedia.org/zz.jpg"}}
+        out = photos.adopt({"aa": {"n": 1, "reason": "ok"}}, adopt_state(), existing)
+        self.assertIn("zz", out)
+        self.assertIn("aa", out)
+        self.assertNotIn("aa", existing)
+
+    def test_render_ts_is_sorted_and_parseable(self):
+        text = photos.render_ts({"b": {"url": "https://x/b.jpg"}, "a": {"url": 'https://x/a"q.jpg'}})
+        self.assertIn("export const REFERENCE_PHOTOS: Record<string, string> = {", text)
+        self.assertIn("tools/illustrate/photos.py adopt", text)
+        self.assertLess(text.index('"a"'), text.index('"b"'))
+        self.assertIn('"a": ' + json.dumps('https://x/a"q.jpg') + ",", text)
+        self.assertTrue(text.endswith("};\n"))
+
+    def test_render_ts_empty(self):
+        self.assertIn("= {};", photos.render_ts({}))
+
+
+class CheckLinksTests(unittest.TestCase):
+    def test_check_links_reports_non_images(self):
+        data = {
+            "ok": {"url": "https://x/ok.jpg"},
+            "html": {"url": "https://x/page.html"},
+            "gone": {"url": "https://x/gone.jpg"},
+        }
+        replies = {"https://x/ok.jpg": (200, "image/jpeg"), "https://x/page.html": (200, "text/html"),
+                   "https://x/gone.jpg": (404, "")}
+        self.assertEqual(photos.check_links(data, lambda url: replies[url]), ["gone", "html"])
+
+    def test_check_links_reports_errors(self):
+        def head(url):
+            raise OSError("down")
+        self.assertEqual(photos.check_links({"a": {"url": "https://x/a.jpg"}}, head), ["a"])
+
+
 if __name__ == "__main__":
     unittest.main()
