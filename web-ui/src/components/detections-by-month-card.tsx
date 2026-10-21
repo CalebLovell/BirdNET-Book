@@ -72,7 +72,10 @@ export function DetectionsByMonthCard({
 					>
 						<BarChart
 							data={trend}
-							aria-label="Detections by month chart. Use the left and right arrow keys to read each month."
+							// Not a tab stop: a click or tap would ring the whole chart in a
+							// focus outline. Screen readers get the hidden table below.
+							accessibilityLayer={false}
+							aria-hidden
 							// No extra right margin for "Dec": each label is centred in its
 							// month's band, so the last one sits half a band in from the edge.
 							margin={CHART_MARGIN}

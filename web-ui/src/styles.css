@@ -449,11 +449,19 @@ a {
      off the element so it reads as a separate marker, not a thicker border.
      To vary it, override just the colour (e.g.
      `focus-visible:outline-destructive`) rather than reaching for
-     `outline-none`; the sole opt-out is Input, which signals focus with its
-     border instead. */
+     `outline-none`; the opt-outs are Input, which signals focus with its
+     border instead, and the charts below, which are not tab stops. */
   :focus-visible {
     outline: 2px solid var(--focus-ring);
     outline-offset: 2px;
+  }
+  /* Recharts leaves tabindex="-1" on its wrapper and layers even with the
+     keyboard layer off, so a click or tap focused them and the browser ringed
+     the whole chart. They are out of the tab order (screen readers read each
+     chart's hidden table), so there is no keyboard focus here to show. */
+  .recharts-wrapper,
+  .recharts-wrapper :focus {
+    outline: none;
   }
   body {
     background-color: var(--background);

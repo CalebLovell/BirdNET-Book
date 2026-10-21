@@ -25,12 +25,11 @@ export function ChartValueTooltip({
 	const bucket = formatLabel ? formatLabel(label) : String(label ?? "");
 	const noun = value === 1 ? "detection" : "detections";
 
-	// A live region, as recharts' own tooltip content is: stepping the chart
-	// with the arrow keys reads each value aloud. It stays mounted while empty
-	// because screen readers skip a region whose text arrives with it.
+	// Pointer-only: the charts are not keyboard-focusable, and screen readers
+	// read every value from each chart's hidden data table instead.
 	return (
-		<output
-			aria-live="assertive"
+		<div
+			aria-hidden
 			className={
 				shown
 					? "block rounded-sm border border-[var(--line)] bg-[var(--paper-raised)] px-2 py-1 text-[13px] text-[var(--ink)]"
@@ -43,6 +42,6 @@ export function ChartValueTooltip({
 					{` — ${value.toLocaleString()} ${noun}`}
 				</>
 			)}
-		</output>
+		</div>
 	);
 }

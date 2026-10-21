@@ -1,11 +1,10 @@
 /**
  * A detections chart's numbers as a table only screen readers see.
  *
- * The chart itself is reachable by keyboard -- recharts' accessibility layer
- * steps the tooltip along the points with the arrow keys -- but a screen
- * reader can only hear that one value at a time, and only after finding the
- * keys. The table is the whole series at once, read in browse mode like any
- * other table on the page.
+ * The chart itself is hidden from assistive tech and is not a tab stop:
+ * recharts' keyboard layer made the whole chart focusable, so every click or
+ * tap drew a focus ring around it. The table is the whole series at once,
+ * read in browse mode like any other table on the page.
  */
 export function ChartDataTable({
 	caption,

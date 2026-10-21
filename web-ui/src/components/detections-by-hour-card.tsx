@@ -77,7 +77,10 @@ export function DetectionsByHourCard({
 					<AreaChart
 						data={activity}
 						margin={CHART_MARGIN}
-						aria-label="Detections by hour chart. Use the left and right arrow keys to read each hour."
+						// Not a tab stop: a click or tap would ring the whole chart in a
+						// focus outline. Screen readers get the hidden table below.
+						accessibilityLayer={false}
+						aria-hidden
 					>
 						<defs>
 							<linearGradient id={fillId} x1="0" y1="0" x2="0" y2="1">
