@@ -50,8 +50,11 @@ def stub(responses, calls=None):
     return get_json
 
 
-def inat_taxon(name="Baeolophus bicolor", iconic="Aves"):
-    return {"results": [{"id": 7, "name": name, "iconic_taxon_name": iconic}]}
+def inat_taxon(name="Baeolophus bicolor", iconic="Aves", term=None):
+    taxon = {"id": 7, "name": name, "iconic_taxon_name": iconic}
+    if term:
+        taxon["matched_term"] = term
+    return {"results": [taxon]}
 
 
 def inat_obs(count):
@@ -82,17 +85,18 @@ class CandidateTests(unittest.TestCase):
             return {"slug": slug, "sci_name": slug, "com_name": slug.upper()}
         ranking = [row("a"), row("b"), row("c")]
         out = photos.target_species(ranking, [row("d"), row("a")], {"b"}, top=2)
-        self.assertEqual([s["slug"] for s in out], ["a", "c", "d"])
+        self.assertEqual([s["slug"] for s in out], ["a", "d"])
         self.assertEqual(set(out[0]), {"slug", "sci_name", "com_name"})
 
     def test_candidates_keyed_by_birdnet_name(self):
         sp = {"slug": "regulus-calendula", "sci_name": "Regulus calendula", "com_name": "Ruby-crowned Kinglet"}
-        get = stub({"/taxa": inat_taxon("Corthylio calendula"), "/observations": inat_obs(5)})
+        get = stub({"/taxa": inat_taxon("Corthylio calendula", term="Regulus calendula"), "/observations": inat_obs(5)})
         out = photos.fetch_candidates(sp, get)
         self.assertEqual(out["slug"], "regulus-calendula")
         self.assertEqual(out["sci_name"], "Regulus calendula")
         self.assertTrue(out["taxon_ok"])
         self.assertEqual(len(out["candidates"]), 5)
+        self.assertEqual(out["inat_name"], "Corthylio calendula")
 
     def test_non_bird_taxon_rejected(self):
         get = stub({"/taxa": inat_taxon(iconic="Mammalia"), "/observations": inat_obs(5)})
@@ -120,6 +124,27 @@ class CandidateTests(unittest.TestCase):
         self.assertEqual([c["n"] for c in cands], [1, 2, 3])
         self.assertEqual(wiki[0]["credit"], "Jane")
         self.assertTrue(wiki[0]["url"].startswith("https://upload.wikimedia.org/"))
+
+    def test_different_species_hit_rejected(self):
+        get = stub({"/taxa": inat_taxon("Baeolophus atricristatus"), "/observations": inat_obs(5)})
+        out = photos.fetch_candidates(SP, get)
+        self.assertFalse(out["taxon_ok"])
+        self.assertEqual(out["candidates"], [])
+
+    def test_exact_match_found_beyond_first_hit(self):
+        resp = {"results": [{"id": 1, "name": "Baeolophus", "iconic_taxon_name": "Aves"},
+                            {"id": 7, "name": "baeolophus BICOLOR", "iconic_taxon_name": "Aves"}]}
+        out = photos.fetch_candidates(SP, stub({"/taxa": resp, "/observations": inat_obs(5)}))
+        self.assertTrue(out["taxon_ok"])
+
+    def test_off_host_photo_urls_dropped(self):
+        obs = inat_obs(2)
+        obs["results"][0]["photos"][0]["url"] = "https://static.inaturalist.org/photos/1/square.jpg"
+        wiki = commons("CC0")
+        wiki["query"]["pages"]["1"]["imageinfo"][0]["thumburl"] = "https://example.com/x.jpg"
+        out = photos.fetch_candidates(SP, stub({"/taxa": inat_taxon(), "/observations": obs, "commons.wikimedia": wiki}))
+        self.assertEqual([c["url"].split("/")[2] for c in out["candidates"]],
+                         ["inaturalist-open-data.s3.amazonaws.com"])
 
     def test_wikimedia_skipped_when_inat_has_enough(self):
         calls = []

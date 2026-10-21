@@ -40,6 +40,7 @@ RANKING_CSV = HERE / 'ranking.csv'
 PHOTOS_DIR = WORK_DIR / 'photos'
 CANDIDATES_JSON = PHOTOS_DIR / 'candidates.json'
 INAT_API = 'https://api.inaturalist.org/v1'
+PHOTO_HOSTS = {'inaturalist-open-data.s3.amazonaws.com', 'upload.wikimedia.org'}
 COMMONS_API = 'https://commons.wikimedia.org/w/api.php'
 USER_AGENT = 'BirdNET-Pi-Live photos tool'
 REQUEST_GAP = 1.0
@@ -148,11 +149,11 @@ def load_labels() -> list[str]:
 
 def target_species(ranking: list[dict], db_species: list[dict], painted: set[str],
                    top: int = 300) -> list[dict]:
-    """The top `top` unpainted ranked species, then every station
+    """The top `top` ranked species minus painted ones, then every station
     species, deduped by slug."""
     out: list[dict] = []
     seen: set[str] = set()
-    pool = [r for r in ranking if r['slug'] not in painted][:top] + list(db_species)
+    pool = [r for r in ranking[:top] if r['slug'] not in painted] + list(db_species)
     for sp in pool:
         if sp['slug'] not in seen:
             seen.add(sp['slug'])
@@ -182,6 +183,20 @@ def http_get_json(url: str) -> dict:
             time.sleep(BACKOFF[attempt])
 
 
+def _allowed_host(url: str) -> bool:
+    return urllib.parse.urlparse(url).hostname in PHOTO_HOSTS
+
+
+def _matching_taxon(results: list[dict], sci_name: str) -> dict | None:
+    """The iNaturalist taxon that is BirdNET's species: same name, or reached
+    through BirdNET's name as a synonym (matched_term) after a rename."""
+    wanted = sci_name.strip().lower()
+    for taxon in results:
+        if wanted in (str(taxon.get('name', '')).lower(), str(taxon.get('matched_term', '')).lower()):
+            return taxon
+    return None
+
+
 def _inat_candidates(taxon_id: int, get_json: Callable[[str], dict], want: int) -> list[dict]:
     query = urllib.parse.urlencode({
         'taxon_id': taxon_id, 'photo_license': 'cc0', 'quality_grade': 'research',
@@ -190,10 +205,11 @@ def _inat_candidates(taxon_id: int, get_json: Callable[[str], dict], want: int) 
     found = []
     for obs in get_json(f'{INAT_API}/observations?{query}').get('results', []):
         for photo in obs.get('photos', [])[:1]:
-            if str(photo.get('license_code', '')).lower() != 'cc0' or not photo.get('url'):
+            url = str(photo.get('url', '')).replace('/square.', '/large.')
+            if str(photo.get('license_code', '')).lower() != 'cc0' or not _allowed_host(url):
                 continue
             found.append({
-                'url': photo['url'].replace('/square.', '/large.'),
+                'url': url,
                 'page': f'https://www.inaturalist.org/photos/{photo["id"]}',
                 'license': 'cc0',
                 'credit': photo.get('attribution', ''),
@@ -224,7 +240,7 @@ def _wikimedia_candidates(sci_name: str, get_json: Callable[[str], dict], want: 
         info = (page.get('imageinfo') or [{}])[0]
         meta = info.get('extmetadata', {})
         licence = _free_license(meta.get('LicenseShortName', {}).get('value', ''))
-        if licence is None or not info.get('thumburl'):
+        if licence is None or not _allowed_host(info.get('thumburl', '')):
             continue
         found.append({
             'url': info['thumburl'],
@@ -240,13 +256,14 @@ def fetch_candidates(sp: dict, get_json: Callable[[str], dict], want: int = WANT
     """CC0 / public-domain photo candidates for one species. The entry stays
     keyed by BirdNET's name even when iNaturalist uses another."""
     entry = {'slug': sp['slug'], 'sci_name': sp['sci_name'], 'com_name': sp['com_name'],
-             'taxon_ok': False, 'candidates': []}
-    query = urllib.parse.urlencode({'q': sp['sci_name'], 'rank': 'species,subspecies', 'per_page': 1})
-    results = get_json(f'{INAT_API}/taxa?{query}').get('results', [])
-    if not results or results[0].get('iconic_taxon_name') != 'Aves':
+             'taxon_ok': False, 'inat_name': None, 'candidates': []}
+    query = urllib.parse.urlencode({'q': sp['sci_name'], 'rank': 'species,subspecies', 'per_page': 5})
+    taxon = _matching_taxon(get_json(f'{INAT_API}/taxa?{query}').get('results', []), sp['sci_name'])
+    if taxon is None or taxon.get('iconic_taxon_name') != 'Aves':
         return entry
     entry['taxon_ok'] = True
-    candidates = _inat_candidates(results[0]['id'], get_json, want)
+    entry['inat_name'] = taxon.get('name')
+    candidates = _inat_candidates(taxon['id'], get_json, want)
     if len(candidates) < WIKIMEDIA_BELOW:
         candidates += _wikimedia_candidates(sp['sci_name'], get_json, want - len(candidates))
     entry['candidates'] = [{'n': n, **c} for n, c in enumerate(candidates, 1)]
