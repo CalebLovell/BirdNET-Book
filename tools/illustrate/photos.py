@@ -10,13 +10,22 @@
             iNaturalist, topped up from Wikimedia Commons, into
             work/photos/candidates.json (resumable)
 
+    sheets  download the candidates and tile them into numbered contact
+            sheets (work/photos/sheets/) for picking
+
+    review  turn picks.json into work/photos/review.html for sign-off
+
 Usage:
     python photos.py rank [--out ranking.csv]
     python photos.py candidates [--top 300] [--db PATH]
+    python photos.py sheets [--per-sheet 8]
+    python photos.py review [--picks PATH]
 """
 
 import argparse
 import csv
+import html
+import io
 import json
 import re
 import time
@@ -27,6 +36,7 @@ from pathlib import Path
 from typing import Callable, Iterable
 
 import numpy as np
+from PIL import Image, ImageDraw, ImageFont
 
 from illustrate import DEFAULT_DB, PUBLIC_DIR, WORK_DIR, installed_slugs, load_species, slugify
 
@@ -39,6 +49,7 @@ COMMON_NAMES = MODEL_DIR / 'l18n' / 'labels_en.json'
 RANKING_CSV = HERE / 'ranking.csv'
 PHOTOS_DIR = WORK_DIR / 'photos'
 CANDIDATES_JSON = PHOTOS_DIR / 'candidates.json'
+PICKS_JSON = PHOTOS_DIR / 'picks.json'
 INAT_API = 'https://api.inaturalist.org/v1'
 PHOTO_HOSTS = {'inaturalist-open-data.s3.amazonaws.com', 'upload.wikimedia.org'}
 COMMONS_API = 'https://commons.wikimedia.org/w/api.php'
@@ -164,9 +175,9 @@ def target_species(ranking: list[dict], db_species: list[dict], painted: set[str
 _last_request = 0.0
 
 
-def http_get_json(url: str) -> dict:
-    """GET a JSON document, one request a second, retrying throttling and
-    server errors after 5s, 15s and 45s."""
+def _throttled_get(url: str, read: Callable):
+    """GET `url` and return read(response), one request a second, retrying
+    throttling and server errors after 5s, 15s and 45s."""
     global _last_request
     request = urllib.request.Request(url, headers={'User-Agent': USER_AGENT})
     for attempt in range(len(BACKOFF) + 1):
@@ -176,11 +187,21 @@ def http_get_json(url: str) -> dict:
         _last_request = time.monotonic()
         try:
             with urllib.request.urlopen(request, timeout=30) as response:
-                return json.load(response)
+                return read(response)
         except urllib.error.HTTPError as e:
             if (e.code != 429 and e.code < 500) or attempt == len(BACKOFF):
                 raise
             time.sleep(BACKOFF[attempt])
+
+
+def http_get_json(url: str) -> dict:
+    return _throttled_get(url, json.load)
+
+
+def http_get_bytes(url: str) -> bytes:
+    if not _allowed_host(url):
+        raise ValueError(f'refusing to fetch from {url}')
+    return _throttled_get(url, lambda response: response.read())
 
 
 def _allowed_host(url: str) -> bool:
@@ -285,6 +306,168 @@ def gather_candidates(targets: list[dict], path: Path, get_json: Callable[[str],
     return state
 
 
+# --------------------------------------------------------------------------
+# Contact sheets and review page
+# --------------------------------------------------------------------------
+
+SHEET_MAX_SIDE = 2000
+ROW_HEIGHT = 240
+LABEL_WIDTH = 280
+CELL_GAP = 8
+PER_SHEET_CLI = 8  # rows stay full height, so a sheet is about 2000px tall
+
+
+def _font(size: int):
+    for name in ('arialbd.ttf', 'arial.ttf', 'DejaVuSans-Bold.ttf', 'DejaVuSans.ttf'):
+        try:
+            return ImageFont.truetype(name, size)
+        except OSError:
+            continue
+    return ImageFont.load_default(size)
+
+
+def _wrap(draw: ImageDraw.ImageDraw, text: str, font, width: int) -> list[str]:
+    lines: list[str] = []
+    line = ''
+    for word in text.split():
+        trial = f'{line} {word}'.strip()
+        if line and draw.textlength(trial, font=font) > width:
+            lines.append(line)
+            line = word
+        else:
+            line = trial
+    return lines + [line] if line else lines
+
+
+def _photo_path(slug: str, n: int) -> Path:
+    return PHOTOS_DIR / slug / f'{n}.jpg'
+
+
+def download_candidates(state: dict, fetch: Callable[[str], bytes]) -> None:
+    """Save each candidate as work/photos/<slug>/<n>.jpg, skipping files that
+    exist. A photo that fails to download is skipped, not fatal."""
+    for slug, entry in state.items():
+        for cand in entry['candidates']:
+            path = _photo_path(slug, cand['n'])
+            if path.exists():
+                continue
+            try:
+                image = Image.open(io.BytesIO(fetch(cand['url'])))
+                image.load()
+                path.parent.mkdir(parents=True, exist_ok=True)
+                image.convert('RGB').save(path, 'JPEG', quality=88)
+            except Exception as e:  # network or bad image: leave the gap, keep going
+                print(f'  {slug}/{cand["n"]}: skipped ({e})')
+
+
+def build_sheets(state: dict, per_sheet: int = 20) -> list[Path]:
+    """Tile downloaded candidates into numbered contact sheets, one species
+    per row, with a matching sheet-NN.json listing what each holds. Species
+    with no downloaded candidates are left out. Rows shrink below 240px only
+    to keep a sheet near 2000px on its long side."""
+    rows = []
+    for slug, entry in state.items():
+        have = [c['n'] for c in entry['candidates'] if _photo_path(slug, c['n']).exists()]
+        if have:
+            rows.append({'slug': slug, 'com_name': entry['com_name'], 'sci_name': entry['sci_name'],
+                         'candidates': have})
+    out_dir = PHOTOS_DIR / 'sheets'
+    out_dir.mkdir(parents=True, exist_ok=True)
+    paths = []
+    for index, start in enumerate(range(0, len(rows), per_sheet), 1):
+        chunk = rows[start:start + per_sheet]
+        row_h = min(ROW_HEIGHT, SHEET_MAX_SIDE // len(chunk)) - CELL_GAP
+        most = max(len(r['candidates']) for r in chunk)
+        cell_w = (SHEET_MAX_SIDE - LABEL_WIDTH) // most - CELL_GAP
+        sheet = Image.new('RGB', (LABEL_WIDTH + most * (cell_w + CELL_GAP), len(chunk) * (row_h + CELL_GAP)),
+                          '#fbfdf6')
+        draw = ImageDraw.Draw(sheet)
+        name_font, sci_font = _font(26), _font(20)
+        number_font = _font(max(28, row_h // 4))
+        for r, row in enumerate(chunk):
+            y = r * (row_h + CELL_GAP)
+            ty = y + 8
+            for line in _wrap(draw, row['com_name'], name_font, LABEL_WIDTH - 20):
+                draw.text((10, ty), line, fill='#1c2b1f', font=name_font)
+                ty += 32
+            for line in _wrap(draw, row['sci_name'], sci_font, LABEL_WIDTH - 20):
+                draw.text((10, ty), line, fill='#5a6b5d', font=sci_font)
+                ty += 25
+            for c, n in enumerate(row['candidates']):
+                with Image.open(_photo_path(row['slug'], n)) as image:
+                    image.thumbnail((cell_w, row_h))
+                    x = LABEL_WIDTH + c * (cell_w + CELL_GAP)
+                    sheet.paste(image, (x, y))
+                box = number_font.getbbox(str(n))
+                w, h = box[2] - box[0], box[3] - box[1]
+                draw.rectangle((x, y, x + w + 24, y + h + 20), fill='#000000')
+                draw.text((x + 12 - box[0], y + 10 - box[1]), str(n), fill='#ffff00', font=number_font)
+        path = out_dir / f'sheet-{index:02d}.jpg'
+        sheet.save(path, 'JPEG', quality=85)
+        path.with_suffix('.json').write_text(json.dumps(chunk, indent=2), encoding='utf-8')
+        paths.append(path)
+    return paths
+
+
+def write_review(picks: dict, state: dict) -> Path:
+    """work/photos/review.html: the chosen photos as the UI will crop them
+    (square, object-fit cover, 4px radius), then the species left without one."""
+    esc = html.escape
+    chosen, none = [], []
+    for slug, pick in picks.items():
+        entry = state.get(slug, {'com_name': slug, 'sci_name': '', 'candidates': []})
+        cand = next((c for c in entry['candidates'] if c['n'] == pick.get('n')), None)
+        if cand is None:
+            none.append((slug, entry, pick.get('reason', '')))
+        else:
+            chosen.append((slug, entry, cand))
+    figures = ''.join(
+        f'<figure><img src="{esc(c["url"])}" alt="{esc(e["com_name"])}" loading="lazy">'
+        f'<figcaption><b>{esc(e["com_name"])}</b><span>{esc(slug)}</span>'
+        f'<a href="{esc(c["page"])}">{esc(c["license"])}</a></figcaption></figure>'
+        for slug, e, c in chosen)
+    misses = ''.join(
+        f'<li><b>{esc(e["com_name"])}</b> <span>{esc(slug)}</span> {esc(reason)}</li>'
+        for slug, e, reason in none)
+    page = f"""<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Reference photo review</title>
+<style>
+body {{ background: #fbfdf6; color: #1c2b1f; font-family: Georgia, serif; margin: 24px; }}
+h1, h2 {{ font-weight: normal; }}
+.grid {{ display: grid; grid-template-columns: repeat(auto-fill, 160px); gap: 16px; }}
+figure {{ margin: 0; }}
+img {{ width: 160px; height: 160px; object-fit: cover; border-radius: 4px; display: block; background: #eef2e6; }}
+figcaption {{ font-size: 13px; margin-top: 4px; display: flex; flex-direction: column; }}
+figcaption span, li span {{ color: #5a6b5d; font-size: 12px; }}
+a {{ color: #3f6b3f; font-size: 12px; }}
+li {{ margin-bottom: 6px; }}
+</style></head><body>
+<h1>Reference photo review</h1>
+<h2>{len(chosen)} chosen</h2>
+<div class="grid">{figures}</div>
+<h2>No photo ({len(none)})</h2>
+<ul>{misses}</ul>
+</body></html>
+"""
+    path = PHOTOS_DIR / 'review.html'
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(page, encoding='utf-8')
+    return path
+
+
+def cmd_sheets(args) -> None:
+    state = json.loads(CANDIDATES_JSON.read_text(encoding='utf-8'))
+    download_candidates(state, http_get_bytes)
+    paths = build_sheets(state, args.per_sheet)
+    print(f'{len(paths)} sheets -> {PHOTOS_DIR / "sheets"}')
+
+
+def cmd_review(args) -> None:
+    state = json.loads(CANDIDATES_JSON.read_text(encoding='utf-8'))
+    picks = json.loads(args.picks.read_text(encoding='utf-8'))
+    print(f'Wrote {write_review(picks, state)}')
+
+
 def cmd_candidates(args) -> None:
     painted = set(installed_slugs(PUBLIC_DIR)[0])
     db_species = load_species(args.db) if args.db.exists() else []
@@ -315,6 +498,14 @@ def main(argv=None):
     candidates.add_argument('--top', type=int, default=300, help='how many ranked species to cover')
     candidates.add_argument('--db', type=Path, default=DEFAULT_DB, help='station database, whose species are always included')
     candidates.set_defaults(run=cmd_candidates)
+
+    sheets = commands.add_parser('sheets', help='download candidates and build contact sheets')
+    sheets.add_argument('--per-sheet', type=int, default=PER_SHEET_CLI, help='species per sheet')
+    sheets.set_defaults(run=cmd_sheets)
+
+    review = commands.add_parser('review', help='write the review page from picks.json')
+    review.add_argument('--picks', type=Path, default=PICKS_JSON, help='picks file')
+    review.set_defaults(run=cmd_review)
 
     args = parser.parse_args(argv)
     args.run(args)

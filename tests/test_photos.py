@@ -175,5 +175,95 @@ class CandidateTests(unittest.TestCase):
         self.assertEqual(set(state), {"a", "b"})
 
 
+def tiny_jpeg(color=(120, 160, 90), size=(60, 40)):
+    import io
+    from PIL import Image
+    buf = io.BytesIO()
+    Image.new("RGB", size, color).save(buf, "JPEG")
+    return buf.getvalue()
+
+
+def sheet_state(count, per_species=2, empty=()):
+    state = {}
+    for i in range(count):
+        slug = f"sp-{i:02d}"
+        cands = [] if slug in empty else [
+            {"n": n, "url": f"https://upload.wikimedia.org/{slug}/{n}.jpg", "page": "", "license": "cc0",
+             "credit": "", "source": "wikimedia"} for n in range(1, per_species + 1)]
+        state[slug] = {"slug": slug, "sci_name": f"Sp {i}", "com_name": f"Bird {i}",
+                       "taxon_ok": True, "inat_name": None, "candidates": cands}
+    return state
+
+
+class SheetTests(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        original = photos.PHOTOS_DIR
+        photos.PHOTOS_DIR = Path(self.tmp.name)
+        self.addCleanup(setattr, photos, "PHOTOS_DIR", original)
+
+    def test_download_writes_files_and_skips_existing(self):
+        state = sheet_state(2)
+        calls = []
+
+        def fetch(url):
+            calls.append(url)
+            return tiny_jpeg()
+        photos.download_candidates(state, fetch)
+        self.assertEqual(len(calls), 4)
+        self.assertTrue((photos.PHOTOS_DIR / "sp-01" / "2.jpg").exists())
+        photos.download_candidates(state, fetch)
+        self.assertEqual(len(calls), 4)
+
+    def test_download_survives_a_failed_fetch(self):
+        state = sheet_state(1)
+
+        def fetch(url):
+            if url.endswith("/1.jpg"):
+                raise OSError("dead link")
+            return tiny_jpeg()
+        photos.download_candidates(state, fetch)
+        self.assertFalse((photos.PHOTOS_DIR / "sp-00" / "1.jpg").exists())
+        self.assertTrue((photos.PHOTOS_DIR / "sp-00" / "2.jpg").exists())
+
+    def test_build_sheets_splits_by_count(self):
+        state = sheet_state(45)
+        photos.download_candidates(state, lambda url: tiny_jpeg())
+        paths = photos.build_sheets(state)
+        self.assertEqual([p.name for p in paths], ["sheet-01.jpg", "sheet-02.jpg", "sheet-03.jpg"])
+        self.assertTrue(all(p.exists() for p in paths))
+        rows = json.loads((photos.PHOTOS_DIR / "sheets" / "sheet-03.json").read_text(encoding="utf-8"))
+        self.assertEqual(len(rows), 5)
+        self.assertEqual(rows[0], {"slug": "sp-40", "com_name": "Bird 40", "sci_name": "Sp 40", "candidates": [1, 2]})
+
+    def test_sheet_skips_species_without_candidates(self):
+        state = sheet_state(3, empty={"sp-01"})
+        photos.download_candidates(state, lambda url: tiny_jpeg())
+        photos.build_sheets(state)
+        rows = json.loads((photos.PHOTOS_DIR / "sheets" / "sheet-01.json").read_text(encoding="utf-8"))
+        self.assertEqual([r["slug"] for r in rows], ["sp-00", "sp-02"])
+
+    def test_sheet_lists_only_candidates_that_downloaded(self):
+        state = sheet_state(1)
+        photos.download_candidates(state, lambda url: tiny_jpeg() if url.endswith("/2.jpg") else (_ for _ in ()).throw(OSError()))
+        photos.build_sheets(state)
+        rows = json.loads((photos.PHOTOS_DIR / "sheets" / "sheet-01.json").read_text(encoding="utf-8"))
+        self.assertEqual(rows[0]["candidates"], [2])
+
+    def test_review_page_lists_every_pick(self):
+        state = sheet_state(2)
+        picks = {"sp-00": {"n": 2, "reason": "clear side view"}, "sp-01": {"n": None, "reason": "all blurry"}}
+        path = photos.write_review(picks, state)
+        html = path.read_text(encoding="utf-8")
+        self.assertEqual(path.name, "review.html")
+        self.assertIn("Bird 0", html)
+        self.assertIn("Bird 1", html)
+        self.assertIn("https://upload.wikimedia.org/sp-00/2.jpg", html)
+        self.assertNotIn("https://upload.wikimedia.org/sp-00/1.jpg", html)
+        self.assertIn("all blurry", html)
+        self.assertIn("#fbfdf6", html)
+
+
 if __name__ == "__main__":
     unittest.main()
