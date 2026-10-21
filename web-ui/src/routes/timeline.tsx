@@ -1,5 +1,6 @@
 import { createFileRoute, stripSearchParams } from "@tanstack/react-router";
 import { ArrowRight, CalendarRange, LayoutDashboard, List } from "lucide-react";
+import type { ReactNode } from "react";
 import { z } from "zod";
 import { Deferred, SHELL_DELAY_MS } from "~/components/deferred.tsx";
 import {
@@ -336,7 +337,8 @@ function TimelineHeader({
 			)}
 			<PageHeaderCard
 				icon={CalendarRange}
-				title={headerTitle(period, anchor)}
+				title={headerTitleNode(period, anchor)}
+				label={headerTitle(period, anchor)}
 				description={PAGE_HEADERS.timeline.description}
 				// Below `xl` the menu bar carries it instead, where it has room.
 				action={
@@ -381,6 +383,22 @@ function TimelineHeader({
  */
 function headerTitle(period: TimelinePeriod, anchor: string): string {
 	return headerLines(period, anchor).join(" — ");
+}
+
+/**
+ * The title as drawn: the week's joining " to " is set at normal weight so the
+ * two dates read as the bold parts.
+ */
+function headerTitleNode(period: TimelinePeriod, anchor: string): ReactNode {
+	const title = headerTitle(period, anchor);
+	if (period !== "week") return title;
+	const [from, to] = title.split(" to ");
+	if (to === undefined) return title;
+	return (
+		<>
+			{from} <span className="font-normal">to</span> {to}
+		</>
+	);
 }
 
 /**

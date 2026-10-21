@@ -31,6 +31,7 @@ const COLUMN_CLASSES: Record<number, string> = {
 export function PageHeaderCard({
 	icon: Icon,
 	title,
+	label,
 	description,
 	stats = [],
 	action,
@@ -40,7 +41,11 @@ export function PageHeaderCard({
 	/** The page's sidebar icon, so the masthead names the page the same way
 	 * the nav entry you clicked did. Required: every masthead carries one. */
 	icon: ComponentType<{ className?: string }>;
-	title: string;
+	/** Plain text, or text with a quieter word set into it. */
+	title: ReactNode;
+	/** The section's accessible name. Required in effect when `title` isn't a
+	 * plain string. */
+	label?: string;
 	/** A sentence, or one with figures set into it. */
 	description: ReactNode;
 	/** Omit for a title-only masthead; otherwise up to four figures. */
@@ -55,7 +60,10 @@ export function PageHeaderCard({
 	children?: ReactNode;
 }) {
 	return (
-		<section aria-label={title} className="space-y-(--page-gap)">
+		<section
+			aria-label={label ?? (typeof title === "string" ? title : undefined)}
+			className="space-y-(--page-gap)"
+		>
 			<div className="feature-card rounded-md p-4">
 				{/* Under 400px the action drops beneath the description instead of
 				    squeezing the title and description into a narrow column beside it. */}
