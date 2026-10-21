@@ -40,8 +40,25 @@ async function copyText(text: string): Promise<boolean> {
 	return copied;
 }
 
+/**
+ * A phone hands the summary to its own share sheet, where it can go straight
+ * into a chat; a desktop copies it and toasts instead. Desktop Chrome and
+ * Safari have navigator.share too, so the pointer is what tells them apart.
+ * navigator.share only exists in a secure context, so a phone on the bare LAN
+ * address falls back to copying like a desktop.
+ */
+function canUseShareSheet(): boolean {
+	return (
+		typeof navigator.share === "function" &&
+		window.matchMedia("(pointer: coarse)").matches
+	);
+}
+
 export type ShareState = {
-	/** Copies the summary and toasts the outcome. */
+	/**
+	 * Opens the share sheet on a phone; elsewhere copies the summary and
+	 * toasts the outcome.
+	 */
 	share: () => Promise<void>;
 	/** False while the page is still loading what the summary reads. */
 	isReady: boolean;
@@ -109,6 +126,17 @@ export function useShare({
 		setIsBusy(true);
 		try {
 			const text = await current.text;
+			if (canUseShareSheet()) {
+				try {
+					await navigator.share({ text });
+				} catch (error) {
+					// Closing the sheet rejects with AbortError: not a failure.
+					if (!(error instanceof DOMException && error.name === "AbortError")) {
+						toast.error("Sharing was blocked by the browser.");
+					}
+				}
+				return;
+			}
 			if (!(await copyText(text))) {
 				toast.error("Copying was blocked by the browser.");
 				return;
@@ -126,7 +154,8 @@ export function useShare({
 }
 
 /**
- * The summary as one button: a press copies it and a toast says so. Nothing
+ * The summary as one button: on a phone a press opens the share sheet;
+ * elsewhere it copies the summary and a toast says so. Nothing
  * unfolds on the page -- the emoji card is for the chat it is pasted into, not
  * for reading here.
  *
