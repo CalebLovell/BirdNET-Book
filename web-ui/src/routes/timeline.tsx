@@ -489,20 +489,27 @@ function TimelineCards({
 	const emptyMessage = stationEmpty
 		? EMPTY.station.detections
 		: EMPTY.window.timelineWindow(windowLabel);
-	// Only the body card carries the way out, as a button on its own line so
-	// it reads as the next step rather than the tail of a sentence; the two
-	// cards beside it just say they're empty.
+	// Only the body card carries the way out: a line naming the nearest window
+	// that heard something, then a full-size button on its own line so it reads
+	// as the next step rather than the tail of a sentence. The two cards beside
+	// it just say they're empty.
 	const emptyAction = jumpTo ? (
-		<ButtonLink
-			to="/timeline"
-			search={(prev) => ({ ...prev, date: jumpTo.anchor })}
-			size="sm"
-			icon={ArrowRight}
-			iconPosition="end"
-		>
-			{jumpTo.direction === "last" ? "Last" : "Next"} {jumpTo.noun} with
-			detections: {jumpTo.label}
-		</ButtonLink>
+		<>
+			<p className="text-muted-foreground text-sm">
+				{jumpTo.direction === "last" ? "Last" : "Next"} {jumpTo.noun} with
+				detections: {jumpTo.label}.
+			</p>
+			<ButtonLink
+				to="/timeline"
+				search={(prev) => ({ ...prev, date: jumpTo.anchor })}
+				size="default"
+				icon={ArrowRight}
+				iconPosition="end"
+				className="mt-(--page-gap)"
+			>
+				Go to that {jumpTo.noun}
+			</ButtonLink>
+		</>
 	) : undefined;
 
 	const gridItems: SpeciesGridItem[] = rows.map((row) => ({
