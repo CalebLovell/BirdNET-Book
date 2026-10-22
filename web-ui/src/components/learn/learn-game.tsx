@@ -764,7 +764,7 @@ function RoundSummary({
 		<section
 			aria-label="Round results"
 			// One gap between every block, the game card's: 16px, 8px on a phone.
-			className="feature-card rise-in flex flex-col gap-(--page-gap) rounded-md p-4"
+			className="@container feature-card rise-in flex flex-col gap-(--page-gap) rounded-md p-4"
 		>
 			{/* The score alone, written the way the rail's footer wrote it. */}
 			<CardHeader title="Round complete">
@@ -812,7 +812,10 @@ function RoundSummary({
 							<RecordingButton
 								audioUrl={question.audioUrl}
 								speciesName={answer.comName}
-								iconOnly
+								// The full Listen button where the card has room, the
+								// recent log's 24px square where it doesn't.
+								labelClassName="@min-[26rem]:inline hidden"
+								className="@min-[26rem]:w-auto w-6 @min-[26rem]:px-2.5 px-0"
 							/>
 						</li>
 					);

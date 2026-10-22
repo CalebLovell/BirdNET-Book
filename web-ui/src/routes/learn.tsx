@@ -80,6 +80,9 @@ function Learn() {
 	const [isConfirmingNewRound, setIsConfirmingNewRound] = useState(false);
 	const [newRoundRequests, setNewRoundRequests] = useState(0);
 	const hasRound = (forPool?.data.round.questions.length ?? 0) > 0;
+	// A finished round's summary has its own "Play again", so the pool row's
+	// "New round" steps aside rather than offering the same thing twice.
+	const [isRoundFinished, setIsRoundFinished] = useState(false);
 
 	return (
 		<div className="page-wrap py-4">
@@ -102,7 +105,11 @@ function Learn() {
 						replace: true,
 					});
 				}}
-				onNewRound={hasRound ? () => setIsConfirmingNewRound(true) : undefined}
+				onNewRound={
+					hasRound && !isRoundFinished
+						? () => setIsConfirmingNewRound(true)
+						: undefined
+				}
 			/>
 
 			<div className="mt-(--page-gap) w-full">
@@ -114,6 +121,7 @@ function Learn() {
 						isLoadingNextRound={forPool.from !== roundPromise}
 						newRoundRequests={newRoundRequests}
 						isPaused={isConfirmingNewRound}
+						onFinishedChange={setIsRoundFinished}
 					/>
 				) : (
 					<LearnGameSkeleton />
@@ -122,10 +130,10 @@ function Learn() {
 
 			{isConfirmingNewRound ? (
 				<ConfirmDialog
-					title="Start a new round?"
+					title="Restart the round?"
 					description="This round's answers and score are lost, and a new set of calls is dealt."
 					confirmIcon={RotateCcw}
-					confirmLabel="New Round"
+					confirmLabel="Restart"
 					destructive
 					onCancel={() => setIsConfirmingNewRound(false)}
 					onConfirm={() => {
@@ -144,6 +152,7 @@ function LearnRoundView({
 	isLoadingNextRound,
 	newRoundRequests,
 	isPaused,
+	onFinishedChange,
 }: {
 	loaded: LoadedRound;
 	pool: LearnPool;
@@ -151,6 +160,8 @@ function LearnRoundView({
 	/** Bumped each time the page's "New round" is confirmed. */
 	newRoundRequests: number;
 	isPaused: boolean;
+	/** Whether the round on screen has reached its summary. */
+	onFinishedChange: (isFinished: boolean) => void;
 }) {
 	const router = useRouter();
 	// The game this tab already had going in the pool, if any, read once as
@@ -169,8 +180,11 @@ function LearnRoundView({
 	// Every step is saved with its round, a fresh round's starting point
 	// included, so switching away at any moment loses nothing.
 	const onProgressChange = useCallback(
-		(progress: GameProgress) => saveGame(pool, { round, progress }),
-		[pool, round],
+		(progress: GameProgress) => {
+			saveGame(pool, { round, progress });
+			onFinishedChange(progress.isFinished);
+		},
+		[pool, round, onFinishedChange],
 	);
 	const playAgain = () => {
 		requestNextRound();
