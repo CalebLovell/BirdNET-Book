@@ -16,6 +16,10 @@ mkdir -p "$dist"
 
 (cd "$root/web-ui" && npm run build)
 echo "$version" > "$root/web-ui/.output/VERSION"
+# A web-UI-only station has no checkout of this repo, so its updater comes
+# with the bundle and replaces itself on each update.
+mkdir -p "$root/web-ui/.output/updater"
+cp "$root/scripts/update_birdnet.sh" "$root/scripts/release_helpers.sh" "$root/web-ui/.output/updater/"
 
 bundle="birdnet-web-ui-${version}.tar.gz"
 tar -C "$root/web-ui/.output" -czf "$dist/$bundle" .

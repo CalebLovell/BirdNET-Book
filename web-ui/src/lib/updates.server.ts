@@ -50,7 +50,10 @@ const UNITS = {
  * The card follows along by polling the status file.
  */
 export function startUpdater(action: keyof typeof UNITS): Promise<void> {
-	if (!updateDirectory() || process.env.BIRDNET_SKIP_SYSTEM_ACTIONS === "1")
+	// Not BIRDNET_SKIP_SYSTEM_ACTIONS: a web UI beside another BirdNET-Pi sets
+	// that to keep its hands off the other project's services, but still
+	// updates itself (see scripts/install_updater_beside.sh).
+	if (!updateDirectory())
 		return Promise.reject(
 			new Error("This copy of the web UI isn't managed by the updater."),
 		);

@@ -11,6 +11,11 @@
 # beside the running one; if the station doesn't come back after the switch,
 # the commit and the web UI are both put back. Progress is written to
 # ~/BirdNET-Pi-web/update-status.json for the Settings page's Updates card.
+#
+# WEB_UI_ONLY=1 is for a web UI running beside another BirdNET-Pi (see
+# install_updater_beside.sh): only the web UI bundle is switched and only
+# WEB_UI_SERVICE restarted. ~/BirdNET-Pi is that other project's checkout, so
+# it is never touched.
 source /etc/birdnet/birdnet.conf
 trap 'exit 1' SIGINT SIGHUP
 
@@ -24,7 +29,11 @@ else
   HOME=$(awk -F: '/1000/ {print $6}' /etc/passwd)
 fi
 my_dir=$HOME/BirdNET-Pi/scripts
-source "$my_dir/release_helpers.sh"
+# Beside its own helpers: in the repo's scripts/, linked into /usr/local/bin,
+# or copied to ~/BirdNET-Pi-web/bin on a web-UI-only install.
+source "$(dirname "$(readlink -f "$0")")/release_helpers.sh"
+WEB_UI_ONLY=${WEB_UI_ONLY:-0}
+WEB_UI_SERVICE=${WEB_UI_SERVICE:-birdnet_web_ui.service}
 
 mode=now
 while getopts ":ac" o; do
@@ -89,8 +98,34 @@ fi
 
 status_merge "$(jq -n --arg v "$tag" '{state: "updating", target: $v, message: ("Installing " + $v + ".")}')"
 
-# The code: fetch the tag and make sure it is the commit the release names.
 commit=$(jq -r .commit "$work/release.json")
+signed_json=$([ "$signed" = signed ] && echo true || echo false)
+
+if [ "$WEB_UI_ONLY" = 1 ]; then
+  install_bundle "$work" || fail "The web UI for $tag couldn't be downloaded."
+  previous_web=$(current_web_ui_version)
+  apply_web() {
+    switch_web_ui "$1"
+    systemctl restart "$WEB_UI_SERVICE"
+    web_ui_healthy
+  }
+  if apply_web "$tag"; then
+    # The updater rides along in the bundle, so it updates itself too.
+    if [ -d "$WEB_RELEASES/$tag/updater" ]; then
+      install -o "$USER" -g "$USER" -m 755 "$WEB_RELEASES/$tag/updater"/*.sh "$WEB_HOME/bin/"
+    fi
+    write_installed "$tag" "$commit" "$signed_json"
+    prune_releases "$previous_web"
+    status_merge "$(jq -n --arg v "$tag" '{state: "updated", target: null, message: ("Updated to " + $v + ".")}')"
+    echo "Updated the web UI to $tag."
+    exit 0
+  fi
+  echo "Update to $tag failed; rolling back." >&2
+  [ -n "$previous_web" ] && apply_web "$previous_web"
+  fail "Updating to $tag didn't work, so the web UI went back to ${previous_web:-the version it had}."
+fi
+
+# The code: fetch the tag and make sure it is the commit the release names.
 as_user git -C "$REPO_DIR" fetch --force origin "refs/tags/$tag:refs/tags/$tag" \
   || fail "Couldn't download $tag."
 fetched=$(as_user git -C "$REPO_DIR" rev-parse "$tag^{commit}")
@@ -111,13 +146,13 @@ apply() {
   "$my_dir/update_birdnet_snippets.sh" || return 1
   switch_web_ui "$target_web"
   systemctl daemon-reload
-  systemctl restart birdnet_web_ui.service
+  systemctl restart "$WEB_UI_SERVICE"
   web_ui_healthy
 }
 
 as_user git --no-pager -C "$REPO_DIR" diff --stat "$previous_commit" "$commit"
 if apply "$commit" "$tag"; then
-  write_installed "$tag" "$commit" "$([ "$signed" = signed ] && echo true || echo false)"
+  write_installed "$tag" "$commit" "$signed_json"
   prune_releases "$previous_web"
   status_merge "$(jq -n --arg v "$tag" '{state: "updated", target: null, message: ("Updated to " + $v + ".")}')"
   echo "Updated to $tag."
