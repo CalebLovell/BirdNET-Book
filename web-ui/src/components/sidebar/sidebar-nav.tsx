@@ -12,6 +12,8 @@ import {
 } from "lucide-react";
 import { useId } from "react";
 
+import { useUpdateOffered } from "~/lib/use-update-offered.ts";
+
 /**
  * The site's nav, shared by the desktop sidebar and the mobile drawer.
  *
@@ -29,6 +31,7 @@ export function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
 	// The body renders in both the desktop column and the drawer, so the label
 	// ids have to be unique per copy.
 	const id = useId();
+	const offered = useUpdateOffered(auth.unlocked);
 
 	return (
 		<div className="flex flex-1 flex-col px-3">
@@ -131,11 +134,38 @@ export function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
 						<Link to="/settings" {...linkProps}>
 							<Settings className="sidebar-icon" aria-hidden="true" />
 							Settings
+							{offered ? (
+								<UpdateDot
+									className="ml-auto"
+									label={`Update to ${offered} available`}
+								/>
+							) : null}
 						</Link>
 					</>
 				) : null}
 			</nav>
 		</div>
+	);
+}
+
+/**
+ * A small moss dot saying the station has a release waiting, on the Settings
+ * link and the menu bar's button. The label is for screen readers and hover.
+ */
+export function UpdateDot({
+	label,
+	className = "",
+}: {
+	label: string;
+	className?: string;
+}) {
+	return (
+		<span
+			role="img"
+			aria-label={label}
+			title={label}
+			className={`size-2 shrink-0 rounded-full bg-[var(--moss)] ${className}`}
+		/>
 	);
 }
 

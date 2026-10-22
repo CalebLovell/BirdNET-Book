@@ -1,9 +1,11 @@
-import { Link, useRouterState } from "@tanstack/react-router";
+import { Link, useRouteContext, useRouterState } from "@tanstack/react-router";
 import { Menu, X } from "lucide-react";
 import { type ReactNode, useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 
+import { UpdateDot } from "~/components/sidebar/sidebar-nav.tsx";
 import { SidebarBody } from "~/components/sidebar/site-sidebar.tsx";
+import { useUpdateOffered } from "~/lib/use-update-offered.ts";
 
 /**
  * The narrow-screen counterpart to the sidebar: a slim bar carrying the site
@@ -15,6 +17,8 @@ import { SidebarBody } from "~/components/sidebar/site-sidebar.tsx";
  */
 export function MobileNav() {
 	const [isOpen, setIsOpen] = useState(false);
+	const { auth } = useRouteContext({ from: "__root__" });
+	const offered = useUpdateOffered(auth.unlocked);
 	const pathname = useRouterState({
 		select: (state) => state.location.pathname,
 	});
@@ -50,9 +54,17 @@ export function MobileNav() {
 					onClick={() => setIsOpen(true)}
 					aria-label="Open navigation"
 					aria-expanded={isOpen}
-					className={ROUND_BUTTON_CLASS}
+					className={`relative ${ROUND_BUTTON_CLASS}`}
 				>
 					<Menu className="size-5" aria-hidden="true" />
+					{/* Closed, the drawer hides the Settings link's dot, so the
+					    button carries one too. */}
+					{offered ? (
+						<UpdateDot
+							className="absolute top-1.5 right-1.5 ring-2 ring-[var(--paper-raised)]"
+							label={`Update to ${offered} available`}
+						/>
+					) : null}
 				</button>
 				<SiteName />
 				{/* Where a page puts its own control for the narrow screen, against
