@@ -15,7 +15,6 @@ import {
 	type SettingsSavers,
 } from "./settings-cards.tsx";
 import { SettingsReset } from "./settings-reset.tsx";
-import { healthStats, healthStatsSkeleton } from "./station-health.tsx";
 
 /** A reset that stored its values without getting BirdNET onto them. */
 type ResetOutcome = { message: string; needsRestart: boolean };
@@ -32,7 +31,7 @@ export function SettingsPage({
 }: {
 	data: SettingsPageData;
 	savers?: SettingsSavers;
-	/** Omit to render the masthead without its figures. */
+	/** Omit to leave the disk figure out of the Storage card. */
 	health?: StationHealth;
 	/** Resolves with what to report. Omit to hide the reset control. */
 	onReset?: () => Promise<ResetOutcome>;
@@ -70,7 +69,6 @@ export function SettingsPage({
 				icon={Settings}
 				title={PAGE_HEADERS.settings.title}
 				description={PAGE_HEADERS.settings.description}
-				stats={health ? healthStats(health) : healthStatsSkeleton()}
 				action={
 					onReset ? (
 						<div className="flex flex-wrap items-center justify-end gap-2">
@@ -119,6 +117,7 @@ export function SettingsPage({
 				data={data}
 				savers={savers}
 				restarter={onRestart}
+				diskUsedPercent={health?.diskUsedPercent ?? null}
 				updates={updates}
 				onCheckUpdates={onCheckUpdates}
 				onInstallUpdate={onInstallUpdate}
@@ -128,8 +127,8 @@ export function SettingsPage({
 }
 
 /**
- * The page before the configuration arrives: the masthead as itself, its
- * figures blurred, the reset control drawn but inert, and the six cards as
+ * The page before the configuration arrives: the masthead as itself, the
+ * reset control drawn but inert, and the six cards as
  * their own skeleton (see SettingsCardsSkeleton).
  */
 export function SettingsPageSkeleton() {
@@ -139,7 +138,6 @@ export function SettingsPageSkeleton() {
 				icon={Settings}
 				title={PAGE_HEADERS.settings.title}
 				description={PAGE_HEADERS.settings.description}
-				stats={healthStatsSkeleton()}
 				action={
 					<div inert className="flex flex-wrap items-center justify-end gap-2">
 						<SettingsReset onReset={async () => {}} />

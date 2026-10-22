@@ -33,9 +33,9 @@ import { usePolledData } from "~/lib/use-polled-data.ts";
 import { useSettled } from "~/lib/use-settled.ts";
 
 /**
- * Refreshed every half minute so "Last detection" keeps aging while the page
- * is open. A statfs, a stat and one indexed row -- cheap enough not to think
- * about, and none of these figures move faster than that anyway.
+ * Refreshed every half minute so the Storage card's disk figure follows a
+ * purge while the page is open. A single statfs -- cheap enough not to think
+ * about, and the disk does not fill faster than that anyway.
  */
 const HEALTH_INTERVAL_MS = 30_000;
 
@@ -43,13 +43,11 @@ const UPDATES_INTERVAL_MS = 5_000;
 
 export const Route = createFileRoute("/settings")({
 	head: () => ({ meta: [{ title: pageTitle("Settings") }] }),
-	// Settled together so the masthead paints with the cards rather than
-	// snapping in a moment later. `getStationHealth` does not throw, so it
-	// cannot be what sends this route to its error component.
 	beforeLoad: ({ context, location }) =>
 		requireUnlocked(context.auth, location),
 	// Deferred: the page renders at once (see Deferred), and the cards fill in
-	// when the configuration arrives.
+	// when the configuration arrives. `getStationHealth` does not throw, so it
+	// cannot be what sends this route to its error component.
 	loader: () => ({
 		data: getSettingsPage(),
 		health: getStationHealth(),

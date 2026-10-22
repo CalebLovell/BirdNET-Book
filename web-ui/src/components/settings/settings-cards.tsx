@@ -335,6 +335,7 @@ export function SettingsCards({
 	data,
 	savers,
 	restarter,
+	diskUsedPercent = null,
 	updates = null,
 	onCheckUpdates,
 	onInstallUpdate,
@@ -342,6 +343,8 @@ export function SettingsCards({
 	data: SettingsPageData;
 	savers: SettingsSavers;
 	restarter?: SettingsRestarter;
+	/** How full the recordings disk is now; null leaves the figure out. */
+	diskUsedPercent?: number | null;
 	/** What the updater last reported; null while it loads. */
 	updates?: UpdateState | null;
 	onCheckUpdates?: () => Promise<void>;
@@ -384,6 +387,7 @@ export function SettingsCards({
 				initial={data.storage}
 				save={savers.storage}
 				restart={restartFor("storage")}
+				diskUsedPercent={diskUsedPercent}
 			/>
 			<ReviewSettingsCard initial={data.review} save={savers.review} />
 			<HighlightsSettingsCard
@@ -979,10 +983,12 @@ function StorageCard({
 	initial,
 	save,
 	restart,
+	diskUsedPercent,
 }: {
 	initial: StorageSettings;
 	save?: Saver<StorageSettings>;
 	restart?: CardRestarter;
+	diskUsedPercent: number | null;
 }) {
 	const form = useCardSave("Storage", initial, save, restart);
 	return (
@@ -1014,7 +1020,11 @@ function StorageCard({
 			</Field>
 			<Field
 				label="Disk-used threshold"
-				hint="How full the disk gets before that action runs."
+				hint={
+					diskUsedPercent === null
+						? "How full the disk gets before that action runs."
+						: `How full the disk gets before that action runs. It is ${Math.round(diskUsedPercent)}% full now.`
+				}
 			>
 				<FieldInput
 					type="number"
