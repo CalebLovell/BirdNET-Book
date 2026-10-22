@@ -384,7 +384,7 @@ export function SpectrogramPlayerSkeleton({
 					<Button type="button" size="icon-sm" icon={Play} disabled />
 				</ShellSized>
 				<ShellText
-					className={`w-24 @max-[22rem]/controls:w-10 ${TIME_CLASS}`}
+					className={`@max-[22rem]/controls:w-10 w-24 ${TIME_CLASS}`}
 					barClassName="w-full"
 				/>
 				{aside ? (

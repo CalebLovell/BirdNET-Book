@@ -16,8 +16,14 @@ test("painting wins over photo", () => {
 
 test("unpainted species falls back to photo", () => {
 	const photos = { "turdus-nonexistens": PHOTO };
-	assert.equal(illustrationUrlFor("Turdus nonexistens", "perched", photos), PHOTO);
-	assert.equal(illustrationUrlFor("Turdus nonexistens", "flight", photos), PHOTO);
+	assert.equal(
+		illustrationUrlFor("Turdus nonexistens", "perched", photos),
+		PHOTO,
+	);
+	assert.equal(
+		illustrationUrlFor("Turdus nonexistens", "flight", photos),
+		PHOTO,
+	);
 });
 
 test("unknown species is null", () => {
@@ -32,5 +38,8 @@ test("isPhotoUrl tells photos from paintings", () => {
 test("faviconHref never shows a photo", () => {
 	assert.equal(faviconHref(PHOTO), DEFAULT_FAVICON);
 	assert.equal(faviconHref(null), DEFAULT_FAVICON);
-	assert.equal(faviconHref("/illustrations-new/x.png"), "/illustrations-new/x.png");
+	assert.equal(
+		faviconHref("/illustrations-new/x.png"),
+		"/illustrations-new/x.png",
+	);
 });
