@@ -219,7 +219,8 @@ function WindowStepper({
 	const max = lastDetected && lastDetected > today ? lastDetected : today;
 	// The arrows walk one window at a time, quiet ones included, between the
 	// station's first window and today's.
-	const prevTarget = min && anchor > min ? stepAnchor(period, anchor, -1) : null;
+	const prevTarget =
+		min && anchor > min ? stepAnchor(period, anchor, -1) : null;
 	const nextTarget = anchor < max ? stepAnchor(period, anchor, 1) : null;
 
 	const overlay = "absolute inset-0 size-full cursor-pointer opacity-0";

@@ -89,9 +89,7 @@ export function LearnPoolSelector({
 					className="px-3 max-[400px]:w-9 max-[400px]:px-0 sm:max-md:w-9 sm:max-md:px-0"
 					onClick={onNewRound}
 				>
-					<span className="max-[400px]:sr-only sm:max-md:sr-only">
-						Restart
-					</span>
+					<span className="max-[400px]:sr-only sm:max-md:sr-only">Restart</span>
 				</Button>
 			) : null}
 		</div>
