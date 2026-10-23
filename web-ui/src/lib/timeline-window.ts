@@ -285,6 +285,22 @@ export function previousPeriodStart(
 	);
 }
 
+/**
+ * The anchor one whole period before (-1) or after (1) `anchor`, at the same
+ * granularity, whether or not anything was heard there: what the date
+ * stepper's arrows move to.
+ */
+export function stepAnchor(
+	period: Exclude<TimelinePeriod, "all">,
+	anchor: TimelineAnchor,
+	direction: -1 | 1,
+): TimelineAnchor {
+	const window = windowFor(period, anchor);
+	// A day just past either edge of the window lies in the neighbouring period.
+	const edge = direction < 0 ? window.start : window.end;
+	return anchorForDay(period, shiftDays(edge, direction));
+}
+
 /** Calendar days from `start` to `end` inclusive; zero or less when `end` comes
     first. */
 export function daysInRange(start: string, end: string): number {

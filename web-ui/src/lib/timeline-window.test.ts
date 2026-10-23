@@ -10,6 +10,7 @@ import {
 	previousPeriodStart,
 	shortAnchorLabel,
 	spelledDate,
+	stepAnchor,
 	windowFor,
 } from "./timeline-window.ts";
 
@@ -135,6 +136,23 @@ test("the previous period crosses month, year and ISO-week boundaries", () => {
 	assert.equal(previousPeriodStart("year", "2025"), "2024-01-01");
 	// Week 1 of 2026 (starts 2025-12-29) follows the last week of 2025.
 	assert.equal(previousPeriodStart("week", "2026-W01"), "2025-12-22");
+});
+
+test("stepping moves one whole period, data or not", () => {
+	assert.equal(stepAnchor("day", "2026-10-20", 1), "2026-10-21");
+	assert.equal(stepAnchor("day", "2026-10-20", -1), "2026-10-19");
+	assert.equal(stepAnchor("week", "2026-W43", 1), "2026-W44");
+	assert.equal(stepAnchor("month", "2026-10", -1), "2026-09");
+	assert.equal(stepAnchor("year", "2026", 1), "2027");
+});
+
+test("stepping crosses month, year and ISO-week boundaries", () => {
+	assert.equal(stepAnchor("day", "2026-02-28", 1), "2026-03-01");
+	assert.equal(stepAnchor("day", "2026-01-01", -1), "2025-12-31");
+	assert.equal(stepAnchor("month", "2026-12", 1), "2027-01");
+	// 2026 has 53 ISO weeks; the one after its last is week 1 of 2027.
+	assert.equal(stepAnchor("week", "2026-W53", 1), "2027-W01");
+	assert.equal(stepAnchor("week", "2026-W01", -1), "2025-W52");
 });
 
 test("short anchor labels fit a phone's date stepper", () => {

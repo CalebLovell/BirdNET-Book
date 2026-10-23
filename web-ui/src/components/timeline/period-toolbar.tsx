@@ -21,6 +21,7 @@ import {
 	currentAnchor,
 	isValidAnchor,
 	shortAnchorLabel,
+	stepAnchor,
 	type TimelineAnchor,
 	type TimelineWindow,
 } from "~/lib/timeline-window.ts";
@@ -66,8 +67,6 @@ export function PeriodToolbar({
 	period,
 	anchor,
 	window,
-	prevAnchor,
-	nextAnchor,
 	lastActiveDay,
 	stationRange,
 	onChange,
@@ -75,8 +74,6 @@ export function PeriodToolbar({
 	period: TimelinePeriod;
 	anchor: TimelineAnchor;
 	window: TimelineWindow | null;
-	prevAnchor: TimelineAnchor | null;
-	nextAnchor: TimelineAnchor | null;
 	lastActiveDay: string | null;
 	stationRange: { first: string; last: string } | null;
 	onChange: (next: { period?: TimelinePeriod; date?: string }) => void;
@@ -132,8 +129,6 @@ export function PeriodToolbar({
 					period={period}
 					anchor={anchor}
 					stationRange={stationRange}
-					prevAnchor={prevAnchor}
-					nextAnchor={nextAnchor}
 					onPick={(date) => onChange({ date })}
 				/>
 			) : (
@@ -189,9 +184,9 @@ function PeriodSelect({
  * The date side of the toolbar: one bordered control, the steps joined to
  * either end by hairlines, around the window's short name ("Sep 2026") rather
  * than the browser's own picker text ("September 2026"), which is wider and
- * reads differently in every browser. The steps jump to the nearest
- * neighbouring window that actually holds detections, and disable at the ends
- * of the station's history rather than walking off into empty windows.
+ * reads differently in every browser. The steps move one window at a time,
+ * quiet ones included, and disable at the station's first window and at
+ * today's.
  *
  * Clicking the name opens the native picker for the granularity, laid
  * invisibly over it -- or, for a year, a native list of the station's years.
@@ -201,15 +196,11 @@ function WindowStepper({
 	period,
 	anchor,
 	stationRange,
-	prevAnchor,
-	nextAnchor,
 	onPick,
 }: {
 	period: Exclude<TimelinePeriod, "all">;
 	anchor: TimelineAnchor;
 	stationRange: { first: string; last: string } | null;
-	prevAnchor: TimelineAnchor | null;
-	nextAnchor: TimelineAnchor | null;
 	onPick: (anchor: TimelineAnchor) => void;
 }) {
 	const label = PICKER_LABELS[period];
@@ -226,6 +217,10 @@ function WindowStepper({
 		: undefined;
 	const today = currentAnchor(period);
 	const max = lastDetected && lastDetected > today ? lastDetected : today;
+	// The arrows walk one window at a time, quiet ones included, between the
+	// station's first window and today's.
+	const prevTarget = min && anchor > min ? stepAnchor(period, anchor, -1) : null;
+	const nextTarget = anchor < max ? stepAnchor(period, anchor, 1) : null;
 
 	const overlay = "absolute inset-0 size-full cursor-pointer opacity-0";
 
@@ -233,8 +228,8 @@ function WindowStepper({
 		<div className="flex h-9 min-w-0 flex-1 overflow-hidden rounded-md border border-input bg-card focus-within:border-[var(--focus-ring)] min-[400px]:w-64 min-[400px]:flex-none">
 			<JoinedStep
 				direction="prev"
-				label={`Previous ${label.toLowerCase()} with detections`}
-				target={prevAnchor}
+				label={`Previous ${label.toLowerCase()}`}
+				target={prevTarget}
 				onPick={onPick}
 			/>
 			<div className="relative flex min-w-0 flex-1 items-center justify-center px-1 pointer-coarse:text-base text-sm">
@@ -298,8 +293,8 @@ function WindowStepper({
 			</div>
 			<JoinedStep
 				direction="next"
-				label={`Next ${label.toLowerCase()} with detections`}
-				target={nextAnchor}
+				label={`Next ${label.toLowerCase()}`}
+				target={nextTarget}
 				onPick={onPick}
 			/>
 		</div>

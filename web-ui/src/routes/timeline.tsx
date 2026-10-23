@@ -180,8 +180,8 @@ function Timeline() {
 								rows={data.body.rows}
 								highlights={data.body.highlights}
 								thresholds={data.body.thresholds}
-								period={period}
-								jumpTo={jumpTarget(period, data)}
+								period={data.period}
+								jumpTo={jumpTarget(data)}
 								windowLabel={data.window?.label ?? null}
 								stationEmpty={!data.hasAnyDetections}
 								view={view}
@@ -259,10 +259,8 @@ type JumpTarget = {
  * up. Null when the window has rows, or for All Time, which is never empty
  * while the station has recorded anything.
  */
-function jumpTarget(
-	period: TimelinePeriod,
-	data: TimelinePageData,
-): JumpTarget | null {
+function jumpTarget(data: TimelinePageData): JumpTarget | null {
+	const { period } = data;
 	if (period === "all" || data.body.kind !== "rows") return null;
 	if (data.body.rows.length > 0) return null;
 	const [anchor, direction] = data.prevAnchor
@@ -360,8 +358,6 @@ function TimelineHeader({
 						period={period}
 						anchor={anchor}
 						window={data ? data.window : safeWindow(period, anchor)}
-						prevAnchor={data?.prevAnchor ?? null}
-						nextAnchor={data?.nextAnchor ?? null}
 						lastActiveDay={data?.lastActiveDay ?? null}
 						stationRange={toolbarData?.stationRange ?? null}
 						onChange={onChange}
@@ -507,7 +503,7 @@ function TimelineCards({
 				iconPosition="end"
 				className="mt-(--page-gap)"
 			>
-				Go to that {jumpTo.noun}
+				View {jumpTo.direction === "last" ? "last" : "next"} detections
 			</ButtonLink>
 		</>
 	) : undefined;

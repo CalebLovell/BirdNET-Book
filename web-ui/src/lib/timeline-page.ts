@@ -48,7 +48,13 @@ export type TimelineBody =
 	  }
 	| { kind: "day-out-of-range"; result: DayOutOfRange };
 
-export type TimelinePageData = TimelineNav & { body: TimelineBody };
+export type TimelinePageData = TimelineNav & {
+	/** The period this page was loaded for. A switch keeps the old page up for a
+	    moment while the new one loads, so its cards read their period here,
+	    never from the URL, which has already moved on. */
+	period: TimelinePeriod;
+	body: TimelineBody;
+};
 
 export const getTimelinePage = createServerFn({ method: "GET" })
 	.validator((request: TimelinePageRequest) => request)
@@ -73,7 +79,7 @@ export const getTimelinePage = createServerFn({ method: "GET" })
 						: { status: verdict };
 				// A window still lets the toolbar draw around the message.
 				const nav = await loadTimelineNav("day", windowFor("day", anchor));
-				return { ...nav, body: { kind: "day-out-of-range", result } };
+				return { ...nav, period, body: { kind: "day-out-of-range", result } };
 			}
 		}
 
@@ -83,5 +89,9 @@ export const getTimelinePage = createServerFn({ method: "GET" })
 			anchor,
 			settings: thresholds,
 		});
-		return { ...nav, body: { kind: "rows", rows, highlights, thresholds } };
+		return {
+			...nav,
+			period,
+			body: { kind: "rows", rows, highlights, thresholds },
+		};
 	});

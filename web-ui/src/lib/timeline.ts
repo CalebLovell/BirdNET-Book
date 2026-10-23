@@ -83,9 +83,9 @@ export type TimelineData = {
 	window: TimelineWindow | null;
 	/**
 	 * Anchors for the nearest neighbouring windows that actually hold
-	 * detections, so the step arrows always land on something. Null when there
-	 * is nothing further in that direction, which is what disables the arrow --
-	 * this skips over silent stretches instead of walking the user through them.
+	 * detections, which an empty window offers as its way out. Null when there
+	 * is nothing further in that direction. (The step arrows don't use these:
+	 * they walk one window at a time, quiet ones included.)
 	 */
 	prevAnchor: TimelineAnchor | null;
 	nextAnchor: TimelineAnchor | null;
@@ -133,8 +133,8 @@ export async function loadTimelineNav(
 	window: TimelineWindow | null,
 ): Promise<TimelineNav> {
 	const [[neighbours], [stationBounds]] = await Promise.all([
-		// The nearest recorded day on either side of the window (what the step
-		// arrows snap to) and the latest one inside it (what a period switch
+		// The nearest recorded day on either side of the window (what an empty
+		// window points to) and the latest one inside it (what a period switch
 		// re-anchors on), in a single pass over the dates.
 		window
 			? db
