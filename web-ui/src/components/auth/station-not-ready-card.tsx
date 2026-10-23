@@ -1,4 +1,5 @@
 import { AlertTriangle } from "lucide-react";
+import { SIGN_IN_CARD_TITLE } from "~/components/auth/session-card.tsx";
 import { CardHeader } from "~/components/card-header.tsx";
 
 const COPY = {
@@ -24,7 +25,13 @@ export function StationNotReadyCard({ state }: { state: keyof typeof COPY }) {
 			aria-labelledby="station-not-ready"
 			className="feature-card flex flex-col gap-(--page-gap) rounded-md p-(--page-gap)"
 		>
-			<CardHeader as="h2" titleId="station-not-ready" title={title} />
+			{/* The Sign-in card's own title, as when the form or the session
+			    shows: the state goes in the body, not the name. */}
+			<CardHeader
+				as="h2"
+				titleId="station-not-ready"
+				title={SIGN_IN_CARD_TITLE}
+			/>
 			{/* biome-ignore lint/a11y/useSemanticElements: <output> means the result of a calculation; this is a persistent configuration warning */}
 			<div
 				role="status"
@@ -32,6 +39,7 @@ export function StationNotReadyCard({ state }: { state: keyof typeof COPY }) {
 			>
 				<AlertTriangle aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
 				<div className="space-y-2">
+					<p className="font-semibold">{title}</p>
 					<p>{body}</p>
 					<p>
 						<code className="tabular-data text-[0.8125rem]">

@@ -2,6 +2,7 @@ import { useRouter } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { AlertTriangle, FlaskConical, KeyRound } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { SIGN_IN_CARD_TITLE } from "~/components/auth/session-card.tsx";
 import { CardHeader } from "~/components/card-header.tsx";
 import { Button } from "~/components/ui/button.tsx";
 import { Input } from "~/components/ui/input.tsx";
@@ -76,7 +77,7 @@ export function UnlockGate({
 			className="feature-card flex flex-col gap-4 rounded-md p-(--page-gap)"
 			onSubmit={onSubmit}
 		>
-			<CardHeader as="h2" titleId="unlock-title" title="Sign in" />
+			<CardHeader as="h2" titleId="unlock-title" title={SIGN_IN_CARD_TITLE} />
 			{/* The same two-column field grid the settings cards use, so the
 					    field is the width of a Station or Storage field rather than a
 					    password box stretched across the whole content column. */}
@@ -140,16 +141,15 @@ export function UnlockGate({
 			</div>
 
 			{/* Button first, on the left under the fields it submits, with any
-			    failure beside it. `sm`, like the timeline's jump-to-nearest link
-			    button, rather than the site's default `xs`. */}
+			    failure beside it. Full size, like every Account page action. */}
 			<div className="flex flex-wrap items-center gap-3">
 				<Button
 					type="submit"
-					size="sm"
+					size="default"
 					icon={KeyRound}
 					disabled={pending || password.length === 0}
 				>
-					{pending ? "Unlocking…" : "Unlock"}
+					{pending ? "Signing in…" : "Sign in"}
 				</Button>
 				{/* Dev server only: signs in with the password it gave its own
 				    station, through the same request the form makes. Dropped from
@@ -157,7 +157,7 @@ export function UnlockGate({
 				{import.meta.env.DEV ? (
 					<Button
 						type="button"
-						size="sm"
+						size="default"
 						variant="outline"
 						icon={FlaskConical}
 						disabled={pending}

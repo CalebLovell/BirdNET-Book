@@ -68,8 +68,9 @@ sudo ./scripts/set_web_ui_password.sh
 ```
 
 It prompts twice without echoing, so the password never reaches your shell history. Minimum
-12 characters. Changing the password signs out every device; the Account page also has a
-"Sign out all devices" button that does so without changing it.
+12 characters. Changing the password signs out every device. The password can only be managed
+on the Pi; the Account page just signs a browser in and out. A browser that hasn't visited in
+30 days is signed out on its own.
 
 The password is stored only as a salted scrypt hash, in `/etc/birdnet/web-ui/auth.conf`
 (mode 0600, in a directory owned by the web UI's account). It is never stored in plaintext, is kept out of `birdnet.conf` and
@@ -86,7 +87,17 @@ The gate is built for it, but two things are required first:
 2. **`WEB_UI_TRUSTED_PROXY=1`** set for the web UI (`sudo systemctl edit birdnet_web_ui`,
    then `Environment=WEB_UI_TRUSTED_PROXY=1`), so that failed-unlock throttling sees real
    client addresses rather than your proxy's. Without it every request appears to come from
-   one address; with it set but no proxy actually in front, addresses can be spoofed.
+   one address; with it set but no proxy actually in front, addresses can be spoofed. With it
+   set, the address comes from Cloudflare's `CF-Connecting-IP` header if present, otherwise
+   from the last `X-Forwarded-For` entry, the one your proxy added.
+
+A Cloudflare Tunnel is the simplest route: `cloudflared` on the Pi connects out to
+Cloudflare, which serves the station at your own domain over HTTPS. Your router doesn't
+need an open port and your home IP stays hidden. Point the tunnel at `http://localhost:80`.
+
+If the microphone can hear people talking, set Settings → Privacy threshold above 0 before
+going public: detection recordings are public, and the threshold drops clips with a human
+voice in them.
 
 ## Requirements
 * A Raspberry Pi 5, Raspberry 4B, Raspberry Pi 400, Raspberry Pi 3B+, or Raspberry Pi 0W2 (The 3B+ and 0W2 must run on RaspiOS-ARM64-**Lite**)

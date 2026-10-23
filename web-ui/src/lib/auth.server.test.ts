@@ -3,11 +3,7 @@ import { mkdtemp, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import test from "node:test";
-import {
-	attemptUnlock,
-	readUnlockStatus,
-	rotateSessionNonce,
-} from "./auth.server.ts";
+import { attemptUnlock, readUnlockStatus } from "./auth.server.ts";
 import {
 	AuthConfigError,
 	changePassword,
@@ -54,19 +50,6 @@ test("rejects a password under the minimum length", async () => {
 		() => changePassword("a".repeat(MIN_PASSWORD_LENGTH - 1)),
 		/at least 12/,
 	);
-});
-
-test("rotating the nonce leaves the password alone", async () => {
-	const file = await useFixtureAuthFile();
-	await changePassword("swifts-over-the-creek");
-	const before = await readAuthFile(file);
-
-	await rotateSessionNonce();
-
-	const after = await readAuthFile(file);
-	assert.ok(before && after);
-	assert.notEqual(after.nonce, before.nonce);
-	assert.equal(after.hash, before.hash);
 });
 
 test("a password can be set over a corrupt file, since that is when it is needed", async () => {

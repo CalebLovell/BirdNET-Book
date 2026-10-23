@@ -5,7 +5,6 @@ import {
 	attemptUnlock,
 	clearSession,
 	readUnlockStatus,
-	rotateSessionNonce,
 	type UnlockStatus,
 } from "./auth.server.ts";
 import { readSiteName } from "./settings-config.server.ts";
@@ -66,10 +65,3 @@ export const lockFn = createServerFn({ method: "POST" }).handler(() => {
 	clearSession();
 	return { ok: true as const };
 });
-
-export const signOutAllDevicesFn = createServerFn({ method: "POST" })
-	.middleware([requireUnlocked])
-	.handler(async () => {
-		await rotateSessionNonce();
-		return { ok: true as const };
-	});

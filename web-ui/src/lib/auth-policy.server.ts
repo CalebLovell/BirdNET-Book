@@ -27,3 +27,27 @@ export function isPrivateAddress(ip: string | undefined) {
 	if (a === 192 && b === 168) return true;
 	return false;
 }
+
+/**
+ * The visitor's address as the proxy in front of the station saw it, for a
+ * deployment that has one (`WEB_UI_TRUSTED_PROXY`). Never the *first*
+ * `X-Forwarded-For` entry: a proxy appends to whatever header the visitor
+ * sent, so the first entry is whatever the visitor chose to write there -- a
+ * fresh address per attempt walks through the throttle, and a private one
+ * dodges the global ceiling too.
+ *
+ * Cloudflare's `CF-Connecting-IP` is set by its edge and replaces anything the
+ * visitor sent, so it wins. Otherwise the last entry is the one the nearest
+ * proxy (Caddy, Tailscale) added itself.
+ */
+export function forwardedClientAddress(headers: {
+	get(name: string): string | null | undefined;
+}) {
+	const cloudflare = headers.get("cf-connecting-ip")?.trim();
+	if (cloudflare) return cloudflare;
+	const hops = (headers.get("x-forwarded-for") ?? "")
+		.split(",")
+		.map((hop) => hop.trim())
+		.filter(Boolean);
+	return hops.at(-1);
+}

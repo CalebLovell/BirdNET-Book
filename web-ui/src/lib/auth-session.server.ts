@@ -3,13 +3,16 @@ import "@tanstack/react-start/server-only";
 import { createHash, createHmac, timingSafeEqual } from "node:crypto";
 
 import type { AuthFile } from "./auth-file.server.ts";
+import { SESSION_IDLE_DAYS } from "./auth-limits.ts";
 
 export const UNLOCK_COOKIE_NAME = "birdnet_unlock";
 
-/** Ten years. Re-set on every verified request, so a device that keeps visiting
- *  never falls out. Revocation is by password change or nonce rotation, not by
- *  waiting -- see the spec's "Known limits". */
-export const COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24 * 365 * 10;
+/** Thirty days without a visit signs a browser out. Every verified request
+ *  re-issues the token with a fresh timestamp, so a device in regular use never
+ *  falls out -- only a forgotten one does. Revocation before then is by password
+ *  change or nonce rotation. */
+const SESSION_IDLE_MS = SESSION_IDLE_DAYS * 24 * 60 * 60 * 1000;
+export const COOKIE_MAX_AGE_SECONDS = SESSION_IDLE_MS / 1000;
 
 const TOKEN_VERSION = "1";
 
@@ -33,7 +36,11 @@ export function signSessionToken(auth: AuthFile, issuedAt = Date.now()) {
 	return `${payload}.${sign(auth, payload)}`;
 }
 
-export function verifySessionToken(auth: AuthFile, token: string | undefined) {
+export function verifySessionToken(
+	auth: AuthFile,
+	token: string | undefined,
+	now = Date.now(),
+) {
 	if (!token) return false;
 
 	const parts = token.split(".");
@@ -41,6 +48,10 @@ export function verifySessionToken(auth: AuthFile, token: string | undefined) {
 
 	const [version, issuedAt, signature] = parts;
 	if (version !== TOKEN_VERSION || !/^\d+$/.test(issuedAt)) return false;
+	// The cookie's own expiry is the browser's promise, not ours: a copied
+	// token would outlive it. The timestamp is signed, so this is the check
+	// that actually holds.
+	if (now - Number(issuedAt) > SESSION_IDLE_MS) return false;
 
 	const expected = Buffer.from(sign(auth, `${version}.${issuedAt}`), "utf8");
 	const actual = Buffer.from(signature, "utf8");

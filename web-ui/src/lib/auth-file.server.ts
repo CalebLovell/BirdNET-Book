@@ -6,7 +6,9 @@ import path from "node:path";
 
 import { parseBirdnetConfig } from "~/lib/settings-config.server.ts";
 
-export const MIN_PASSWORD_LENGTH = 12;
+import { MIN_PASSWORD_LENGTH } from "./auth-limits.ts";
+
+export { MIN_PASSWORD_LENGTH };
 
 const SCRYPT = { N: 16384, r: 8, p: 1 } as const;
 const KEY_LENGTH = 32;

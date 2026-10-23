@@ -3,6 +3,7 @@ import "@tanstack/react-start/server-only";
 import {
 	deleteCookie,
 	getCookie,
+	getRequestHeaders,
 	getRequestIP,
 	getRequestProtocol,
 	setCookie,
@@ -11,12 +12,11 @@ import {
 import {
 	AuthConfigError,
 	type AuthFile,
-	newNonce,
 	readAuthFile,
 	resolveAuthPath,
 	verifyPassword,
-	writeAuthFile,
 } from "./auth-file.server.ts";
+import { forwardedClientAddress } from "./auth-policy.server.ts";
 import {
 	COOKIE_MAX_AGE_SECONDS,
 	signSessionToken,
@@ -77,12 +77,15 @@ function getThrottle() {
  * Trusting `x-forwarded-for` unconditionally would let an attacker mint a fresh
  * address per attempt and walk straight through the throttle; ignoring it behind
  * a tunnel would collapse every client onto one address and let one attacker
- * lock the owner out. So it is honoured only when the deployment says so.
+ * lock the owner out. So it is honoured only when the deployment says so, and
+ * then only the part the proxy wrote (`forwardedClientAddress`).
  */
 function resolveClientIp() {
-	return getRequestIP({
-		xForwardedFor: Boolean(process.env.WEB_UI_TRUSTED_PROXY),
-	});
+	if (process.env.WEB_UI_TRUSTED_PROXY) {
+		const forwarded = forwardedClientAddress(getRequestHeaders());
+		if (forwarded) return forwarded;
+	}
+	return getRequestIP();
 }
 
 /**
@@ -147,13 +150,6 @@ export async function attemptUnlock(password: string): Promise<UnlockResult> {
 
 export function clearSession() {
 	deleteCookie(UNLOCK_COOKIE_NAME, { path: "/" });
-}
-
-/** Only reachable signed in (`requireUnlocked`), so a password is set. */
-export async function rotateSessionNonce() {
-	const auth = await readAuthFile();
-	if (!auth) throw new AuthConfigError("No password is set.");
-	await writeAuthFile({ ...auth, nonce: newNonce() });
 }
 
 // `changePassword` lives in `auth-file.server.ts`,

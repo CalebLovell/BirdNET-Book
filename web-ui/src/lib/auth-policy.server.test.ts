@@ -1,7 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { isPrivateAddress } from "./auth-policy.server.ts";
+import {
+	forwardedClientAddress,
+	isPrivateAddress,
+} from "./auth-policy.server.ts";
 
 test("recognises loopback and RFC1918 addresses as private", () => {
 	for (const ip of [
@@ -49,4 +52,36 @@ test("accepts .0 and .255 boundary octets where the prefix is private", () => {
 	assert.equal(isPrivateAddress("10.255.255.255"), true);
 	assert.equal(isPrivateAddress("192.168.0.0"), true);
 	assert.equal(isPrivateAddress("192.168.255.255"), true);
+});
+
+const headers = (values: Record<string, string>) =>
+	new Headers(Object.entries(values));
+
+test("a forwarded address comes from the proxy, never the visitor's own first entry", () => {
+	assert.equal(
+		forwardedClientAddress(
+			headers({ "x-forwarded-for": "10.0.0.9, 203.0.113.7" }),
+		),
+		"203.0.113.7",
+	);
+});
+
+test("Cloudflare's own header wins over X-Forwarded-For", () => {
+	assert.equal(
+		forwardedClientAddress(
+			headers({
+				"cf-connecting-ip": "198.51.100.4",
+				"x-forwarded-for": "10.0.0.9, 198.51.100.4",
+			}),
+		),
+		"198.51.100.4",
+	);
+});
+
+test("no forwarding headers means no forwarded address", () => {
+	assert.equal(forwardedClientAddress(headers({})), undefined);
+	assert.equal(
+		forwardedClientAddress(headers({ "x-forwarded-for": " , " })),
+		undefined,
+	);
 });

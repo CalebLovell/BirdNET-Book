@@ -3,6 +3,7 @@ import test from "node:test";
 
 import type { AuthFile } from "./auth-file.server.ts";
 import { hashPassword } from "./auth-file.server.ts";
+import { SESSION_IDLE_DAYS } from "./auth-limits.ts";
 import { signSessionToken, verifySessionToken } from "./auth-session.server.ts";
 
 const auth: AuthFile = {
@@ -47,4 +48,18 @@ test("the token carries no secret material", () => {
 	const token = signSessionToken(auth);
 	assert.equal(token.includes(auth.hash), false);
 	assert.equal(token.includes(auth.nonce), false);
+});
+
+test("a token unused for longer than the idle limit is rejected", () => {
+	const day = 24 * 60 * 60 * 1000;
+	const issuedAt = Date.UTC(2026, 9, 1);
+	const token = signSessionToken(auth, issuedAt);
+	assert.equal(
+		verifySessionToken(auth, token, issuedAt + SESSION_IDLE_DAYS * day - 1),
+		true,
+	);
+	assert.equal(
+		verifySessionToken(auth, token, issuedAt + SESSION_IDLE_DAYS * day + 1),
+		false,
+	);
 });
