@@ -1,10 +1,12 @@
 import assert from "node:assert/strict";
 import {
 	chmod,
+	lstat,
 	mkdtemp,
 	readdir,
 	readFile,
 	stat,
+	symlink,
 	writeFile,
 } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -84,6 +86,30 @@ test("updates only Station assignments and preserves the document", async () => 
 	assert.match(after, /^RTSP_STREAM="rtsp:\/\/bird:secret@camera\/live"$/m);
 	assert.equal((await stat(file)).mode & 0o777, originalMode);
 	assert.deepEqual(await readdir(path.dirname(file)), ["birdnet.conf"]);
+});
+
+// /etc/birdnet/birdnet.conf is a link into the user's checkout, in a directory
+// only root can write. The temp file has to go beside the real file, and the
+// link has to survive the rename.
+test("saves through a symlinked config into the real file", async (t) => {
+	const real = await fixtureConfig("CONFIDENCE=0.7\n");
+	const linkDirectory = await mkdtemp(path.join(tmpdir(), "birdnet-etc-"));
+	const link = path.join(linkDirectory, "birdnet.conf");
+	try {
+		await symlink(real, link);
+	} catch {
+		t.skip("this system can't make symlinks");
+		return;
+	}
+	await chmod(linkDirectory, 0o555);
+	try {
+		await writeSettingsCard("review", { rareSpeciesMax: 12 }, link);
+	} finally {
+		await chmod(linkDirectory, 0o755);
+	}
+	assert.match(await readFile(real, "utf8"), /^REVIEW_RARE_SPECIES_MAX=12$/m);
+	assert.ok((await lstat(link)).isSymbolicLink());
+	assert.deepEqual(await readdir(path.dirname(real)), ["birdnet.conf"]);
 });
 
 test("appends the Review setting once and defaults older files", async () => {

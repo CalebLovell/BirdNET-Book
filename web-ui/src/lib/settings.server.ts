@@ -136,7 +136,9 @@ async function saveSettings<K extends SettingsCardKind>(
 			values,
 			dependencies.settingsPath ?? resolveSettingsPath(),
 		);
-	} catch {
+	} catch (error) {
+		// The reader gets the plain sentence; the cause goes to the journal.
+		console.error(`[settings] saving ${kind} failed:`, error);
 		throw new Error("Settings could not be saved.");
 	}
 	try {

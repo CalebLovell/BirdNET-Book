@@ -1,7 +1,15 @@
 import "@tanstack/react-start/server-only";
 
 import { randomUUID } from "node:crypto";
-import { chmod, readFile, rename, rm, stat, writeFile } from "node:fs/promises";
+import {
+	chmod,
+	readFile,
+	realpath,
+	rename,
+	rm,
+	stat,
+	writeFile,
+} from "node:fs/promises";
 
 import {
 	HIGHLIGHT_THRESHOLDS,
@@ -298,6 +306,10 @@ export async function writeSettingsCard<K extends SettingsCardKind>(
 	settingsPath = resolveSettingsPath(),
 ) {
 	const assignments = assignmentsFor(kind, values);
+	// BirdNET-Pi installs /etc/birdnet/birdnet.conf as a link into the user's
+	// checkout, and /etc/birdnet is root's: write beside the real file, which
+	// also keeps the link a link.
+	settingsPath = await realpath(settingsPath);
 	const source = await readFile(settingsPath, "utf8");
 	const sourceStat = await stat(settingsPath);
 	const updated = replaceAssignments(source, assignments);
