@@ -39,7 +39,7 @@ export function SettingsPage({
 	onRestart?: SettingsRestarter;
 	/** What the updater last reported; null while it loads. */
 	updates?: UpdateState | null;
-	onCheckUpdates?: () => Promise<void>;
+	onCheckUpdates?: () => Promise<UpdateState>;
 	onInstallUpdate?: () => Promise<void>;
 }) {
 	// A reset that stored the defaults but could not get BirdNET onto them

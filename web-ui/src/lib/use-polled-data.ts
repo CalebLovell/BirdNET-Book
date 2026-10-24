@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 /**
  * Re-runs `fetcher` on an interval and keeps the latest result in state.
@@ -18,12 +18,12 @@ export function usePolledData<T>(
 	fetcher: () => Promise<T>,
 	initialData: T,
 	intervalMs: number,
-): { data: T; lastUpdated: Date };
+): { data: T; lastUpdated: Date; replace: (next: T) => void };
 export function usePolledData<T>(
 	fetcher: () => Promise<T>,
 	initialData: Promise<T>,
 	intervalMs: number,
-): { data: T | null; lastUpdated: Date };
+): { data: T | null; lastUpdated: Date; replace: (next: T) => void };
 export function usePolledData<T>(
 	fetcher: () => Promise<T>,
 	initialData: T | Promise<T>,
@@ -75,5 +75,12 @@ export function usePolledData<T>(
 		};
 	}, [intervalMs]);
 
-	return { data, lastUpdated };
+	// For an answer that arrives some other way -- a mutation that returns the
+	// fresh value -- so the page shows it now rather than at the next tick.
+	const replace = useCallback((next: T) => {
+		setData(next);
+		setLastUpdated(new Date());
+	}, []);
+
+	return { data, lastUpdated, replace };
 }

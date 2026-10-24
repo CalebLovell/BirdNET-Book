@@ -80,7 +80,7 @@ function SettingsRoute() {
 	const installUpdate = useServerFn(installUpdateFn);
 	// Every few seconds: cheap (two small files), and what lets the card follow
 	// an install through the restart it causes.
-	const { data: updates } = usePolledData(
+	const { data: updates, replace: replaceUpdates } = usePolledData(
 		getUpdateState,
 		loaded.updates,
 		UPDATES_INTERVAL_MS,
@@ -97,7 +97,11 @@ function SettingsRoute() {
 			health={health ?? undefined}
 			onRestart={(card) => restart({ data: { card } })}
 			updates={updates}
-			onCheckUpdates={() => checkForUpdates()}
+			onCheckUpdates={async () => {
+				const state = await checkForUpdates();
+				replaceUpdates(state);
+				return state;
+			}}
 			onInstallUpdate={() => installUpdate()}
 			onReset={async () => {
 				const result = await reset({});

@@ -14,8 +14,8 @@ export type UpdateState = {
 	/** False where the web UI wasn't installed by install_web_ui.sh -- a
 	    development checkout -- so there is no updater to drive. */
 	managed: boolean;
-	installed: { version: string; signed: boolean; installedAt: string } | null;
-	latest: { version: string; signed: boolean } | null;
+	installed: { version: string; installedAt: string } | null;
+	latest: { version: string } | null;
 	/** When GitHub was last asked, as an ISO timestamp. */
 	checkedAt: string | null;
 	state: UpdateRunState;
@@ -81,7 +81,6 @@ export function parseUpdateState(
 			installed && text(installed.version)
 				? {
 						version: text(installed.version) as string,
-						signed: installed.signed === true,
 						installedAt: text(installed.installedAt) ?? "",
 					}
 				: null,
@@ -89,7 +88,6 @@ export function parseUpdateState(
 			latest && text(latest.version)
 				? {
 						version: text(latest.version) as string,
-						signed: latest.signed === true,
 					}
 				: null,
 		checkedAt: text(status?.checkedAt),

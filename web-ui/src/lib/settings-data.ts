@@ -179,7 +179,7 @@ export const highlightSettingsSchema = z.object({
 	vocalRatio: z.number().finite().min(1.5).max(20),
 });
 
-/** Whether the nightly timer installs new signed releases by itself
+/** Whether the nightly timer installs new releases by itself
     (AUTOMATIC_UPDATE). Not part of a reset: it is a choice about the station,
     not a tuning value with a right answer. */
 export const updateSettingsSchema = z.object({ automatic: z.boolean() });

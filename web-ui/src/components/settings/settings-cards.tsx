@@ -347,7 +347,7 @@ export function SettingsCards({
 	diskUsedPercent?: number | null;
 	/** What the updater last reported; null while it loads. */
 	updates?: UpdateState | null;
-	onCheckUpdates?: () => Promise<void>;
+	onCheckUpdates?: () => Promise<UpdateState>;
 	onInstallUpdate?: () => Promise<void>;
 }) {
 	const restartFor = (card: SettingsCardKind): CardRestarter | undefined =>
@@ -1230,7 +1230,7 @@ function UpdatesSettingsCard({
 	initial: UpdateSettings;
 	save?: Saver<UpdateSettings>;
 	updates: UpdateState | null;
-	onCheck?: () => Promise<void>;
+	onCheck?: () => Promise<UpdateState>;
 	onInstall?: () => Promise<void>;
 }) {
 	const form = useCardSave("Updates", initial, save);
@@ -1251,6 +1251,11 @@ function UpdatesSettingsCard({
 		installed !== null &&
 		installed.version !== loadedVersion;
 
+	// Held here rather than read from the status file: a check is over in a
+	// second or two, quicker than the page polls, so "checking" there is
+	// rarely seen.
+	const [checking, setChecking] = useState(false);
+
 	async function run(
 		action: (() => Promise<void>) | undefined,
 		failure: string,
@@ -1262,6 +1267,33 @@ function UpdatesSettingsCard({
 			toast.error(error instanceof Error ? error.message : failure, {
 				id: "settings-updates",
 			});
+		}
+	}
+
+	async function check() {
+		if (!onCheck) return;
+		setChecking(true);
+		try {
+			const result = await onCheck();
+			if (result.state === "failed")
+				toast.error(result.message ?? "Couldn't look for updates.", {
+					id: "settings-updates",
+				});
+			else
+				toast.success(
+					result.message ??
+						(availableUpdate(result)
+							? "An update is available."
+							: "Up to date."),
+					{ id: "settings-updates" },
+				);
+		} catch (error) {
+			toast.error(
+				error instanceof Error ? error.message : "Couldn't look for updates.",
+				{ id: "settings-updates" },
+			);
+		} finally {
+			setChecking(false);
 		}
 	}
 
@@ -1293,7 +1325,7 @@ function UpdatesSettingsCard({
 							</button>
 						</p>
 					) : installed?.installedAt ? (
-						`Installed ${formatDate(installed.installedAt)}${installed.signed ? "" : ", unsigned"}.`
+						`Installed ${formatDate(installed.installedAt)}.`
 					) : null
 				}
 			>
@@ -1322,9 +1354,9 @@ function UpdatesSettingsCard({
 					) : updates.state === "updating" ? (
 						"Recording stops for about a minute while it installs, and this page comes back when the station does."
 					) : updates.checkedAt ? (
-						`Checked ${ago(updates.checkedAt)}.${offered && updates.latest && !updates.latest.signed ? " Unsigned: install it only if you trust where it came from." : ""}`
+						`Checked ${ago(updates.checkedAt)}.`
 					) : managed ? (
-						"Checked nightly, or when you press Check now."
+						"Checked nightly, or when you press Check."
 					) : (
 						"Only an installed station looks for releases."
 					)
@@ -1367,16 +1399,16 @@ function UpdatesSettingsCard({
 					variant="outline"
 					size="default"
 					icon={RefreshCw}
-					loading={updates?.state === "checking"}
+					loading={checking || updates?.state === "checking"}
 					disabled={!managed || busy || !onCheck}
-					onClick={() => void run(onCheck, "Couldn't look for updates.")}
+					onClick={() => void check()}
 				>
-					Check now
+					{checking ? "Checking…" : "Check"}
 				</Button>
 			</Field>
 			<Field
 				label="Automatic updates"
-				hint="Installs new signed releases overnight, between 3 and 5 AM. Unsigned ones always wait for you."
+				hint="Installs new releases by itself overnight, between 3 and 5 AM. Off, they wait for you to press Update."
 			>
 				<FieldChoice
 					value={form.values.automatic ? "on" : "off"}

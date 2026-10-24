@@ -10,7 +10,6 @@ import {
 const installed = JSON.stringify({
 	version: "v1.2.0",
 	commit: "abc",
-	signed: true,
 	installedAt: "2026-10-01T03:12:00Z",
 });
 
@@ -20,7 +19,7 @@ test("reads what the updater wrote", () => {
 		JSON.stringify({
 			state: "idle",
 			message: "Version v1.3.0 is available.",
-			latest: { version: "v1.3.0", signed: true },
+			latest: { version: "v1.3.0" },
 			checkedAt: "2026-10-12T03:40:00Z",
 		}),
 	);
@@ -28,10 +27,9 @@ test("reads what the updater wrote", () => {
 		managed: true,
 		installed: {
 			version: "v1.2.0",
-			signed: true,
 			installedAt: "2026-10-01T03:12:00Z",
 		},
-		latest: { version: "v1.3.0", signed: true },
+		latest: { version: "v1.3.0" },
 		checkedAt: "2026-10-12T03:40:00Z",
 		state: "idle",
 		message: "Version v1.3.0 is available.",
@@ -51,7 +49,7 @@ test("a station that has never checked has nothing on offer", () => {
 test("the installed release is not offered again", () => {
 	const state = parseUpdateState(
 		installed,
-		JSON.stringify({ latest: { version: "v1.2.0", signed: true } }),
+		JSON.stringify({ latest: { version: "v1.2.0" } }),
 	);
 	assert.equal(availableUpdate(state), null);
 });
@@ -70,13 +68,4 @@ test("garbage and unknown states read as unknown, never as a crash", () => {
 	assert.equal(state.installed, null);
 	assert.equal(state.state, "idle");
 	assert.equal(parseUpdateState("[]", "null").installed, null);
-});
-
-test("an unsigned release is reported as such", () => {
-	const state = parseUpdateState(
-		JSON.stringify({ version: "dev-1a2b3c4", signed: false }),
-		JSON.stringify({ latest: { version: "v0.1.0", signed: false } }),
-	);
-	assert.equal(state.installed?.signed, false);
-	assert.equal(state.latest?.signed, false);
 });

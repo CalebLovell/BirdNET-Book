@@ -49,7 +49,25 @@ const UNITS = {
  * systemd, so an update that restarts this very server isn't cut off with it.
  * The card follows along by polling the status file.
  */
-export function startUpdater(action: keyof typeof UNITS): Promise<void> {
+export async function startUpdater(action: keyof typeof UNITS): Promise<void> {
+	if ((await runUnit(UNITS[action], ["--no-block"])) !== 0)
+		throw new Error("The updater could not start.");
+}
+
+/**
+ * Asks GitHub for the newest release and answers once it knows. A check never
+ * restarts this server, so it can be waited on; the updater's own sentence
+ * ("Up to date.", "Version v1.9.0 is available.", or what went wrong) comes
+ * back in the state's message. A check that fails partway exits non-zero but
+ * has written why to the status file, so the state is returned either way.
+ */
+export async function checkForUpdates(): Promise<UpdateState> {
+	await runUnit(UNITS.check, []);
+	return loadUpdateState();
+}
+
+/** Starts a unit and resolves with systemctl's exit code. */
+function runUnit(unit: string, flags: string[]): Promise<number> {
 	// Not BIRDNET_SKIP_SYSTEM_ACTIONS: a web UI beside another BirdNET-Pi sets
 	// that to keep its hands off the other project's services, but still
 	// updates itself (see scripts/install_updater_beside.sh).
@@ -58,18 +76,14 @@ export function startUpdater(action: keyof typeof UNITS): Promise<void> {
 			new Error("This copy of the web UI isn't managed by the updater."),
 		);
 	return new Promise((resolve, reject) => {
-		const child = spawn(
-			"sudo",
-			["systemctl", "start", "--no-block", UNITS[action]],
-			{ shell: false, stdio: "ignore", windowsHide: true },
-		);
+		const child = spawn("sudo", ["systemctl", "start", ...flags, unit], {
+			shell: false,
+			stdio: "ignore",
+			windowsHide: true,
+		});
 		child.once("error", () =>
 			reject(new Error("The updater could not start.")),
 		);
-		child.once("exit", (code) =>
-			code === 0
-				? resolve()
-				: reject(new Error("The updater could not start.")),
-		);
+		child.once("exit", (code) => resolve(code ?? 1));
 	});
 }

@@ -140,11 +140,11 @@ Please take a look at the [wiki](https://github.com/mcguirepr89/BirdNET-Pi/wiki)
 ## Updating
 
 Stations update from this repository's GitHub releases. Settings → Updates shows the
-installed version and the newest release, with **Check now** and **Update to …**, and an
-**Automatic updates** switch (on for new installs, `AUTOMATIC_UPDATE` in `birdnet.conf`).
-With it on, `birdnet_update.timer` checks nightly between 3 and 5 AM and installs a new
-release by itself -- but only one signed with a key the station trusts. Unsigned releases
-always wait for someone to press Update.
+installed version and the newest release, with **Check** (asks GitHub now and says what it
+found) and **Update to …**, and an **Automatic updates** switch (`AUTOMATIC_UPDATE` in
+`birdnet.conf`, on for new installs). Every night between 3 and 5 AM `birdnet_update.timer`
+looks for a new release: with the switch on it installs it, with it off it only marks
+Settings in the sidebar so you can press Update when you like.
 
 From a shell:
 
@@ -153,19 +153,11 @@ update_birdnet.sh        # install the newest release now
 update_birdnet.sh -c     # only check
 ```
 
-An update downloads the release's prebuilt web UI beside the running one, moves the code
-to the release's commit, and restarts. If the web UI doesn't answer afterwards, the station
-goes back to the version it had. Progress is in `~/BirdNET-Pi-web/update-status.json` and
+An update downloads the release's prebuilt web UI beside the running one, checks it
+against the sha256 in the release's `release.json`, moves the code to the release's commit,
+and restarts. If the web UI doesn't answer afterwards, the station goes back to the version
+it had. Progress is in `~/BirdNET-Pi-web/update-status.json` and
 `journalctl -u birdnet_update_now`.
-
-### How releases are trusted
-
-Each release carries `release.json`, naming its commit and the sha256 of its web UI
-bundle, signed with an SSH key. A station checks that signature against
-`/etc/birdnet/release_signers`, copied from this repository's `release_signers` when the
-station was installed and never replaced by an update -- so a release can't vouch for
-itself, even from someone who gets into the GitHub account. The commit and the bundle must
-then match what the signed manifest says.
 
 ### Releasing (for maintainers)
 
@@ -181,25 +173,14 @@ release to pick the version:
 | `feat(ui)!: …`, or a `BREAKING CHANGE:` footer | major: 1.4.0 → 2.0.0 |
 | `test:`, `docs:`, `chore:`, `refactor:`, `style:`, `ci:` | none |
 
-The highest one among the new commits wins. When there is a release, it builds and signs
-the web UI bundle (`scripts/package_release.sh`), tags the commit `vX.Y.Z`, and publishes
+The highest one among the new commits wins. When there is a release, it builds the web UI
+bundle (`scripts/package_release.sh`), tags the commit `vX.Y.Z`, and publishes
 the GitHub release with notes grouped from the commit messages. A message that doesn't
 follow the format simply doesn't count toward a release.
 
-Set up signing once:
-
-1. Make a key, without a passphrase, and keep the private half somewhere safe:
-   `ssh-keygen -t ed25519 -N "" -C release@birdnet-book -f birdnet-book-release`
-2. Add its public half to `release_signers` as
-   `release@birdnet-book namespaces="birdnet-book-release" ssh-ed25519 AAAA…`
-   (the first two fields of `birdnet-book-release.pub`), and commit it. Stations installed
-   from then on trust it; ones installed earlier need it copied to
-   `/etc/birdnet/release_signers` by hand.
-3. Add the private key's full text as the repository secret `RELEASE_SIGNING_KEY`
-   (Settings → Secrets and variables → Actions).
-
-Until the secret exists, releases are published unsigned and nothing installs them
-automatically.
+The checks (Biome, TypeScript, tests) run first, and a failing check means no release:
+fix it and push again. `.githooks/pre-push` runs the same checks before a push to `main`;
+turn it on once per clone with `git config core.hooksPath .githooks`.
 
 ## Backup and Restore
 Use the web interface and go to "Tools" > "System Controls" > "Backup" or "Restore". Backup/Restore is primary meant for migrating your data for one system to another. Since the time required to create or restore a backup depends on the size of the data set and the speed of the storage, this could take quite a while.

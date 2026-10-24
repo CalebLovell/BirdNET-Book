@@ -11,8 +11,6 @@ WEB_RELEASES=$WEB_HOME/releases
 WEB_CURRENT=$WEB_HOME/current
 UPDATE_STATUS=$WEB_HOME/update-status.json
 INSTALLED_FILE=$WEB_HOME/installed.json
-RELEASE_SIGNERS=/etc/birdnet/release_signers
-SIGNING_NAMESPACE=birdnet-book-release
 NODE_HOME=/opt/birdnet-node
 WEB_UI_PORT=${WEB_UI_PORT:-80}
 
@@ -53,19 +51,10 @@ release_asset_url() {
   echo "https://github.com/${UPDATE_REPO}/releases/download/$1/$2"
 }
 
-# True when the station holds at least one key to check releases against.
-have_signing_keys() {
-  [ -f "$RELEASE_SIGNERS" ] && grep -qvE '^\s*(#|$)' "$RELEASE_SIGNERS"
-}
-
-# Downloads a release's manifest (and its signature, if it has one) into a
-# directory and judges it. Prints one word:
-#   signed    the signature checks out against /etc/birdnet/release_signers
-#   unsigned  the release carries no signature, or the station has no key
-# Fails outright when a signature is present but wrong: that is tampering or
-# the wrong key, and never something to install.
+# Downloads a release's manifest into a directory and checks it names what a
+# station needs; install_bundle then checks the bundle against its sha256.
 fetch_manifest() {
-  local tag=$1 dir=$2 principal
+  local tag=$1 dir=$2
   curl -fsSL --max-time 60 -o "$dir/release.json" "$(release_asset_url "$tag" release.json)" || {
     echo "Release $tag has no release.json." >&2
     return 1
@@ -74,22 +63,6 @@ fetch_manifest() {
     echo "Release $tag has an unreadable release.json." >&2
     return 1
   }
-  if ! curl -fsSL --max-time 60 -o "$dir/release.json.sig" "$(release_asset_url "$tag" release.json.sig)" 2>/dev/null; then
-    rm -f "$dir/release.json.sig"
-    echo unsigned
-    return 0
-  fi
-  if ! have_signing_keys; then
-    echo unsigned
-    return 0
-  fi
-  principal=$(ssh-keygen -Y find-principals -f "$RELEASE_SIGNERS" -s "$dir/release.json.sig" 2>/dev/null | head -n 1)
-  if [ -z "$principal" ] || ! ssh-keygen -Y verify -f "$RELEASE_SIGNERS" -I "$principal" \
-      -n "$SIGNING_NAMESPACE" -s "$dir/release.json.sig" < "$dir/release.json" >/dev/null 2>&1; then
-    echo "Release $tag is signed, but not by a key this station trusts." >&2
-    return 1
-  fi
-  echo signed
 }
 
 # Downloads the bundle a manifest names, checks it against the manifest's
@@ -176,10 +149,10 @@ prune_releases() {
 }
 
 write_installed() {
-  local version=$1 commit=$2 signed=$3 tmp
+  local version=$1 commit=$2 tmp
   tmp=$(mktemp "$WEB_HOME/.installed.XXXXXX")
-  jq -n --arg version "$version" --arg commit "$commit" --argjson signed "$signed" --arg at "$(now_iso)" \
-    '{version: $version, commit: $commit, signed: $signed, installedAt: $at}' > "$tmp"
+  jq -n --arg version "$version" --arg commit "$commit" --arg at "$(now_iso)" \
+    '{version: $version, commit: $commit, installedAt: $at}' > "$tmp"
   chmod 644 "$tmp"
   chown "$USER:$USER" "$tmp"
   mv -f "$tmp" "$INSTALLED_FILE"

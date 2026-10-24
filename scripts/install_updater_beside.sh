@@ -9,8 +9,9 @@
 #
 # Copies the updater to ~/BirdNET-Pi-web/bin, adds the units the Settings
 # page's Updates card starts (in WEB_UI_ONLY mode, so only the web UI is ever
-# switched), a nightly check, and points the web UI at its update directory.
-# Never installs anything by itself: the nightly run only looks.
+# switched), a nightly run, and points the web UI at its update directory.
+# The nightly run always looks, and installs only when Automatic updates is on
+# (AUTOMATIC_UPDATE in birdnet.conf).
 set -euo pipefail
 source /etc/birdnet/birdnet.conf
 
@@ -24,8 +25,9 @@ source "$here/release_helpers.sh"
 install -d -o "$USER" -g "$USER" "$WEB_HOME/bin"
 install -o "$USER" -g "$USER" -m 755 "$here/update_birdnet.sh" "$here/release_helpers.sh" "$WEB_HOME/bin/"
 
-for unit in update_now update_check; do
+for unit in update update_now update_check; do
   case $unit in
+    update) flags="-a"; description="Install a new BirdNET-Book web UI if automatic updates are on" ;;
     update_now) flags=""; description="Install the newest BirdNET-Book web UI" ;;
     update_check) flags="-c"; description="Look for a new BirdNET-Book web UI" ;;
   esac
@@ -43,10 +45,14 @@ ExecStart=${WEB_HOME}/bin/update_birdnet.sh ${flags}
 EOF
 done
 
-# Only a check: installing waits for someone to press Update on Settings.
-cat << EOF > /etc/systemd/system/birdnet_update_check.timer
+# Earlier versions only checked nightly, from a timer of their own.
+if [ -f /etc/systemd/system/birdnet_update_check.timer ]; then
+  systemctl disable --now birdnet_update_check.timer
+  rm -f /etc/systemd/system/birdnet_update_check.timer
+fi
+cat << EOF > /etc/systemd/system/birdnet_update.timer
 [Unit]
-Description=Nightly BirdNET-Book web UI update check
+Description=Nightly BirdNET-Book web UI update
 [Timer]
 OnCalendar=*-*-* 03:00:00
 RandomizedDelaySec=2h
@@ -63,10 +69,10 @@ EOF
 
 # What is running now, so the card has a version to compare releases with.
 if [ ! -f "$INSTALLED_FILE" ] && version=$(current_web_ui_version); then
-  write_installed "$version" "" false
+  write_installed "$version" ""
 fi
 
 systemctl daemon-reload
-systemctl enable --now birdnet_update_check.timer
+systemctl enable --now birdnet_update.timer
 systemctl restart "$WEB_UI_SERVICE"
 echo "Updates set up for $WEB_UI_SERVICE on port $WEB_UI_PORT."

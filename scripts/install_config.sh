@@ -256,8 +256,8 @@ HEARTBEAT_URL=
 SILENCE_UPDATE_INDICATOR=0
 
 ## AUTOMATIC_UPDATE installs new releases from UPDATE_REPO by itself, checked
-## nightly by birdnet_update.timer. Only releases signed with a key in
-## /etc/birdnet/release_signers are installed automatically.
+## nightly by birdnet_update.timer. Set it to 0 to install them yourself from
+## Settings -> Updates.
 
 AUTOMATIC_UPDATE=1
 

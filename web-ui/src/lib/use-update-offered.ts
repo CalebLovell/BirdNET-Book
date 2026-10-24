@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { getUpdateState } from "./updates.ts";
 import { availableUpdate } from "./updates-data.ts";
 
-// A minute: the files only change nightly or when someone presses Check now,
+// A minute: the files only change nightly or when someone presses Check,
 // and reading them is two small file reads, so this stays cheap while still
 // clearing the dot soon after an install.
 const INTERVAL_MS = 60_000;

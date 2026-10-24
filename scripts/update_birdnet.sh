@@ -2,8 +2,8 @@
 # Updates the station to the newest release published on GitHub.
 #
 #   update_birdnet.sh       install the newest release now
-#   update_birdnet.sh -a    the nightly run: only if AUTOMATIC_UPDATE=1, and
-#                           only a release signed with a key this station trusts
+#   update_birdnet.sh -a    the nightly run: always looks, and installs only
+#                           when AUTOMATIC_UPDATE=1
 #   update_birdnet.sh -c    only look, and record what was found
 #
 # A release is its git commit plus a prebuilt web UI, both pinned by its
@@ -64,19 +64,13 @@ fail() {
   exit 1
 }
 
-if [ "$mode" = auto ] && [ "${AUTOMATIC_UPDATE:-0}" != 1 ]; then
-  echo "Automatic updates are off."
-  exit 0
-fi
-
 status_merge '{"state":"checking","message":"Looking for a new release."}'
 tag=$(latest_release_tag)
 [ -n "$tag" ] || fail "Couldn't reach GitHub, or no release has been published yet."
-signed=$(fetch_manifest "$tag" "$work") || fail "Release $tag failed its checks and was not installed."
+fetch_manifest "$tag" "$work" || fail "Release $tag failed its checks and was not installed."
 installed=$(jq -r '.version // empty' "$INSTALLED_FILE" 2>/dev/null)
 
-status_merge "$(jq -n --arg v "$tag" --argjson s "$([ "$signed" = signed ] && echo true || echo false)" \
-  --arg at "$(now_iso)" '{latest: {version: $v, signed: $s}, checkedAt: $at}')"
+status_merge "$(jq -n --arg v "$tag" --arg at "$(now_iso)" '{latest: {version: $v}, checkedAt: $at}')"
 
 if [ "$tag" = "$installed" ]; then
   status_merge '{"state":"idle","message":"Up to date."}'
@@ -84,22 +78,17 @@ if [ "$tag" = "$installed" ]; then
   exit 0
 fi
 
-if [ "$mode" = check ]; then
+# The nightly run with automatic updates off only looks, so the Settings link
+# can show that a release is waiting.
+if [ "$mode" = check ] || { [ "$mode" = auto ] && [ "${AUTOMATIC_UPDATE:-0}" != 1 ]; }; then
   status_merge "$(jq -n --arg v "$tag" '{state: "idle", message: ("Version " + $v + " is available.")}')"
   echo "$tag is available."
-  exit 0
-fi
-
-if [ "$mode" = auto ] && [ "$signed" != signed ]; then
-  status_merge "$(jq -n --arg v "$tag" '{state: "idle", message: ("Version " + $v + " is unsigned, so it waits for you to install it.")}')"
-  echo "$tag is unsigned; not installing it automatically."
   exit 0
 fi
 
 status_merge "$(jq -n --arg v "$tag" '{state: "updating", target: $v, message: ("Installing " + $v + ".")}')"
 
 commit=$(jq -r .commit "$work/release.json")
-signed_json=$([ "$signed" = signed ] && echo true || echo false)
 
 if [ "$WEB_UI_ONLY" = 1 ]; then
   install_bundle "$work" || fail "The web UI for $tag couldn't be downloaded."
@@ -114,7 +103,7 @@ if [ "$WEB_UI_ONLY" = 1 ]; then
     if [ -d "$WEB_RELEASES/$tag/updater" ]; then
       install -o "$USER" -g "$USER" -m 755 "$WEB_RELEASES/$tag/updater"/*.sh "$WEB_HOME/bin/"
     fi
-    write_installed "$tag" "$commit" "$signed_json"
+    write_installed "$tag" "$commit"
     prune_releases "$previous_web"
     status_merge "$(jq -n --arg v "$tag" '{state: "updated", target: null, message: ("Updated to " + $v + ".")}')"
     echo "Updated the web UI to $tag."
@@ -152,7 +141,7 @@ apply() {
 
 as_user git --no-pager -C "$REPO_DIR" diff --stat "$previous_commit" "$commit"
 if apply "$commit" "$tag"; then
-  write_installed "$tag" "$commit" "$signed_json"
+  write_installed "$tag" "$commit"
   prune_releases "$previous_web"
   status_merge "$(jq -n --arg v "$tag" '{state: "updated", target: null, message: ("Updated to " + $v + ".")}')"
   echo "Updated to $tag."

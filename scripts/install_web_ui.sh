@@ -46,13 +46,6 @@ install_node() {
   rm -rf "$tmp"
 }
 
-# Trusted once, here; updates never replace it (see release_signers).
-install_signers() {
-  if [ ! -f "$RELEASE_SIGNERS" ]; then
-    install -m 644 "$REPO_DIR/release_signers" "$RELEASE_SIGNERS"
-  fi
-}
-
 install_units() {
   cat << EOF > "$REPO_DIR/templates/birdnet_web_ui.service"
 [Unit]
@@ -80,7 +73,7 @@ Environment=BIRDNET_UPDATE_DIR=${WEB_HOME}
 WantedBy=multi-user.target
 EOF
 
-  # -a: the nightly run, which only installs signed releases and only when
+  # -a: the nightly run, which always looks and installs only when
   # AUTOMATIC_UPDATE=1. The other two are what the Updates card starts.
   local unit flags description
   for unit in update update_now update_check; do
@@ -157,29 +150,28 @@ ensure_password() {
 # The bundle for whatever is checked out: the release's own when HEAD is a
 # release tag, a local build otherwise.
 install_initial_bundle() {
-  local tag commit tmp signed
+  local tag commit tmp
   [ -L "$WEB_CURRENT" ] && [ -f "$WEB_CURRENT/server/index.mjs" ] && return 0
   mkdir -p "$WEB_RELEASES"
   chown -R "$USER:$USER" "$WEB_HOME"
   commit=$(as_user git -C "$REPO_DIR" rev-parse HEAD)
   tag=$(as_user git -C "$REPO_DIR" describe --tags --exact-match HEAD 2>/dev/null || true)
   tmp=$(mktemp -d)
-  if [ -n "$tag" ] && signed=$(fetch_manifest "$tag" "$tmp") \
+  if [ -n "$tag" ] && fetch_manifest "$tag" "$tmp" \
       && [ "$(jq -r .commit "$tmp/release.json")" = "$commit" ] \
       && install_bundle "$tmp"; then
     switch_web_ui "$tag"
-    write_installed "$tag" "$commit" "$([ "$signed" = signed ] && echo true || echo false)"
+    write_installed "$tag" "$commit"
   else
     tag=${tag:-dev-${commit:0:7}}
     build_bundle_from_source "$tag"
     switch_web_ui "$tag"
-    write_installed "$tag" "$commit" false
+    write_installed "$tag" "$commit"
   fi
   rm -rf "$tmp"
 }
 
 install_node
-install_signers
 install_auth_dir
 install_units
 install_initial_bundle
