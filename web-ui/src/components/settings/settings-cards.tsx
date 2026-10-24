@@ -1425,6 +1425,7 @@ function UpdatesSettingsCard({
 					title={`Update to ${offered}?`}
 					description="The station installs the new release and restarts. Recording stops for about a minute, and this page comes back when the station does. If the new version doesn't start, the station goes back to the one it has now."
 					confirmLabel="Update now"
+					confirmIcon={Download}
 					onCancel={() => setConfirming(false)}
 					onConfirm={() => {
 						setConfirming(false);

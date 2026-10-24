@@ -48,7 +48,8 @@ export function ConfirmDialog({
 	confirmLabel: string;
 	cancelLabel?: string;
 	cancelIcon?: LucideIcon;
-	confirmIcon?: LucideIcon;
+	/** Required: every button in a dialog carries an icon. */
+	confirmIcon: LucideIcon;
 	destructive?: boolean;
 	pending?: boolean;
 	onCancel: () => void;

@@ -78,9 +78,9 @@ export function SettingsCard({
 				<div className="flex-1">{children}</div>
 
 				{/* No status line beside Save: how the save went arrives as a
-				    toast, so the row holds only the controls. */}
-				<div className="flex flex-wrap items-center justify-end gap-2 border-t pt-(--page-gap)">
-					{restart}
+				    toast, so the row holds only the controls. Save leads, at the
+				    left, with Restart after it when there is one. */}
+				<div className="flex flex-wrap items-center justify-start gap-2 border-t pt-(--page-gap)">
 					<Button
 						type="submit"
 						size="default"
@@ -89,6 +89,7 @@ export function SettingsCard({
 					>
 						Save
 					</Button>
+					{restart}
 				</div>
 			</form>
 
@@ -97,6 +98,7 @@ export function SettingsCard({
 					title={`Save ${title.toLowerCase()} settings?`}
 					description={confirmDescription}
 					confirmLabel="Save changes"
+					confirmIcon={Save}
 					onCancel={() => setConfirming(false)}
 					onConfirm={() => {
 						setConfirming(false);
