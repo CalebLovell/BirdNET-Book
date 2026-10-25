@@ -200,7 +200,7 @@ function Field({
 	const field = { id, labelId: `${id}-label` };
 	const Name = readOnly ? "span" : "label";
 	return (
-		<div className="grid gap-x-8 gap-y-2 border-t py-(--page-gap) sm:grid-cols-[minmax(0,1fr)_minmax(0,20rem)] sm:items-center">
+		<div className="-mx-(--page-gap) grid gap-x-8 gap-y-2 border-t px-(--page-gap) py-(--page-gap) sm:grid-cols-[minmax(0,1fr)_minmax(0,20rem)] sm:items-center">
 			<div className="min-w-0">
 				<div className="flex items-center gap-1.5">
 					<Name

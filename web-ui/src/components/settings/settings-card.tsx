@@ -80,7 +80,7 @@ export function SettingsCard({
 				{/* No status line beside Save: how the save went arrives as a
 				    toast, so the row holds only the controls. Save leads, at the
 				    left, with Restart after it when there is one. */}
-				<div className="flex flex-wrap items-center justify-start gap-2 border-t pt-(--page-gap)">
+				<div className="-mx-(--page-gap) flex flex-wrap items-center justify-start gap-2 border-t px-(--page-gap) pt-(--page-gap)">
 					<Button
 						type="submit"
 						size="default"
