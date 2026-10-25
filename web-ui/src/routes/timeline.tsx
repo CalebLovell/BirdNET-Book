@@ -233,7 +233,7 @@ function TimelineCardsShell({
 					emptyMessage=""
 					className="self-start"
 				/>
-				<DetectionsByHourCardSkeleton />
+				<DetectionsByHourCardSkeleton className={HOUR_CARD_SIZE} />
 			</div>
 		</div>
 	);
@@ -566,7 +566,8 @@ function TimelineCards({
 	// for the column beside the body, so the same two cards follow it
 	// underneath, side by side from md (768px, roughly 360px each) up, each only
 	// as tall as its own content -- Highlights doesn't stretch to the chart's
-	// height and trail empty space. Only on a phone do they stack.
+	// height and trail empty space, and the chart keeps its fixed height rather
+	// than growing to a long Highlights card. Only on a phone do they stack.
 	return (
 		<div className="min-[1800px]:flex min-[1800px]:items-start min-[1800px]:gap-4">
 			{body}
@@ -585,6 +586,7 @@ function TimelineCards({
 				<DetectionsByHourCard
 					activity={hourActivity}
 					emptyMessage={emptyMessage}
+					className={HOUR_CARD_SIZE}
 				/>
 			</div>
 		</div>
@@ -600,6 +602,11 @@ function TimelineCards({
 // 1800px: below that, what's left beside a 72rem card is too narrow to hold
 // anything, so its cards drop beneath the body instead.
 const BODY_CARD_WIDTH = "min-w-0 min-[1800px]:w-[72rem] min-[1800px]:flex-none";
+
+// One height for the hour chart, whatever sits beside it. The species page
+// lets the same card stretch to its row; here a long Highlights card would
+// pull it into a tall, mostly empty chart.
+const HOUR_CARD_SIZE = "h-72 self-start";
 
 const VIEW_META: Record<
 	TimelineView,
