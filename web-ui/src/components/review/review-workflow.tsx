@@ -55,7 +55,12 @@ const UNDER_REVIEW_CLASS =
 // middle, with a little air before the binomial, so the pair fills the
 // portrait's height instead of huddling at its centre.
 const IDENTITY_ROW_CLASS = "flex items-start gap-(--page-gap)";
-const IDENTITY_TEXT_CLASS = "flex min-w-0 flex-1 flex-col gap-1.5 pt-2";
+// Name, binomial and the eBird link stacked tight, so the three stand no
+// taller than the portrait beside them.
+const IDENTITY_TEXT_CLASS = "flex min-w-0 flex-1 flex-col items-start";
+const NAME_CLASS =
+	"display-title font-bold text-2xl leading-[1.15] sm:text-3xl";
+const EBIRD_LINK_CLASS = "mt-1";
 const PORTRAIT_CLASS =
 	"flex size-20 shrink-0 items-center justify-center overflow-hidden max-[400px]:size-14";
 // The verdict buttons' band, bled to the card's edges like the queue's pager.
@@ -94,24 +99,26 @@ export function ReviewWorkflowSkeleton() {
 					aria-label="Detection under review"
 					className={UNDER_REVIEW_CLASS}
 				>
-					<CardHeader title="Under review">
-						<ShellSized className="rounded-md">
-							<Button variant="outline">
-								<ExternalLink />
-								<span className="max-sm:hidden">eBird reference</span>
-							</Button>
-						</ShellSized>
-					</CardHeader>
+					<CardHeader title="Under review" />
 					<div aria-hidden="true" className={IDENTITY_ROW_CLASS}>
 						<div className={PORTRAIT_CLASS}>
 							<ShellBar className="size-full rounded-md" />
 						</div>
 						<div className={IDENTITY_TEXT_CLASS}>
 							<ShellText
-								className="display-title font-bold text-2xl sm:text-3xl"
+								className={`${NAME_CLASS} w-full`}
 								barClassName="w-56 max-w-full"
 							/>
-							<ShellText className="text-sm" barClassName="w-36" />
+							<ShellText
+								className="w-full text-sm leading-tight"
+								barClassName="w-36"
+							/>
+							<ShellSized className={`${EBIRD_LINK_CLASS} rounded-md`}>
+								<Button variant="outline">
+									<ExternalLink />
+									eBird
+								</Button>
+							</ShellSized>
 						</div>
 					</div>
 					<SpectrogramPlayerSkeleton
@@ -362,21 +369,7 @@ export function ReviewWorkflow({
 						aria-label="Detection under review"
 						className={UNDER_REVIEW_CLASS}
 					>
-						{/* Its place in the queue is already the queue's highlighted row,
-						    so the header carries the species' eBird page instead. */}
-						<CardHeader title="Under review">
-							<Button asChild variant="outline">
-								<a
-									href={row.ebirdUrl}
-									target="_blank"
-									rel="noreferrer"
-									aria-label="eBird reference"
-								>
-									<ExternalLink />
-									<span className="max-sm:hidden">eBird reference</span>
-								</a>
-							</Button>
-						</CardHeader>
+						<CardHeader title="Under review" />
 						<div className={IDENTITY_ROW_CLASS}>
 							<div className={PORTRAIT_CLASS}>
 								<SpeciesImage
@@ -392,7 +385,7 @@ export function ReviewWorkflow({
 								    does -- moss set on the heading, not the anchor. */}
 								<h2
 									title={row.comName}
-									className="display-title truncate font-bold text-2xl text-[var(--moss)] sm:text-3xl"
+									className={`${NAME_CLASS} w-full truncate text-[var(--moss)]`}
 								>
 									<Link
 										to="/birds/$comName"
@@ -404,10 +397,22 @@ export function ReviewWorkflow({
 								</h2>
 								<p
 									title={row.sciName}
-									className="truncate text-[var(--bark)] text-sm italic"
+									className="w-full truncate text-[var(--bark)] text-sm italic leading-tight"
 								>
 									{row.sciName}
 								</p>
+								{/* The species' eBird page, under its names. */}
+								<Button asChild variant="outline" className={EBIRD_LINK_CLASS}>
+									<a
+										href={row.ebirdUrl}
+										target="_blank"
+										rel="noreferrer"
+										aria-label={`${row.comName} on eBird`}
+									>
+										<ExternalLink />
+										eBird
+									</a>
+								</Button>
 							</div>
 						</div>
 
