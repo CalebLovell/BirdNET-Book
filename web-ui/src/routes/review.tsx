@@ -1,15 +1,13 @@
 import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { CircleAlert, RotateCcw, SearchCheck } from "lucide-react";
+import { CircleAlert, SearchCheck } from "lucide-react";
 import { useState } from "react";
 import { Deferred } from "~/components/deferred.tsx";
 import { PageHeaderCard } from "~/components/page-header-card.tsx";
-import { PageStatus } from "~/components/page-status.tsx";
 import {
 	ReviewWorkflow,
 	ReviewWorkflowSkeleton,
 } from "~/components/review/review-workflow.tsx";
-import { Button } from "~/components/ui/button.tsx";
 import { PAGE_HEADERS } from "~/lib/page-headers.ts";
 import { pageTitle } from "~/lib/page-title.ts";
 import { requireUnlocked } from "~/lib/require-unlocked.ts";
@@ -41,12 +39,6 @@ export const Route = createFileRoute("/review")({
 		]).then(([page, species]) => ({ page, species })),
 	}),
 	component: Review,
-	// Gating this route gave its loader a second way to fail: the unlock status
-	// resolved in the root's `beforeLoad` can go stale -- another device rotating
-	// the session nonce, say -- between that check and the loader's call, and the
-	// gated server function then refuses. A narrow window, but without a boundary
-	// it surfaces raw.
-	errorComponent: ReviewUnavailable,
 });
 
 function Review() {
@@ -116,32 +108,6 @@ function Review() {
 					/>
 				)}
 			</Deferred>
-		</div>
-	);
-}
-
-function ReviewUnavailable() {
-	const router = useRouter();
-
-	return (
-		<div className="page-wrap py-4">
-			<PageStatus
-				tone="unavailable"
-				title="Review is unavailable"
-				actions={
-					<Button
-						variant="outline"
-						size="sm"
-						icon={RotateCcw}
-						onClick={() => router.invalidate()}
-					>
-						Try again
-					</Button>
-				}
-			>
-				The detection queue could not be read, or this browser's session expired
-				while the page was open. Reload to sign in again.
-			</PageStatus>
 		</div>
 	);
 }

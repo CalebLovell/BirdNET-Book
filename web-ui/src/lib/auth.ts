@@ -9,11 +9,22 @@ import {
 } from "./auth.server.ts";
 import { readSiteName } from "./settings-config.server.ts";
 
+const UNAUTHORIZED_MESSAGE = "This page requires the station password.";
+
 export class UnauthorizedError extends Error {
 	override name = "UnauthorizedError";
 	constructor() {
-		super("This page requires the station password.");
+		super(UNAUTHORIZED_MESSAGE);
 	}
+}
+
+/**
+ * Whether `error` is the gate's refusal, as it reaches the browser. The class
+ * does not survive the trip from a server function, so this goes by the
+ * message.
+ */
+export function isUnauthorizedError(error: unknown): boolean {
+	return error instanceof Error && error.message === UNAUTHORIZED_MESSAGE;
 }
 
 /**

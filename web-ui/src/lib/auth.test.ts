@@ -6,7 +6,11 @@ import { fileURLToPath } from "node:url";
 // Importing these confirms every gated symbol still exists and type-checks as
 // a server function -- if a name below gets renamed or removed, this file
 // fails to load before the assertions even run.
-import { requireUnlocked } from "./auth.ts";
+import {
+	isUnauthorizedError,
+	requireUnlocked,
+	UnauthorizedError,
+} from "./auth.ts";
 import { deleteDetections } from "./detections.ts";
 import { getStationHealth } from "./health.ts";
 import {
@@ -122,4 +126,18 @@ test("every gated server function carries requireUnlocked", () => {
 	// Same trap: detections.ts is mostly read paths for a public page, so its
 	// one destructive export shipped ungated.
 	assertGated(sourceOf("./detections.ts"), "deleteDetections");
+});
+
+test("the gate's refusal is recognised after losing its class", () => {
+	assert.equal(isUnauthorizedError(new UnauthorizedError()), true);
+	// What reaches the browser: a plain Error carrying the same message.
+	assert.equal(
+		isUnauthorizedError(new Error(new UnauthorizedError().message)),
+		true,
+	);
+	assert.equal(isUnauthorizedError(new Error("database is locked")), false);
+	assert.equal(
+		isUnauthorizedError("This page requires the station password."),
+		false,
+	);
 });
