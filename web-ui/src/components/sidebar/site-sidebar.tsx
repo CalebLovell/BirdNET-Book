@@ -25,7 +25,7 @@ export function SidebarBody({
 					onClick={onNavigate}
 					className="display-title px-3 pb-4 font-semibold text-xl no-underline"
 				>
-					BirdNET-Book
+					Songbook
 				</Link>
 			) : null}
 

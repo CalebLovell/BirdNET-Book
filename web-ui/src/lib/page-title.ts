@@ -1,4 +1,4 @@
-export const SITE_NAME = "BirdNET-Book";
+export const SITE_NAME = "Songbook";
 
 /**
  * Document title for a route. The site name leads so a row of pinned tabs

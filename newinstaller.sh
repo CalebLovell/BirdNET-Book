@@ -43,7 +43,7 @@ if [[ ! -z $PACKAGES_MISSING ]] ; then
   sudo apt -y install $PACKAGES_MISSING
 fi
 
-REPO=${BIRDNET_REPO:-CalebLovell/BirdNET-Book}
+REPO=${BIRDNET_REPO:-CalebLovell/Songbook}
 # The newest release, so the station starts on the same version the updater
 # would bring it to; main only while the project has no releases yet.
 branch=$(curl -fsSL "https://api.github.com/repos/${REPO}/releases/latest" 2>/dev/null | jq -r '.tag_name // empty')

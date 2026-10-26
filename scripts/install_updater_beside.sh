@@ -27,9 +27,9 @@ install -o "$USER" -g "$USER" -m 755 "$here/update_birdnet.sh" "$here/release_he
 
 for unit in update update_now update_check; do
   case $unit in
-    update) flags="-a"; description="Install a new BirdNET-Book web UI if automatic updates are on" ;;
-    update_now) flags=""; description="Install the newest BirdNET-Book web UI" ;;
-    update_check) flags="-c"; description="Look for a new BirdNET-Book web UI" ;;
+    update) flags="-a"; description="Install a new Songbook web UI if automatic updates are on" ;;
+    update_now) flags=""; description="Install the newest Songbook web UI" ;;
+    update_check) flags="-c"; description="Look for a new Songbook web UI" ;;
   esac
   cat << EOF > "/etc/systemd/system/birdnet_${unit}.service"
 [Unit]
@@ -52,7 +52,7 @@ if [ -f /etc/systemd/system/birdnet_update_check.timer ]; then
 fi
 cat << EOF > /etc/systemd/system/birdnet_update.timer
 [Unit]
-Description=Nightly BirdNET-Book web UI update
+Description=Nightly Songbook web UI update
 [Timer]
 OnCalendar=*-*-* 03:00:00
 RandomizedDelaySec=2h

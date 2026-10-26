@@ -177,7 +177,7 @@ def _download(url: str) -> bytes:
     # its User-Agent, and only the hosts the photo list is allowed to use.
     if urllib.parse.urlparse(url).hostname not in PHOTO_HOSTS:
         raise ValueError(f'refusing to fetch from {url}')
-    request = urllib.request.Request(url, headers={'User-Agent': 'BirdNET-Pi-Live photos tool'})
+    request = urllib.request.Request(url, headers={'User-Agent': 'Songbook photos tool'})
     with urllib.request.urlopen(request, timeout=30) as response:
         return response.read()
 

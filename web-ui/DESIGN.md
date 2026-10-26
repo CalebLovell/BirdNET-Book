@@ -1,7 +1,7 @@
 # Design system
 
 The rules the web UI follows. Tokens live in `src/styles.css`; this file says
-what they mean and when to use them. The visual reference is the "BirdNET-Book
+what they mean and when to use them. The visual reference is the "Songbook
 Design System" canvas on claude.ai.
 
 ## Principles

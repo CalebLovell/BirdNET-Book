@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Sets the BirdNET-Pi web UI password. The plaintext is never written to disk,
+# Sets the Songbook web UI password. The plaintext is never written to disk,
 # never passed as an argument, and never echoed to the terminal.
 set -euo pipefail
 

@@ -54,7 +54,7 @@ function dateLabel(date: string): string {
  */
 export function shareHeader([period, date]: string[]): string {
 	return [
-		"📖  BirdNET-Book",
+		"📖  Songbook",
 		`📊  ${period} Summary`,
 		...(date ? [`📅  ${date}`] : []),
 	].join("\n");

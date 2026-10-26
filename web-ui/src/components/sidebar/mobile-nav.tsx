@@ -158,7 +158,7 @@ function SiteName({ onClick }: { onClick?: () => void }) {
 			onClick={onClick}
 			className="display-title font-semibold text-lg no-underline"
 		>
-			BirdNET-Book
+			Songbook
 		</Link>
 	);
 }

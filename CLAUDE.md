@@ -1,4 +1,4 @@
-# BirdNET-Pi-Live
+# Songbook
 
 The web UI lives in `web-ui/` (Vite + React + TanStack Start). Code in
 `*.server.ts` runs only on the server; don't import it from client components.

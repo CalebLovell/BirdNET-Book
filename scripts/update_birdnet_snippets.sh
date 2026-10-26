@@ -221,8 +221,11 @@ if ! which jq &>/dev/null || ! which ssh-keygen &>/dev/null || ! which xz &>/dev
 fi
 if ! grep -E '^UPDATE_REPO=' /etc/birdnet/birdnet.conf &>/dev/null;then
   echo '## UPDATE_REPO is the GitHub repository this station takes its releases from' >> /etc/birdnet/birdnet.conf
-  echo "UPDATE_REPO=CalebLovell/BirdNET-Book" >> /etc/birdnet/birdnet.conf
+  echo "UPDATE_REPO=CalebLovell/Songbook" >> /etc/birdnet/birdnet.conf
 fi
+# The repository was renamed from BirdNET-Book; GitHub redirects the old name,
+# but only until something else takes it.
+sed -i 's|^UPDATE_REPO=CalebLovell/BirdNET-Book$|UPDATE_REPO=CalebLovell/Songbook|' /etc/birdnet/birdnet.conf
 # The web UI, its service and the update timer. Run every update, so a release
 # that changes their unit files gets them rewritten.
 "$HOME/BirdNET-Pi/scripts/install_web_ui.sh"

@@ -4,7 +4,7 @@
 # Sourced, never run. Expects USER and HOME to name the station's user, and
 # runs as root.
 
-UPDATE_REPO=${UPDATE_REPO:-CalebLovell/BirdNET-Book}
+UPDATE_REPO=${UPDATE_REPO:-CalebLovell/Songbook}
 REPO_DIR=$HOME/BirdNET-Pi
 WEB_HOME=$HOME/BirdNET-Pi-web
 WEB_RELEASES=$WEB_HOME/releases

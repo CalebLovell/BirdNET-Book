@@ -67,7 +67,7 @@ export function verifyPassword(password: string, stored: string) {
 
 function serialize(auth: AuthFile) {
 	return [
-		"# BirdNET-Pi web UI password. Do not edit by hand --",
+		"# Songbook web UI password. Do not edit by hand --",
 		"# use scripts/set_web_ui_password.sh.",
 		`WEB_UI_PWD_HASH=${auth.hash}`,
 		`WEB_UI_SESSION_NONCE=${auth.nonce}`,

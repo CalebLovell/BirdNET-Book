@@ -1300,7 +1300,7 @@ function UpdatesSettingsCard({
 	return (
 		<SettingsCard
 			title="Updates"
-			description="Keep this station on the newest release of BirdNET-Book."
+			description="Keep this station on the newest release of Songbook."
 			confirmDescription="This writes the values in this card to the station's configuration. Nothing restarts."
 			onSave={() => void form.submit()}
 			saveDisabled={form.saveDisabled}
