@@ -48,12 +48,9 @@ export const getUnlockStatusFn = createServerFn({ method: "GET" }).handler(
 			console.error("[auth] could not read the unlock status", error);
 			status = { unlocked: false, state: "misconfigured" };
 		}
-		// The station's name rides along only once unlocked: it's the
-		// account row's title, and a visitor has no business reading it.
-		return {
-			...status,
-			siteName: status.unlocked ? await readSiteName() : "",
-		};
+		// The station's name, for everyone: it heads the sidebar so a visitor
+		// knows whose station they're looking at.
+		return { ...status, siteName: await readSiteName() };
 	},
 );
 

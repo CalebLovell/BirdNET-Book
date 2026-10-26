@@ -387,8 +387,8 @@ export async function readHighlightThresholds(
 
 /**
  * The station's own name (`SITE_NAME`), trimmed, or "" when unset or the config
- * can't be read. Only ever handed to a signed-in browser: it names whoever's
- * station this is, and Settings -- where it's edited -- is gated too.
+ * can't be read. Shown to every visitor under the sidebar's wordmark; only
+ * Settings, where it's edited, is gated.
  */
 export async function readSiteName(settingsPath = resolveSettingsPath()) {
 	try {

@@ -21,10 +21,11 @@ export function SidebarBody({
 	const { auth } = useRouteContext({ from: "__root__" });
 	return (
 		<div className="flex min-h-full flex-col py-3">
-			{/* The wordmark, and under it which station this is, over a hairline
-			    that runs the card's full width. Both start where the nav's icons
-			    and labels do (the nav's inset plus a link's padding). The name is
-			    only known once signed in, so a visitor sees the wordmark alone. */}
+			{/* The wordmark, and under it which station this is, over a hairline.
+			    Both start where the nav's icons and labels do (the nav's inset plus
+			    a link's padding), and the hairline spans what the search box and
+			    the section labels' lines do. A station with no name set shows the
+			    wordmark alone. */}
 			{withTitle ? (
 				<>
 					<Link
@@ -39,7 +40,7 @@ export function SidebarBody({
 							</span>
 						) : null}
 					</Link>
-					<div aria-hidden="true" className="mb-3 h-px bg-[var(--line)]" />
+					<div aria-hidden="true" className="mx-3 mb-3 h-px bg-[var(--line)]" />
 				</>
 			) : null}
 
