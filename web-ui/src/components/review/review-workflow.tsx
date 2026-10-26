@@ -401,18 +401,25 @@ export function ReviewWorkflow({
 								>
 									{row.sciName}
 								</p>
-								{/* The species' eBird page, under its names. */}
-								<Button asChild variant="outline" className={EBIRD_LINK_CLASS}>
-									<a
-										href={row.ebirdUrl}
-										target="_blank"
-										rel="noreferrer"
-										aria-label={`${row.comName} on eBird`}
+								{/* The species' eBird (or, for non-birds, iNaturalist) page,
+								    under its names. */}
+								{row.speciesLink && (
+									<Button
+										asChild
+										variant="outline"
+										className={EBIRD_LINK_CLASS}
 									>
-										<ExternalLink />
-										eBird
-									</a>
-								</Button>
+										<a
+											href={row.speciesLink.href}
+											target="_blank"
+											rel="noreferrer"
+											aria-label={`${row.comName} on ${row.speciesLink.site}`}
+										>
+											<ExternalLink />
+											{row.speciesLink.site}
+										</a>
+									</Button>
+								)}
 							</div>
 						</div>
 

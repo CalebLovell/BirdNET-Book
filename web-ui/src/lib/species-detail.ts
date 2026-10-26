@@ -4,13 +4,13 @@ import { avg, desc, sql } from "drizzle-orm";
 import { db } from "~/db/index.ts";
 import { detections } from "~/db/schema.ts";
 import { audioUrlFor } from "~/lib/audio.ts";
-import { ebirdUrlFor } from "~/lib/ebird.ts";
 import { illustrationUrlFor } from "~/lib/illustrations.ts";
 import {
 	type CatalogSpecies,
 	findCatalogSpeciesBySlug,
 } from "~/lib/species-catalog.ts";
 import { loadInstalledSpeciesCatalog } from "~/lib/species-control.server.ts";
+import { type SpeciesLink, speciesLinkFor } from "~/lib/species-link.ts";
 import { comNameToSlug } from "~/lib/species-slug.ts";
 import { buildHourActivity, type HourActivity } from "~/lib/stats-data.ts";
 import {
@@ -47,7 +47,7 @@ export type SpeciesDetail = {
 	comName: string;
 	sciName: string;
 	imageUrl: string | null;
-	ebirdUrl: string;
+	speciesLink: SpeciesLink | null;
 	totalDetections: number;
 	availableYears: number[];
 	firstDetected: Visit;
@@ -314,7 +314,7 @@ export const getSpeciesDetail = createServerFn({ method: "GET" })
 				comName,
 				sciName: totals.sciName,
 				imageUrl: illustrationUrlFor(totals.sciName, "flight"),
-				ebirdUrl: ebirdUrlFor(totals.sciName, comName),
+				speciesLink: speciesLinkFor(totals.sciName),
 				totalDetections: totals.totalDetections,
 				availableYears,
 				firstDetected: first ?? { date: "", time: "", confidence: null },

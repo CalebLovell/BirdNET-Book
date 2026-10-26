@@ -653,7 +653,7 @@ function SpeciesCard({ card }: { card: LifeListCard }) {
 				</div>
 				<SpeciesActions
 					audioUrl={card.audioUrl}
-					ebirdUrl={card.ebirdUrl}
+					speciesLink={card.speciesLink}
 					comName={card.comName}
 				/>
 				<div className="w-full self-end text-right text-[10px] text-muted-foreground/70 leading-none">

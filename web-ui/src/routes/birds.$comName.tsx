@@ -42,7 +42,7 @@ import {
 import { YearSelector } from "~/components/year-selector.tsx";
 import { formatConfidence } from "~/lib/confidence.ts";
 import { formatDate, formatDateTime, formatTime } from "~/lib/date-format.ts";
-import { ebirdUrlFor } from "~/lib/ebird.ts";
+import { speciesLinkFor } from "~/lib/species-link.ts";
 import { EMPTY } from "~/lib/empty-messages.ts";
 import { heatColor, heatColorAt } from "~/lib/heatmap.ts";
 import { illustrationUrlFor } from "~/lib/illustrations.ts";
@@ -438,7 +438,7 @@ function UndetectedSpecies({
 						it is heard.
 					</p>
 					<SpeciesActions
-						ebirdUrl={ebirdUrlFor(sciName, comName)}
+						speciesLink={speciesLinkFor(sciName)}
 						comName={comName}
 					/>
 				</div>
@@ -799,7 +799,10 @@ function SummaryCard({ detail }: { detail: SpeciesDetail }) {
 				</p>
 				{/* Every row of the column on one even step; the eBird link takes its
 				    own row under the last-heard line rather than the card's far edge. */}
-				<SpeciesActions ebirdUrl={detail.ebirdUrl} comName={detail.comName} />
+				<SpeciesActions
+					speciesLink={detail.speciesLink}
+					comName={detail.comName}
+				/>
 			</div>
 		</section>
 	);

@@ -3,7 +3,6 @@ import { and, lt, sql } from "drizzle-orm";
 import { db } from "~/db/index.ts";
 import { detections } from "~/db/schema.ts";
 import { dayIdFor } from "~/lib/day.ts";
-import { ebirdUrlFor } from "~/lib/ebird.ts";
 import {
 	type HighlightThresholds,
 	lookbackFor,
@@ -15,6 +14,7 @@ import {
 	type VocalJump,
 } from "~/lib/highlights-data.ts";
 import { illustrationUrlFor } from "~/lib/illustrations.ts";
+import { type SpeciesLink, speciesLinkFor } from "~/lib/species-link.ts";
 import type { TimelinePeriod } from "~/lib/timeline-periods.ts";
 import {
 	addDays,
@@ -41,7 +41,7 @@ export type TimelineRow = {
 	comName: string;
 	sciName: string;
 	imageUrl: string | null;
-	ebirdUrl: string;
+	speciesLink: SpeciesLink | null;
 	totalDetections: number;
 	hourCounts: number[];
 	/**
@@ -368,7 +368,7 @@ export async function loadTimelineData({
 			comName: entry.comName,
 			sciName: entry.sciName,
 			imageUrl: illustrationUrlFor(entry.sciName),
-			ebirdUrl: ebirdUrlFor(entry.sciName, entry.comName),
+			speciesLink: speciesLinkFor(entry.sciName),
 			totalDetections: entry.hourCounts.reduce((a, b) => a + b, 0),
 			hourCounts: entry.hourCounts,
 			isNew: flag?.isNew ?? false,

@@ -8,7 +8,6 @@ import type { DatabaseSync } from "node:sqlite";
 import { audioUrlFor } from "~/lib/audio.ts";
 import { CONFIDENT_MIN } from "~/lib/confidence.ts";
 import { resolveDetectionClipPath } from "~/lib/detection-file-path.server.ts";
-import { ebirdUrlFor } from "~/lib/ebird.ts";
 import { illustrationUrlFor } from "~/lib/illustrations.ts";
 import {
 	parseSpeciesCatalog,
@@ -18,6 +17,7 @@ import {
 	type SpeciesOption,
 } from "~/lib/review-data.ts";
 import { DEFAULT_REVIEW_RARE_SPECIES_MAX } from "~/lib/settings-data.ts";
+import { type SpeciesLink, speciesLinkFor } from "~/lib/species-link.ts";
 
 export type ReviewCandidate = {
 	rowId: number;
@@ -30,7 +30,7 @@ export type ReviewCandidate = {
 	lifetimeCount: number;
 	audioUrl: string;
 	audioAvailable: boolean;
-	ebirdUrl: string;
+	speciesLink: SpeciesLink | null;
 	/** The bundled illustration, or null for the generic bird glyph. */
 	imageUrl: string | null;
 };
@@ -178,7 +178,7 @@ export function loadReviewPage(
 				...row,
 				audioUrl: audioUrlFor(row.date, row.comName, row.fileName),
 				audioAvailable: filePath !== null && existsSync(filePath),
-				ebirdUrl: ebirdUrlFor(row.sciName, row.comName),
+				speciesLink: speciesLinkFor(row.sciName),
 				imageUrl: illustrationUrlFor(row.sciName),
 			};
 		}),

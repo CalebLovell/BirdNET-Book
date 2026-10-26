@@ -26,8 +26,8 @@ import {
 	type DetectionWorkspaceSearch,
 	normalizeDetectionWorkspaceSearch,
 } from "~/lib/detection-workspace.ts";
-import { ebirdUrlFor } from "~/lib/ebird.ts";
 import { illustrationUrlFor } from "~/lib/illustrations.ts";
+import { type SpeciesLink, speciesLinkFor } from "~/lib/species-link.ts";
 
 const isToday = sql`${detections.Date} = date('now', 'localtime')`;
 const isLastHour = sql`datetime(${detections.Date} || ' ' || ${detections.Time}) >= datetime('now', '-1 hour', 'localtime')`;
@@ -339,7 +339,7 @@ export type LifeListCard = {
 	lastDetected: string;
 	audioUrl: string | null;
 	imageUrl: string | null;
-	ebirdUrl: string;
+	speciesLink: SpeciesLink | null;
 };
 
 export const getLifeListCards = createServerFn({ method: "GET" }).handler(
@@ -379,7 +379,7 @@ export const getLifeListCards = createServerFn({ method: "GET" }).handler(
 					lastDetected: "",
 					audioUrl: null,
 					imageUrl: illustrationUrlFor(group.sciName),
-					ebirdUrl: ebirdUrlFor(group.sciName, group.comName),
+					speciesLink: speciesLinkFor(group.sciName),
 					fileName: "",
 				};
 				cards.set(group.comName, card);
