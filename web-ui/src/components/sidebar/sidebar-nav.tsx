@@ -178,9 +178,12 @@ function SectionLabel({ id, children }: { id: string; children: string }) {
 	return (
 		<h2
 			id={id}
-			className="m-0 flex items-center gap-2 pb-2 font-bold text-[0.69rem] text-[var(--kicker)] leading-none"
+			className="-mx-3 m-0 flex items-center gap-2 pb-2 font-bold text-[0.69rem] text-[var(--kicker)] leading-none"
 		>
-			<span aria-hidden="true" className="h-px w-3 bg-[var(--line)]" />
+			{/* The lines run out past the nav's inset to the card's edges, like the
+			    divider under the wordmark; the leading one is that inset longer,
+			    so the label itself stays put. */}
+			<span aria-hidden="true" className="h-px w-6 bg-[var(--line)]" />
 			{children}
 			<span aria-hidden="true" className="h-px flex-1 bg-[var(--line)]" />
 		</h2>
