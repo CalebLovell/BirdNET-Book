@@ -63,27 +63,9 @@ export const getDetectionStats = createServerFn({ method: "GET" }).handler(
 	},
 );
 
-export const getRecentDetections = createServerFn({ method: "GET" }).handler(
-	async (): Promise<Detection[]> => {
-		return db
-			.select()
-			.from(detections)
-			.orderBy(desc(detections.Date), desc(detections.Time))
-			.limit(50);
-	},
-);
-
-export const getDetections = createServerFn({ method: "GET" }).handler(
-	async (): Promise<Detection[]> => {
-		return db
-			.select()
-			.from(detections)
-			.orderBy(desc(detections.Date), desc(detections.Time))
-			.limit(200);
-	},
-);
-
-export type DetectionTableRow = Detection & {
+// No Lat/Lon: the table is public, and the station's coordinates are where
+// its owner lives.
+export type DetectionTableRow = Omit<Detection, "Lat" | "Lon"> & {
 	rowId: number;
 };
 
@@ -190,8 +172,6 @@ export const getDetectionsPage = createServerFn({ method: "GET" })
 				Sci_Name: detections.Sci_Name,
 				Com_Name: detections.Com_Name,
 				Confidence: detections.Confidence,
-				Lat: detections.Lat,
-				Lon: detections.Lon,
 				Cutoff: detections.Cutoff,
 				Week: detections.Week,
 				Sens: detections.Sens,
