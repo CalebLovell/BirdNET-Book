@@ -40,8 +40,10 @@ export function CurrentBirdCard({
 	if (!current && hasAnyDetections) {
 		return (
 			<HeroCardShell label="Last 24 hours" portrait={<NestPortrait />}>
-				<StandInBody>
-					<TitleRow live={live}>{EMPTY.window.liveQuietTitle}</TitleRow>
+				<StandInBody live={live}>
+					<h1 className="display-title font-bold text-2xl sm:text-3xl">
+						{EMPTY.window.liveQuietTitle}
+					</h1>
 					<p className="text-muted-foreground">{EMPTY.window.liveQuietBody}</p>
 				</StandInBody>
 			</HeroCardShell>
@@ -86,28 +88,17 @@ export function CurrentBirdCard({
 	);
 }
 
-// Title and pill share a line, pill on the right, as on the bird card.
-function TitleRow({
+// Laid over an invisible copy of the loading shell's text, in one grid cell,
+// so the card keeps the height the shell gave it and the page below doesn't
+// jump when the snapshot lands. The text itself stays centred in that height,
+// while the pill, if any, keeps to the top-right corner as on the bird card.
+function StandInBody({
 	live,
 	children,
 }: {
-	live: ReactNode;
+	live?: ReactNode;
 	children: ReactNode;
 }) {
-	return (
-		<div className="flex flex-wrap items-start justify-between gap-3 max-[400px]:gap-2">
-			<h1 className="display-title font-bold text-2xl sm:text-3xl">
-				{children}
-			</h1>
-			{live}
-		</div>
-	);
-}
-
-// Laid over an invisible copy of the loading shell's text, in one grid cell,
-// so the card keeps the height the shell gave it and the page below doesn't
-// jump when the snapshot lands. The text itself stays centred in that height.
-function StandInBody({ children }: { children: ReactNode }) {
 	return (
 		<div className="grid">
 			<div
@@ -117,8 +108,11 @@ function StandInBody({ children }: { children: ReactNode }) {
 			>
 				<HeroTextShell actions={<LivePillSkeleton />} />
 			</div>
-			<div className="col-start-1 row-start-1 flex flex-col justify-center gap-2">
-				{children}
+			<div className="col-start-1 row-start-1 flex items-start justify-between gap-3 max-[400px]:gap-2">
+				<div className="flex min-w-0 flex-col justify-center gap-2 self-stretch">
+					{children}
+				</div>
+				{live}
 			</div>
 		</div>
 	);
