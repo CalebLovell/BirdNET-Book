@@ -23,6 +23,32 @@ export function faviconHref(
     either claims the tab or lets it happen. */
 let pendingReset: ReturnType<typeof setTimeout> | undefined;
 
+/** The icon each history entry last showed, by the router's entry key. */
+const iconByEntry = new Map<string, string>();
+
+function entryKey(): string | undefined {
+	return (history.state as { key?: string } | null)?.key;
+}
+
+function showIcon(link: HTMLLinkElement, href: string) {
+	link.setAttribute("href", href);
+	const key = entryKey();
+	if (key) iconByEntry.set(key, href);
+}
+
+// Back and Forward: the browser puts back the icon it remembers for the entry
+// straight away, then rereads the page's link -- which still names the page
+// being left until React renders the one arrived at, so the tab flickered
+// between the two. Pointing the link at the arriving entry's icon in the same
+// moment means the page already agrees with the browser.
+if (typeof window !== "undefined") {
+	window.addEventListener("popstate", () => {
+		const href = iconByEntry.get(entryKey() ?? "");
+		const link = document.querySelector<HTMLLinkElement>('link[rel~="icon"]');
+		if (href && link) link.setAttribute("href", href);
+	});
+}
+
 /**
  * Points the tab icon at `href` while the calling component is mounted, and
  * puts the default back once it's gone. `undefined` means the page doesn't know
@@ -52,13 +78,9 @@ export function useFavicon(
 		if (!link) return;
 
 		clearTimeout(pendingReset);
-		if (href !== undefined)
-			link.setAttribute("href", faviconHref(href, fallback));
+		if (href !== undefined) showIcon(link, faviconHref(href, fallback));
 		return () => {
-			pendingReset = setTimeout(
-				() => link.setAttribute("href", DEFAULT_FAVICON),
-				0,
-			);
+			pendingReset = setTimeout(() => showIcon(link, DEFAULT_FAVICON), 0);
 		};
 	}, [href, fallback]);
 }
