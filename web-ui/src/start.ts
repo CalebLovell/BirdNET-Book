@@ -1,4 +1,10 @@
-import { createMiddleware, createStart } from "@tanstack/react-start";
+import {
+	createCsrfMiddleware,
+	createMiddleware,
+	createStart,
+} from "@tanstack/react-start";
+
+import { isStationOrigin } from "~/lib/csrf-origin.ts";
 
 /**
  * Headers every response carries, for a station that may face the internet.
@@ -37,6 +43,25 @@ const securityHeaders = createMiddleware({ type: "request" }).server(
 	},
 );
 
+/**
+ * Server functions refuse calls made from another site's page. The unlock
+ * cookie is `SameSite=Lax`, which already keeps it off cross-site POSTs, but
+ * not off GETs from a link, nor off requests from a sibling subdomain (same
+ * site, different origin) -- and a server function is an RPC endpoint, not a
+ * page anyone should reach from elsewhere.
+ *
+ * Browsers that send `Sec-Fetch-Site` (every current one, over HTTPS) must say
+ * `same-origin`. Over plain HTTP on the LAN they don't send it, so the
+ * `Origin` (or `Referer`) must match the station's own -- see
+ * `isStationOrigin` for how that holds up behind a proxy. A request with none
+ * of the three is refused: no browser sends a server-function call that way.
+ */
+const csrf = createCsrfMiddleware({
+	filter: (ctx) => ctx.handlerType === "serverFn",
+	origin: (origin, { request }) =>
+		isStationOrigin(origin, request, Boolean(process.env.WEB_UI_TRUSTED_PROXY)),
+});
+
 export const startInstance = createStart(() => ({
-	requestMiddleware: [securityHeaders],
+	requestMiddleware: [securityHeaders, csrf],
 }));
