@@ -102,7 +102,7 @@ export function MobileNav() {
 					{/* The bar's height and look, with the name against the panel's left
 					    edge, in line with the search box below, and the close button at
 					    its far end. */}
-					<div className={BAR_CLASS}>
+					<div className={DRAWER_BAR_CLASS}>
 						<SiteName onClick={() => setIsOpen(false)} />
 						<button
 							type="button"
@@ -146,8 +146,12 @@ export function InMenuBar({ children }: { children: ReactNode }) {
 }
 
 // Shared by the bar and the drawer's top row so the two stay the same size.
-const BAR_CLASS =
-	"z-30 flex h-14 shrink-0 items-center gap-3 border-[var(--line)] border-b bg-[var(--paper-raised)] px-4 max-[400px]:px-2 xl:hidden";
+const BAR_BASE_CLASS =
+	"z-30 flex h-14 shrink-0 items-center gap-3 border-[var(--line)] border-b bg-[var(--paper-raised)] xl:hidden";
+const BAR_CLASS = `${BAR_BASE_CLASS} px-4 max-[400px]:px-2`;
+// The drawer's row takes the sidebar body's inset instead of the page gutter,
+// so the name's box lines up with the search box under it at every width.
+const DRAWER_BAR_CLASS = `${BAR_BASE_CLASS} px-3`;
 
 const ROUND_BUTTON_CLASS =
 	"flex size-9 items-center justify-center rounded-full bg-[var(--paper-raised)] text-[var(--moss)] transition-colors duration-[180ms] hover:bg-[color-mix(in_oklab,var(--moss)_8%,var(--paper-raised))]";
