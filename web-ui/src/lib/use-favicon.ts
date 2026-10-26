@@ -2,21 +2,13 @@ import { useEffect } from "react";
 
 import { isPhotoUrl } from "~/lib/illustrations.ts";
 
-/** What the tab shows on any page that isn't about a bird: the site's mark. */
-export const DEFAULT_FAVICON = "/songbook.svg";
+/** The tab's picture on any page without a bird of its own: the empty nest. */
+export const DEFAULT_FAVICON = "/illustrations/nest.webp";
 
-/** What a bird page shows when it has no painted bird to put in the tab. */
-export const NEST_FAVICON = "/illustrations/nest.webp";
-
-/**
- * The icon for `href`: a reference photo is never a favicon, so it, like no
- * bird at all, gets the fallback.
- */
-export function faviconHref(
-	href: string | null,
-	fallback: string = DEFAULT_FAVICON,
-): string {
-	return href && !isPhotoUrl(href) ? href : fallback;
+/** The icon for `href`: a reference photo is never a favicon, so it, like no
+    bird at all, gets the nest. */
+export function faviconHref(href: string | null): string {
+	return href && !isPhotoUrl(href) ? href : DEFAULT_FAVICON;
 }
 
 /** The reset a page that just unmounted has asked for, until the next page
@@ -78,14 +70,15 @@ if (typeof window !== "undefined") {
 }
 
 /**
- * Points the tab icon at `href` while the calling component is mounted, and
- * puts the default back once it's gone. `undefined` means the page doesn't know
+ * Points the tab icon at a bird page's painting while the calling component
+ * is mounted -- the nest when there's no painting -- and puts the nest back
+ * once it's gone. `undefined` means the page doesn't know
  * its picture yet: the tab keeps whatever it shows rather than flashing a
  * stand-in while the data loads.
  *
  * The way back to the default waits a tick: a page that takes over the tab in
  * the same navigation cancels it, so going from one bird page to another never
- * shows the mark in between. A page that doesn't claim the tab lets it run.
+ * shows the nest in between. A page that doesn't claim the tab lets it run.
  *
  * This mutates the single <link rel="icon"> the root route renders rather than
  * appending a second one, which matters more than it looks: a document gets one
@@ -97,23 +90,15 @@ if (typeof window !== "undefined") {
  * though that would server-render it -- the root's link is already in the
  * document, so a route-level one only ever arrives as the second.
  */
-export function useFavicon(
-	href: string | null | undefined,
-	fallback: string = DEFAULT_FAVICON,
-) {
+export function useBirdFavicon(href: string | null | undefined) {
 	useEffect(() => {
 		const link = document.querySelector<HTMLLinkElement>('link[rel~="icon"]');
 		if (!link) return;
 
 		clearTimeout(pendingReset);
-		if (href !== undefined) showIcon(link, faviconHref(href, fallback));
+		if (href !== undefined) showIcon(link, faviconHref(href));
 		return () => {
 			pendingReset = setTimeout(() => showIcon(link, DEFAULT_FAVICON), 0);
 		};
-	}, [href, fallback]);
-}
-
-/** A bird page's tab: its bird's painting, or the nest when it has none. */
-export function useBirdFavicon(href: string | null | undefined) {
-	useFavicon(href, NEST_FAVICON);
+	}, [href]);
 }

@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import { illustrationUrlFor, isPhotoUrl } from "./illustrations.ts";
-import { DEFAULT_FAVICON, faviconHref, NEST_FAVICON } from "./use-favicon.ts";
+import { DEFAULT_FAVICON, faviconHref } from "./use-favicon.ts";
 
 const PHOTO = "https://inaturalist-open-data.s3.amazonaws.com/x.jpg";
 
@@ -40,15 +40,6 @@ test("faviconHref never shows a photo", () => {
 	assert.equal(faviconHref(null), DEFAULT_FAVICON);
 	assert.equal(
 		faviconHref("/illustrations-new/x.png"),
-		"/illustrations-new/x.png",
-	);
-});
-
-test("a bird page falls back to the nest, not the site's mark", () => {
-	assert.equal(faviconHref(null, NEST_FAVICON), NEST_FAVICON);
-	assert.equal(faviconHref(PHOTO, NEST_FAVICON), NEST_FAVICON);
-	assert.equal(
-		faviconHref("/illustrations-new/x.png", NEST_FAVICON),
 		"/illustrations-new/x.png",
 	);
 });

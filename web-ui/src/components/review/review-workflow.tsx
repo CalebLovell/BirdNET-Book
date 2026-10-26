@@ -39,6 +39,7 @@ import { EMPTY } from "~/lib/empty-messages.ts";
 import type { ReviewCandidate, ReviewPage } from "~/lib/review.server.ts";
 import { REVIEW_PAGE_SIZE, type SpeciesOption } from "~/lib/review-data.ts";
 import { comNameToSlug } from "~/lib/species-slug.ts";
+import { useBirdFavicon } from "~/lib/use-favicon.ts";
 
 /** A queue row's height: the 40px thumbnail and 7px above and below it. */
 const ROW_HEIGHT_PX = 54;
@@ -306,6 +307,8 @@ export function ReviewWorkflow({
 	const [query, setQuery] = useState("");
 	const rows = page.candidates;
 	const row = rows[Math.min(index, Math.max(0, rows.length - 1))];
+	// The tab shows the bird under review, following along as the queue moves.
+	useBirdFavicon(row?.imageUrl ?? null);
 	const pageCount = Math.max(1, Math.ceil(page.total / page.pageSize));
 	const paged = pageCount > 1;
 	/** A recording's place in the whole queue, counted from one. */
