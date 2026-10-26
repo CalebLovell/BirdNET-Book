@@ -2,8 +2,7 @@
  * The site's mark: a bird singing on an open book, drawn on Lucide's 24px grid
  * with its 2px round strokes so it sits beside the nav icons as one of them.
  * The bird takes the text color; the book is bark and the song is sand.
- * public/songbook.svg is the same drawing for the tab, lightened when the
- * browser itself is dark so it still shows on a dark tab bar.
+ * public/songbook.svg is the same drawing, in the same colors, for the tab.
  */
 export function SongbookMark({ className = "" }: { className?: string }) {
 	return (
