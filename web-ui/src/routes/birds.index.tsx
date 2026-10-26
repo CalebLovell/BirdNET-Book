@@ -181,8 +181,8 @@ function SpeciesControls() {
 		// 640px the same choice becomes a dropdown.
 		<div className="flex items-center gap-2 sm:gap-3">
 			<SearchInput
-				aria-label="Filter by species"
-				placeholder="Search species..."
+				aria-label="Filter birds"
+				placeholder="Search birds..."
 				value={queryInput}
 				onChange={(e) => {
 					const value = e.target.value;
@@ -235,7 +235,7 @@ function SpeciesGridShell() {
 				<span className="ml-auto">
 					<ShellSized className="rounded-md">
 						<PageStepper
-							label="Species pages"
+							label="Bird pages"
 							page={1}
 							pageCount={2}
 							onPageChange={() => {}}
@@ -451,7 +451,7 @@ function SpeciesFooter({
 			</div>
 			<PageStepper
 				className="ml-auto"
-				label="Species pages"
+				label="Bird pages"
 				page={page}
 				pageCount={pageCount}
 				onPageChange={onPageChange}

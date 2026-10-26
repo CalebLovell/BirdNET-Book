@@ -343,7 +343,7 @@ function BirdNames({
 	);
 }
 
-/** A named bird, linked to its species page the way Recent activity links its
+/** A named bird, linked to its bird page the way Recent activity links its
  * birds: moss at medium weight, underlined only on hover, so a line of four
  * names reads as links without turning into a row of rules. */
 function BirdName({ bird }: { bird: HighlightBird }) {

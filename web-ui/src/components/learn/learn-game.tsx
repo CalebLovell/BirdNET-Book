@@ -344,7 +344,7 @@ export function LearnGame({
 		// and the score and pip track above the clip stand in for it. Both keep
 		// their natural height -- the rail stops where its rows do.
 		//
-		// On a wide page the split copies the species page's: its left track is
+		// On a wide page the split copies the bird page's: its left track is
 		// the year heat map's natural width (914px), the right one takes the rest
 		// with a 20rem floor. So the game sits at the heat map's width and the
 		// rail at the visit log's, and the two pages read as one system. Past

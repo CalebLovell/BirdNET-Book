@@ -603,7 +603,7 @@ function TimelineCards({
 // anything, so its cards drop beneath the body instead.
 const BODY_CARD_WIDTH = "min-w-0 min-[1800px]:w-[72rem] min-[1800px]:flex-none";
 
-// One height for the hour chart, whatever sits beside it. The species page
+// One height for the hour chart, whatever sits beside it. The bird page
 // lets the same card stretch to its row; here a long Highlights card would
 // pull it into a tall, mostly empty chart.
 const HOUR_CARD_SIZE = "h-72 self-start";

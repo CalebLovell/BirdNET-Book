@@ -264,7 +264,7 @@ export function SiteSearch({ onNavigate }: { onNavigate?: () => void }) {
 						{results.map((result, index) => (
 							<div key={resultKey(result)}>
 								{index === 0 && result.kind === "species" ? (
-									<GroupLabel>Species</GroupLabel>
+									<GroupLabel>Birds</GroupLabel>
 								) : null}
 								{index === firstPage ? (
 									<GroupLabel divided={index > 0}>Pages</GroupLabel>

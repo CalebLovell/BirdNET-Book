@@ -1,7 +1,7 @@
 // Heat shading as a continuous ramp rather than a handful of steps: every
 // count gets its own mix of moss over paper, from a pale wash at the smallest
 // count up to full moss at the busiest. Shared by the timeline heat map, the
-// species grid's bars and the species page's history, so they all read as one
+// species grid's bars and the bird page's history, so they all read as one
 // scale.
 
 /** How much moss the smallest non-zero count gets, in percent. Well above the

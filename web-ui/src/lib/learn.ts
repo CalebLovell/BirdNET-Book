@@ -25,7 +25,7 @@ import { comNameToSlug } from "~/lib/species-slug.ts";
 const MINIMUM_CLIP_CONFIDENCE = 0.65;
 
 // Every question about a species plays its best recording -- the same
-// highest-confidence clip the species page features -- so the ear learns one
+// highest-confidence clip the bird page features -- so the ear learns one
 // clean example rather than whatever happened to be caught last. BirdNET-Pi's
 // cleanup job can take that file off disk, so a few runners-up come along in
 // confidence order to stand in for it.
@@ -60,7 +60,7 @@ function bestClipsPerSpecies(): ClipRow[] {
 				File_Name AS fileName,
 				Confidence AS confidence,
 				Date || ' ' || Time AS detectedAt,
-				-- Ties break toward the most recent, as on the species page, since
+				-- Ties break toward the most recent, as on the bird page, since
 				-- that clip is likeliest to still be on disk.
 				ROW_NUMBER() OVER (PARTITION BY Com_Name ORDER BY Confidence DESC, Date DESC, Time DESC) AS rn
 			FROM detections

@@ -26,7 +26,7 @@ import type { TrendPoint } from "~/lib/stats-data.ts";
 const INITIALS_BELOW_PX = 380;
 
 /**
- * The species page's detections-by-month chart: every detection on record,
+ * The bird page's detections-by-month chart: every detection on record,
  * each calendar month summed across the years, so it shows the bird's seasons.
  *
  * Bars rather than the line the by-hour card uses: twelve months are discrete

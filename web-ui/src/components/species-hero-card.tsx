@@ -106,7 +106,7 @@ export function SpeciesHeroCard({
 	label: string;
 	comName: string;
 	sciName: string;
-	/** Links the title to the species page. */
+	/** Links the title to the bird page. */
 	speciesSlug?: string;
 	imageUrl: string | null;
 	/** The moss line: "5 minutes ago". */
@@ -116,7 +116,7 @@ export function SpeciesHeroCard({
 	heardAt: string;
 	confidence: number | null;
 	audioUrl: string | null;
-	/** Top-right controls, e.g. the species page's eBird link. */
+	/** Top-right controls, e.g. the bird page's eBird link. */
 	actions?: ReactNode;
 	/** Unfolds beneath the card's row -- what `actions` opens, if anything. */
 	footer?: ReactNode;

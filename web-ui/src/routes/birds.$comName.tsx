@@ -225,10 +225,10 @@ function BirdResult({
  */
 function SpeciesDetailShell({ year }: { year: number }) {
 	return (
-		<div className="@container/species page-wrap pb-4">
+		<div className="@container/bird page-wrap pb-4">
 			<section
 				aria-busy="true"
-				aria-label="Species profile"
+				aria-label="Bird profile"
 				className={PROFILE_CARD_CLASS}
 			>
 				<div className="flex h-36 items-center justify-center overflow-hidden p-4 pb-0 sm:h-44 sm:pb-4">
@@ -311,9 +311,9 @@ function SpeciesDetailShell({ year }: { year: number }) {
 
 				<BestRecordingCardSkeleton />
 
-				<div className="grid min-w-0 @min-[80rem]/species:grid-rows-2 gap-(--page-gap)">
-					<DetectionsByHourCardSkeleton className="@min-[80rem]/species:min-h-0" />
-					<DetectionsByMonthCardSkeleton className="@min-[80rem]/species:min-h-0" />
+				<div className="grid min-w-0 @min-[80rem]/bird:grid-rows-2 gap-(--page-gap)">
+					<DetectionsByHourCardSkeleton className="@min-[80rem]/bird:min-h-0" />
+					<DetectionsByMonthCardSkeleton className="@min-[80rem]/bird:min-h-0" />
 				</div>
 
 				<VisitLogSkeleton />
@@ -416,7 +416,7 @@ function UndetectedSpecies({
 	return (
 		<div className="page-wrap pb-4">
 			<section
-				aria-label="Species profile"
+				aria-label="Bird profile"
 				className="feature-card mt-(--page-gap) grid overflow-hidden rounded-md sm:grid-cols-[12rem_minmax(0,1fr)]"
 			>
 				<div className="flex h-36 items-center justify-center overflow-hidden p-4 pb-0 sm:h-44 sm:pb-4">
@@ -461,7 +461,7 @@ function SpeciesNotFound() {
 		<div className="page-wrap py-4">
 			<PageStatus
 				tone="missing"
-				title="No such species"
+				title="No such bird"
 				actions={
 					<ButtonLink to="/birds" size="sm" icon={Feather}>
 						Browse all species
@@ -506,7 +506,7 @@ function SpeciesDetailView({ detail }: { detail: SpeciesDetail }) {
 
 	return (
 		<TooltipProvider>
-			<div className="@container/species page-wrap pb-4">
+			<div className="@container/bird page-wrap pb-4">
 				<SummaryCard detail={detail} />
 
 				{/* Two columns only once the page is wide enough (80rem) for a full
@@ -593,15 +593,15 @@ function SpeciesDetailView({ detail }: { detail: SpeciesDetail }) {
 					    charts line up on the left and Best recording and the visit log
 					    line up on the right. min-w-0 lets the charts conform to the
 					    left track rather than widen it. */}
-					<div className="grid min-w-0 @min-[80rem]/species:grid-rows-2 gap-(--page-gap)">
+					<div className="grid min-w-0 @min-[80rem]/bird:grid-rows-2 gap-(--page-gap)">
 						<DetectionsByHourCard
 							activity={detail.hourActivity}
-							className="@min-[80rem]/species:min-h-0"
+							className="@min-[80rem]/bird:min-h-0"
 						/>
 
 						<DetectionsByMonthCard
 							trend={detail.detectionTrend}
-							className="@min-[80rem]/species:min-h-0"
+							className="@min-[80rem]/bird:min-h-0"
 						/>
 					</div>
 
@@ -666,7 +666,7 @@ function WeekdayLabels() {
 const PROFILE_CARD_CLASS =
 	"feature-card mt-(--page-gap) grid overflow-hidden rounded-md sm:grid-cols-[12rem_minmax(0,1fr)]";
 const COLUMNS_CLASS =
-	"mt-(--page-gap) grid @min-[80rem]/species:grid-cols-[minmax(0,max-content)_minmax(20rem,1fr)] grid-cols-[minmax(0,1fr)] items-stretch gap-(--page-gap)";
+	"mt-(--page-gap) grid @min-[80rem]/bird:grid-cols-[minmax(0,max-content)_minmax(20rem,1fr)] grid-cols-[minmax(0,1fr)] items-stretch gap-(--page-gap)";
 const VISIT_LOG_BASE_CLASS =
 	"@container feature-card flex flex-col rounded-md p-4";
 const VISIT_LOG_CLASS = `${VISIT_LOG_BASE_CLASS} min-h-[420px]`;
@@ -744,7 +744,7 @@ function SummaryCard({ detail }: { detail: SpeciesDetail }) {
 		? formatTimeAgo(lastVisit.ageMs + offsetMs)
 		: formatHeardDate(detail.lastDetected.date);
 	return (
-		<section aria-label="Species profile" className={PROFILE_CARD_CLASS}>
+		<section aria-label="Bird profile" className={PROFILE_CARD_CLASS}>
 			{/* The portrait's own column -- above the text on a phone, where the
 			    column becomes a band, and beside it from sm up. Either way the
 			    bird is centred in its column, so a narrow painting doesn't sit

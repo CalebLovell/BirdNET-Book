@@ -333,7 +333,7 @@ export type LifeListCard = {
 	comName: string;
 	sciName: string;
 	allTimeCount: number;
-	// Detections bucketed by hour of day (length 24), so the species page can
+	// Detections bucketed by hour of day (length 24), so the bird page can
 	// fold these across a search result to name its most active hour.
 	hourCounts: number[];
 	lastDetected: string;

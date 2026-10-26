@@ -39,7 +39,7 @@ export const EMPTY = {
 
 	// A search or filter matched nothing.
 	filter: {
-		birdsSearch: (search: string) => `No species match “${search}”.`,
+		birdsSearch: (search: string) => `No birds match “${search}”.`,
 		detectionsFilters: "No detections match these filters.",
 		speciesControlSearch: "No species match that search.",
 		recategorizeSearch: (search: string) => `No species match “${search}”.`,

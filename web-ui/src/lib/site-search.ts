@@ -49,10 +49,10 @@ function matchesWords(text: string, needles: string[]): boolean {
  * What the sidebar's search shows for a query. Pure, so the matching can be
  * tested without a station behind it.
  *
- * Species use the same Fuse settings as the Species page and the detections
+ * Species use the same Fuse settings as the Birds page and the detections
  * filter, so a name found here is one those pages will find too. Pages and
  * settings are short fixed lists, so a plain word-prefix match is enough and
- * never surprises: "set" finds Settings, "s" finds Species and Settings.
+ * never surprises: "set" finds Settings, "s" finds Birds and Settings.
  */
 export function searchSite<P extends SearchPage, S extends SearchSetting>(
 	query: string,

@@ -126,7 +126,7 @@ export function RecentLogCardSkeleton() {
 const NAME_WIDTHS = ["w-36", "w-28", "w-44", "w-32", "w-40"];
 
 /**
- * The window's visits, most recently heard first, set like the species page's visit
+ * The window's visits, most recently heard first, set like the bird page's visit
  * log: a header band that links on to today's Timeline, hairline-divided rows bled to
  * the card's edges, and a layout that answers to the card's own width rather than the
  * screen's -- the card spans the page on a phone and takes the wider track
