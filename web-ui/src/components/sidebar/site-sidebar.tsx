@@ -1,4 +1,4 @@
-import { Link } from "@tanstack/react-router";
+import { Link, useRouteContext } from "@tanstack/react-router";
 
 import { SidebarNav } from "~/components/sidebar/sidebar-nav.tsx";
 import { SiteSearch } from "~/components/sidebar/site-search.tsx";
@@ -18,18 +18,26 @@ export function SidebarBody({
 	onNavigate?: () => void;
 	withTitle?: boolean;
 }) {
+	const { auth } = useRouteContext({ from: "__root__" });
 	return (
 		<div className="flex min-h-full flex-col py-3">
-			{/* The wordmark centered over a hairline that runs the card's full
-			    width, setting the brand apart from the list below. */}
+			{/* The wordmark, and under it which station this is, over a hairline
+			    that runs the card's full width. Both start where the nav's icons
+			    and labels do (the nav's inset plus a link's padding). The name is
+			    only known once signed in, so a visitor sees the wordmark alone. */}
 			{withTitle ? (
 				<>
 					<Link
 						to="/"
 						onClick={onNavigate}
-						className="flex justify-center px-3 pt-1.5 pb-3.5 no-underline"
+						className="flex flex-col items-start px-[1.375rem] pt-1 pb-3 no-underline"
 					>
-						<SongbookWordmark className="shrink-0 text-[26px] text-[var(--moss)]" />
+						<SongbookWordmark className="shrink-0 text-[24px] text-[var(--moss)]" />
+						{auth.siteName ? (
+							<span className="mt-0.5 text-muted-foreground text-xs">
+								{auth.siteName}
+							</span>
+						) : null}
 					</Link>
 					<div aria-hidden="true" className="mb-3 h-px bg-[var(--line)]" />
 				</>
