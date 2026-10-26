@@ -19,7 +19,7 @@ import {
 import { getNowSnapshot, type NowSnapshot } from "~/lib/now.ts";
 import { pageTitle } from "~/lib/page-title.ts";
 import { getStationStatus } from "~/lib/station-status.ts";
-import { useFavicon } from "~/lib/use-favicon.ts";
+import { useBirdFavicon } from "~/lib/use-favicon.ts";
 import { usePolledData } from "~/lib/use-polled-data.ts";
 
 const POLL_INTERVAL_MS = 10_000;
@@ -150,7 +150,7 @@ function LiveBody({
 	// turned out to be, so the two never disagree and the browser fetches once.
 	// A null here means nothing was heard in the last 24 hours, and the nest is
 	// what the hero card is showing too.
-	useFavicon(snapshot.current?.imageUrl ?? null);
+	useBirdFavicon(snapshot.current?.imageUrl ?? null);
 
 	// The hero is left out of the log, so each tracks its own arrivals: a new
 	// bird flashes in the hero, and the one it replaced flashes again as it

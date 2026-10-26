@@ -40,6 +40,7 @@ import { EMPTY } from "~/lib/empty-messages.ts";
 import { PAGE_HEADERS } from "~/lib/page-headers.ts";
 import { pageTitle } from "~/lib/page-title.ts";
 import { comNameToSlug } from "~/lib/species-slug.ts";
+import { useBirdFavicon } from "~/lib/use-favicon.ts";
 import { useSettled } from "~/lib/use-settled.ts";
 import { cn } from "~/lib/utils.ts";
 
@@ -99,6 +100,7 @@ const FOOTER_CLASS =
 
 function Species() {
 	const { cards } = Route.useLoaderData();
+	useBirdFavicon(topCard(useSettled(cards)?.value ?? [])?.imageUrl ?? null);
 
 	return (
 		<div className="page-wrap flex min-h-full flex-col gap-(--page-gap) py-4">
@@ -117,6 +119,14 @@ function Species() {
 				{(loaded) => <SpeciesBrowser cards={loaded} />}
 			</Deferred>
 		</div>
+	);
+}
+
+/** The station's most-heard bird of all time: the tab's picture. */
+function topCard(cards: LifeListCard[]): LifeListCard | undefined {
+	return cards.reduce<LifeListCard | undefined>(
+		(top, card) => (!top || card.allTimeCount > top.allTimeCount ? card : top),
+		undefined,
 	);
 }
 

@@ -58,7 +58,7 @@ import { speciesLinkFor } from "~/lib/species-link.ts";
 import { formatTimeAgo } from "~/lib/time-ago.ts";
 import type { TrendPoint } from "~/lib/trend.ts";
 import { useAgeOffset } from "~/lib/use-age-offset.ts";
-import { useFavicon } from "~/lib/use-favicon.ts";
+import { useBirdFavicon } from "~/lib/use-favicon.ts";
 
 const CURRENT_YEAR = new Date().getFullYear();
 const MIN_YEAR = 2000;
@@ -480,7 +480,7 @@ function SpeciesDetailView({ detail }: { detail: SpeciesDetail }) {
 	// cache rather than pulling a second half-megabyte PNG. The wings lose their
 	// detail at 16px, but the silhouette still reads. Species without a bundled
 	// illustration keep the nest.
-	useFavicon(illustrationUrlFor(detail.sciName, "flight"));
+	useBirdFavicon(illustrationUrlFor(detail.sciName, "flight"));
 
 	const { weeks, maximum } = buildHeatMap(detail.history);
 	// A year of weeks is wider than a phone, so the grid scrolls inside its card.
