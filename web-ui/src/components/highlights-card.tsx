@@ -107,7 +107,11 @@ const PENDING_NOTES = [["w-4/5"], ["w-1/3"], ["w-3/4"], ["w-3/5"]];
 
 function PendingNotes() {
 	return (
-		<ul aria-busy="true" aria-label="Loading highlights" className={NOTES_CLASS}>
+		<ul
+			aria-busy="true"
+			aria-label="Loading highlights"
+			className={NOTES_CLASS}
+		>
 			{PENDING_NOTES.map((lines, index) => (
 				// biome-ignore lint/suspicious/noArrayIndexKey: static decoration
 				<li key={index} className={NOTE_CLASS}>
