@@ -586,7 +586,13 @@ function TimelineCards({
 				<DetectionsByHourCard
 					activity={hourActivity}
 					emptyMessage={emptyMessage}
-					className={HOUR_CARD_SIZE}
+					// A quiet window has no chart to size, just the empty line, so
+					// the card fits it like Highlights beside it does.
+					className={
+						hourActivity.some((point) => point.count > 0)
+							? HOUR_CARD_SIZE
+							: "self-start"
+					}
 				/>
 			</div>
 		</div>
