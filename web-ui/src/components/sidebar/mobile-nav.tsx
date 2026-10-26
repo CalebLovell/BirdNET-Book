@@ -99,19 +99,19 @@ export function MobileNav() {
 						isOpen ? "translate-x-0" : "-translate-x-full"
 					}`}
 				>
-					{/* A copy of the bar above, the close button standing where the
-					    hamburger was and the name where it was, so opening the drawer
-					    swaps the icon and leaves everything else in place. */}
+					{/* The bar's height and look, with the name against the panel's left
+					    edge, in line with the search box below, and the close button at
+					    its far end. */}
 					<div className={BAR_CLASS}>
+						<SiteName onClick={() => setIsOpen(false)} />
 						<button
 							type="button"
 							onClick={() => setIsOpen(false)}
 							aria-label="Close navigation"
-							className={ROUND_BUTTON_CLASS}
+							className={`ml-auto ${ROUND_BUTTON_CLASS}`}
 						>
 							<X className="size-5" aria-hidden="true" />
 						</button>
-						<SiteName onClick={() => setIsOpen(false)} />
 					</div>
 					{/* Only the part under the bar scrolls, and only when a short
 					    screen needs it: the body fills this box exactly, so the
