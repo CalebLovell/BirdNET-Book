@@ -84,7 +84,7 @@ export function HighlightsCard({
 			) : highlights.length === 0 ? (
 				<EmptyNote>{emptyMessage}</EmptyNote>
 			) : (
-				<ul className="mt-2">
+				<ul className={NOTES_CLASS}>
 					{highlights.map((highlight) => (
 						<HighlightNote
 							key={highlight.kind}
@@ -107,7 +107,7 @@ const PENDING_NOTES = [["w-4/5"], ["w-1/3"], ["w-3/4"], ["w-3/5"]];
 
 function PendingNotes() {
 	return (
-		<ul aria-busy="true" aria-label="Loading highlights" className="mt-2">
+		<ul aria-busy="true" aria-label="Loading highlights" className={NOTES_CLASS}>
 			{PENDING_NOTES.map((lines, index) => (
 				// biome-ignore lint/suspicious/noArrayIndexKey: static decoration
 				<li key={index} className={NOTE_CLASS}>
@@ -270,9 +270,14 @@ function ActivityNote({
 }
 
 /** One highlight: its glyph, then the sentence, hairlines between notes. */
-/** A note's row, shared with the pending shell so the two are one shape. */
+/** A note's row, shared with the pending shell so the two are one shape. The
+    rows sit in NOTES_CLASS's full-bleed list, so each pads itself back in and
+    its hairline runs to the card's edges. */
 const NOTE_CLASS =
-	"flex items-center gap-2.5 border-[var(--line)] border-t py-2.5 text-[13px] leading-normal first:border-t-0 first:pt-1.5 last:pb-0 max-[400px]:gap-2";
+	"flex items-center gap-2.5 border-[var(--line)] border-t px-(--page-gap) py-2.5 text-[13px] leading-normal first:border-t-0 first:pt-1.5 last:pb-0 max-[400px]:gap-2";
+
+/** The notes' list, pulled out through the card's padding like CardHeader. */
+const NOTES_CLASS = "-mx-(--page-gap) mt-2";
 
 function Note({
 	icon: Icon,
