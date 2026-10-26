@@ -47,6 +47,7 @@ import { heatColor, heatColorAt } from "~/lib/heatmap.ts";
 import { illustrationUrlFor } from "~/lib/illustrations.ts";
 import { pageTitle } from "~/lib/page-title.ts";
 import {
+	getBirdName,
 	getSpeciesDetail,
 	getSpeciesVisits,
 	type SpeciesDetail,
@@ -55,7 +56,7 @@ import {
 	visitPageCount,
 } from "~/lib/species-detail.ts";
 import { speciesLinkFor } from "~/lib/species-link.ts";
-import { comNameForSlug } from "~/lib/species-slug.ts";
+import { comNameForSlug, comNameToSlug } from "~/lib/species-slug.ts";
 import { formatTimeAgo } from "~/lib/time-ago.ts";
 import type { TrendPoint } from "~/lib/trend.ts";
 import { useAgeOffset } from "~/lib/use-age-offset.ts";
@@ -87,26 +88,38 @@ export const Route = createFileRoute("/birds/$comName")({
 	// that page, rather than rerunning every query on the page. The loader still
 	// reads it so a deep link to page 40 server-renders page 40.
 	loaderDeps: ({ search }) => ({ year: search.year }),
-	// Deferred: the page renders at once (see Deferred) and fills in when the
-	// bird's detail arrives. Which means an unknown slug can't be thrown as the
+	// The detail is deferred: the page renders at once (see Deferred) and fills
+	// in when it arrives. Which means an unknown slug can't be thrown as the
 	// router's not-found -- the loader has returned long before anyone knows --
 	// so the page renders its not-found card in place instead.
-	loader: ({ params, deps, location }) => ({
-		result: getSpeciesDetail({
+	//
+	// The bird's name alone is awaited, so the tab is titled the moment the page
+	// switches and never shows a stand-in first. A name this browser already
+	// built a link from needs no trip at all -- any click from a list; otherwise
+	// it's one small lookup, run alongside the detail.
+	loader: async ({ params, deps, location }) => {
+		const result = getSpeciesDetail({
 			data: {
 				comNameSlug: params.comName,
 				year: deps.year,
 				visitsPage: (location.search as { visits?: number }).visits,
 			},
-		}),
+		});
+		const comName =
+			comNameForSlug(params.comName) ??
+			(await getBirdName({ data: params.comName }));
+		// Remembered, so a new year or a return visit skips the lookup.
+		if (comName) comNameToSlug(comName);
+		return { result, comName };
+	},
+	head: ({ loaderData }) => ({
+		meta: [{ title: pageTitle(loaderData?.comName ?? "Bird") }],
 	}),
-	// The bird's name when the link that led here was built in this browser --
-	// any click from a list -- so the tab names it at once. A first load can't
-	// know it yet: it shows the section name until the detail lands and the
-	// page names itself (see useBirdTitle).
-	head: ({ params }) => ({
-		meta: [{ title: pageTitle(comNameForSlug(params.comName) ?? "Bird") }],
-	}),
+	// Only the name is awaited, and it's quick: hold the page being left while
+	// it comes rather than showing a pending view (the router's default here is
+	// to show one at once -- see router.tsx). A slow one still gets the shell.
+	pendingMs: 1000,
+	pendingComponent: BirdPendingShell,
 	component: BirdPage,
 });
 
@@ -203,22 +216,15 @@ function BirdPage() {
 	);
 }
 
+function BirdPendingShell() {
+	return <SpeciesDetailShell year={Route.useSearch().year} />;
+}
+
 function BirdResult({
 	result,
 }: {
 	result: Awaited<ReturnType<typeof getSpeciesDetail>>;
 }) {
-	// The bird's own name once the slug has resolved -- for an undetected bird
-	// too, since the catalog gave us the name even though the station has never
-	// heard it.
-	useBirdTitle(
-		result.status === "detected"
-			? result.detail.comName
-			: result.status === "undetected"
-				? result.comName
-				: null,
-	);
-
 	if (result.status === "undetected") {
 		return (
 			<UndetectedSpecies comName={result.comName} sciName={result.sciName} />
@@ -227,14 +233,6 @@ function BirdResult({
 	if (result.status !== "detected") return <SpeciesNotFound />;
 
 	return <SpeciesDetailView detail={result.detail} />;
-}
-
-/** Names the tab after the bird once its detail is in. The route's own head
-    can't: it renders before the deferred detail settles. */
-function useBirdTitle(comName: string | null) {
-	useEffect(() => {
-		if (comName) document.title = pageTitle(comName);
-	}, [comName]);
 }
 
 /**

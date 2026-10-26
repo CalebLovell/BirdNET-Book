@@ -23,17 +23,45 @@ export function faviconHref(
     either claims the tab or lets it happen. */
 let pendingReset: ReturnType<typeof setTimeout> | undefined;
 
-/** The icon each history entry last showed, by the router's entry key. */
-const iconByEntry = new Map<string, string>();
+/** The icon each history entry last showed, by the router's entry key. Kept
+    in session storage too, so Back still knows it after a reload. */
+const ICONS_KEY = "songbook:favicon-by-entry";
+const iconByEntry = new Map<string, string>(readStoredIcons());
+
+function readStoredIcons(): [string, string][] {
+	if (typeof window === "undefined") return [];
+	try {
+		return Object.entries(
+			JSON.parse(sessionStorage.getItem(ICONS_KEY) ?? "{}"),
+		);
+	} catch {
+		return [];
+	}
+}
 
 function entryKey(): string | undefined {
 	return (history.state as { key?: string } | null)?.key;
 }
 
+/** Sets the link only when it changes: browsers can redraw the tab icon on a
+    write of the same address, which shows as a flicker. */
+function pointLink(link: HTMLLinkElement, href: string) {
+	if (link.getAttribute("href") !== href) link.setAttribute("href", href);
+}
+
 function showIcon(link: HTMLLinkElement, href: string) {
-	link.setAttribute("href", href);
+	pointLink(link, href);
 	const key = entryKey();
-	if (key) iconByEntry.set(key, href);
+	if (!key || iconByEntry.get(key) === href) return;
+	iconByEntry.set(key, href);
+	try {
+		sessionStorage.setItem(
+			ICONS_KEY,
+			JSON.stringify(Object.fromEntries(iconByEntry)),
+		);
+	} catch {
+		// Storage off or full: Back just loses the head start after a reload.
+	}
 }
 
 // Back and Forward: the browser puts back the icon it remembers for the entry
@@ -45,7 +73,7 @@ if (typeof window !== "undefined") {
 	window.addEventListener("popstate", () => {
 		const href = iconByEntry.get(entryKey() ?? "");
 		const link = document.querySelector<HTMLLinkElement>('link[rel~="icon"]');
-		if (href && link) link.setAttribute("href", href);
+		if (href && link) pointLink(link, href);
 	});
 }
 

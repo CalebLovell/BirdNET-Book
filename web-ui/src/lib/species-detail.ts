@@ -216,6 +216,19 @@ async function missToResult(slug: string): Promise<SpeciesDetailResult> {
 	};
 }
 
+/**
+ * Just the name a bird-page slug stands for -- heard here or only in the
+ * model's catalog -- so the page can title the tab before its detail lands.
+ */
+export const getBirdName = createServerFn({ method: "GET" })
+	.validator((slug: string) => slug)
+	.handler(
+		async ({ data: slug }): Promise<string | null> =>
+			(await resolveComName(slug)) ??
+			(await resolveCatalogSpecies(slug))?.comName ??
+			null,
+	);
+
 export type SpeciesDetailInput = {
 	comNameSlug: string;
 	year: number;
