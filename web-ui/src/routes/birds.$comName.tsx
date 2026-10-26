@@ -42,7 +42,6 @@ import {
 import { YearSelector } from "~/components/year-selector.tsx";
 import { formatConfidence } from "~/lib/confidence.ts";
 import { formatDate, formatDateTime, formatTime } from "~/lib/date-format.ts";
-import { speciesLinkFor } from "~/lib/species-link.ts";
 import { EMPTY } from "~/lib/empty-messages.ts";
 import { heatColor, heatColorAt } from "~/lib/heatmap.ts";
 import { illustrationUrlFor } from "~/lib/illustrations.ts";
@@ -55,6 +54,7 @@ import {
 	type VisitPage,
 	visitPageCount,
 } from "~/lib/species-detail.ts";
+import { speciesLinkFor } from "~/lib/species-link.ts";
 import { formatTimeAgo } from "~/lib/time-ago.ts";
 import type { TrendPoint } from "~/lib/trend.ts";
 import { useAgeOffset } from "~/lib/use-age-offset.ts";
