@@ -1,12 +1,9 @@
 import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { RotateCcw } from "lucide-react";
-import { PageStatus } from "~/components/page-status.tsx";
 import {
 	SettingsPage,
 	SettingsPageSkeleton,
 } from "~/components/settings/settings-page.tsx";
-import { Button } from "~/components/ui/button.tsx";
 import { getStationHealth } from "~/lib/health.ts";
 import { pageTitle } from "~/lib/page-title.ts";
 import { requireUnlocked } from "~/lib/require-unlocked.ts";
@@ -47,14 +44,13 @@ export const Route = createFileRoute("/settings")({
 		requireUnlocked(context.auth, location),
 	// Deferred: the page renders at once (see Deferred), and the cards fill in
 	// when the configuration arrives. `getStationHealth` does not throw, so it
-	// cannot be what sends this route to its error component.
+	// cannot be what sends this page to the error card.
 	loader: () => ({
 		data: getSettingsPage(),
 		health: getStationHealth(),
 		updates: getUpdateState(),
 	}),
 	component: SettingsRoute,
-	errorComponent: SettingsUnavailable,
 });
 
 function SettingsRoute() {
@@ -128,32 +124,5 @@ function SettingsRoute() {
 				updates: (values) => saveUpdates({ data: values }),
 			}}
 		/>
-	);
-}
-
-function SettingsUnavailable() {
-	const router = useRouter();
-
-	return (
-		<div className="page-wrap py-4">
-			<PageStatus
-				tone="unavailable"
-				title="Settings unavailable"
-				actions={
-					<Button
-						variant="outline"
-						size="sm"
-						icon={RotateCcw}
-						onClick={() => router.invalidate()}
-					>
-						Try again
-					</Button>
-				}
-			>
-				The BirdNET configuration could not be read. Check that the service can
-				access <code>/etc/birdnet/birdnet.conf</code>, or set the{" "}
-				<code>BIRDNET_CONF</code> environment variable to its location.
-			</PageStatus>
-		</div>
 	);
 }

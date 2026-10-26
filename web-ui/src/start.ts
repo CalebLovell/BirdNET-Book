@@ -1,4 +1,7 @@
+import { isNotFound, isRedirect } from "@tanstack/react-router";
 import { createMiddleware, createStart } from "@tanstack/react-start";
+
+import { isUnauthorizedError } from "~/lib/auth.ts";
 
 /**
  * Headers every response carries, for a station that may face the internet.
@@ -37,6 +40,30 @@ const securityHeaders = createMiddleware({ type: "request" }).server(
 	},
 );
 
+/**
+ * The service log is the only place a failure's cause is kept. The page that
+ * hit it shows one plain card and names no cause (see `RouteError`), and the
+ * framework logs nothing on its own, so without this the cause is lost. The
+ * gate's refusal and the router's redirects are expected, not failures.
+ */
+const logFailures = createMiddleware({ type: "function" }).server(
+	async ({ next }) => {
+		try {
+			return await next();
+		} catch (error) {
+			if (
+				!isUnauthorizedError(error) &&
+				!isRedirect(error) &&
+				!isNotFound(error)
+			) {
+				console.error("[server] a server function failed:", error);
+			}
+			throw error;
+		}
+	},
+);
+
 export const startInstance = createStart(() => ({
 	requestMiddleware: [securityHeaders],
+	functionMiddleware: [logFailures],
 }));
