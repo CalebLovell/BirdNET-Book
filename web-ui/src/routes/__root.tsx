@@ -10,7 +10,6 @@ import { SiteSidebar } from "~/components/sidebar/site-sidebar.tsx";
 import { Toaster } from "~/components/ui/toaster.tsx";
 import { pageTitle } from "~/lib/page-title.ts";
 import { unlockStatusForNavigation } from "~/lib/unlock-status.ts";
-import { DEFAULT_FAVICON } from "~/lib/use-favicon.ts";
 import appCss from "../styles.css?url";
 
 export const Route = createRootRoute({
@@ -37,14 +36,11 @@ export const Route = createRootRoute({
 				rel: "stylesheet",
 				href: appCss,
 			},
-			// The one and only icon element in the document: the singing book.
-			// Routes that know which bird they are about point this same link
-			// somewhere else via `useBirdFavicon` -- see the note there for why
-			// they must not render a second one. No `type`: the href gets swapped
-			// between svg, webp and png, and a stale type is worse than none.
+			// The wordmark's singing book, on every page.
 			{
 				rel: "icon",
-				href: DEFAULT_FAVICON,
+				type: "image/svg+xml",
+				href: "/songbook.svg",
 			},
 		],
 	}),

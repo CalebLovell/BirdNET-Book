@@ -60,8 +60,6 @@ import { comNameForSlug, comNameToSlug } from "~/lib/species-slug.ts";
 import { formatTimeAgo } from "~/lib/time-ago.ts";
 import type { TrendPoint } from "~/lib/trend.ts";
 import { useAgeOffset } from "~/lib/use-age-offset.ts";
-import { useBirdFavicon } from "~/lib/use-favicon.ts";
-import { useSettled } from "~/lib/use-settled.ts";
 
 const CURRENT_YEAR = new Date().getFullYear();
 const MIN_YEAR = 2000;
@@ -186,22 +184,6 @@ function buildHeatMap(history: TrendPoint[]): {
 function BirdPage() {
 	const { result } = Route.useLoaderData();
 	const { year } = Route.useSearch();
-	// Set here rather than in the detail view so the shell holds the tab's
-	// current icon too: nothing until the bird resolves, then its painting --
-	// the same flight illustration the hero draws, so the browser serves it from
-	// cache rather than pulling a second half-megabyte PNG. The wings lose their
-	// detail at 16px, but the silhouette still reads. A bird without a bundled
-	// illustration gets the nest.
-	const settled = useSettled(result);
-	useBirdFavicon(
-		settled === null
-			? undefined
-			: settled.value.status === "detected"
-				? illustrationUrlFor(settled.value.detail.sciName, "flight")
-				: settled.value.status === "undetected"
-					? illustrationUrlFor(settled.value.sciName, "flight")
-					: null,
-	);
 
 	// Keyed on the year, the one search the loader reruns for, so a new year
 	// drops the page to its shell at once rather than holding the old one.

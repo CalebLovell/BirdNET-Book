@@ -50,7 +50,6 @@ import {
 	spelledDate,
 	windowFor,
 } from "~/lib/timeline-window.ts";
-import { useBirdFavicon } from "~/lib/use-favicon.ts";
 import { useSettled } from "~/lib/use-settled.ts";
 import { cn } from "~/lib/utils.ts";
 
@@ -126,17 +125,6 @@ function Timeline() {
 	const { period, view } = search;
 	const anchor = resolveAnchor(period, search.date);
 	const navigate = Route.useNavigate();
-	// The window's most-heard bird (rows come busiest first), held over from the
-	// last window while the next one loads, and nothing at all before the first
-	// one lands, so the tab never flashes a stand-in.
-	const shown = settled?.value.body;
-	useBirdFavicon(
-		shown === undefined
-			? undefined
-			: shown.kind === "day-out-of-range"
-				? null
-				: (shown.rows[0]?.imageUrl ?? null),
-	);
 
 	const show = (next: {
 		period?: TimelinePeriod;
