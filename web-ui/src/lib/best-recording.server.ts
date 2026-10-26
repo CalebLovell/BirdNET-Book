@@ -1,6 +1,7 @@
 import { existsSync } from "node:fs";
 import type { DatabaseSync } from "node:sqlite";
 
+import { commonNameSafe } from "~/lib/audio.ts";
 import { resolveDetectionClipPath } from "~/lib/detection-file-path.server.ts";
 
 // A species' best recording is the one rule every page plays it by -- the bird
@@ -74,4 +75,27 @@ export function bestRecordings(
 		if (filePath !== null && existsSync(filePath)) best.set(clip.comName, clip);
 	}
 	return best;
+}
+
+/**
+ * Whether the clip at By_Date/<date>/<speciesDir>/<fileName> is its species'
+ * best recording right now -- the only clips a signed-out visitor may hear.
+ * The folder is the common name made path-safe, so the detection is looked up
+ * by date and file and its species' best compared against it.
+ */
+export function isBestRecording(
+	database: DatabaseSync,
+	extractedRoot: string,
+	clip: { date: string; speciesDir: string; fileName: string },
+): boolean {
+	const rows = database
+		.prepare(
+			"SELECT DISTINCT Com_Name AS comName FROM detections WHERE Date = ? AND File_Name = ?",
+		)
+		.all(clip.date, clip.fileName) as { comName: string }[];
+	return rows.some(({ comName }) => {
+		if (commonNameSafe(comName) !== clip.speciesDir) return false;
+		const best = bestRecordings(database, extractedRoot, comName).get(comName);
+		return best?.date === clip.date && best.fileName === clip.fileName;
+	});
 }

@@ -18,6 +18,7 @@ import {
 	recentPageCount,
 } from "~/lib/now.ts";
 import { formatClockRange, formatTimeAgo } from "~/lib/time-ago.ts";
+import { useCanListen } from "~/lib/use-can-listen.ts";
 import { useAgeOffset } from "~/lib/use-age-offset.ts";
 
 /** A row's height: the 40px thumbnail and 7px above and below it. Paged, the
@@ -66,6 +67,7 @@ function RecentLogHeader() {
 const SKELETON_ROWS = 10;
 
 export function RecentLogCardSkeleton() {
+	const canListen = useCanListen();
 	return (
 		<section
 			aria-busy="true"
@@ -100,9 +102,11 @@ export function RecentLogCardSkeleton() {
 						<ShellSized className="rounded-full">
 							<ConfidencePill confidence={0.9} className="shrink-0" />
 						</ShellSized>
-						<ShellSized className="rounded-md">
-							<RecordingButton audioUrl={null} {...ROW_BUTTON} />
-						</ShellSized>
+						{canListen ? (
+							<ShellSized className="rounded-md">
+								<RecordingButton audioUrl={null} {...ROW_BUTTON} />
+							</ShellSized>
+						) : null}
 					</li>
 				))}
 			</ul>
@@ -155,6 +159,7 @@ export function RecentLogCard({
 	generatedAt: string;
 	freshKeys: Set<string>;
 }) {
+	const canListen = useCanListen();
 	const fetchPage = useServerFn(getRecentPage);
 	const [page, setPage] = useState(1);
 	const [fetched, setFetched] = useState<RecentPage | null>(null);
@@ -272,11 +277,13 @@ export function RecentLogCard({
 									confidence={visit.confidence}
 									className="shrink-0"
 								/>
-								<RecordingButton
-									audioUrl={visit.audioUrl}
-									speciesName={visit.comName}
-									{...ROW_BUTTON}
-								/>
+								{canListen ? (
+									<RecordingButton
+										audioUrl={visit.audioUrl}
+										speciesName={visit.comName}
+										{...ROW_BUTTON}
+									/>
+								) : null}
 							</li>
 						);
 					})}

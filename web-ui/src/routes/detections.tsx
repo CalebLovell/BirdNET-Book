@@ -56,6 +56,9 @@ function Detections() {
 	// off entirely rather than sitting there offering something that cannot work.
 	const { auth } = useRouteContext({ from: "__root__" });
 	const canDelete = auth.unlocked;
+	// Clips can carry voices from around the station: signed out, the
+	// Recording column comes off too, and the server refuses the clip anyway.
+	const canListen = auth.unlocked;
 	const runDeletion = useServerFn(deleteDetections);
 	const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
 	const [deleteOpen, setDeleteOpen] = useState(false);
@@ -133,6 +136,7 @@ function Detections() {
 					<DetectionsTableShell
 						search={search}
 						canDelete={canDelete}
+						canListen={canListen}
 						onSearchChange={(nextSearch) =>
 							navigate({ search: nextSearch, replace: true })
 						}
@@ -174,6 +178,7 @@ function Detections() {
 								rowSelection={rowSelection}
 								onRowSelectionChange={setRowSelection}
 								canDelete={canDelete}
+								canListen={canListen}
 								onDeleteSelected={() => setDeleteOpen(true)}
 							/>
 						</section>
@@ -198,10 +203,12 @@ function Detections() {
 function DetectionsTableShell({
 	search,
 	canDelete,
+	canListen,
 	onSearchChange,
 }: {
 	search: DetectionWorkspaceSearch;
 	canDelete: boolean;
+	canListen: boolean;
 	onSearchChange: (search: DetectionWorkspaceSearch) => void;
 }) {
 	return (
@@ -217,6 +224,7 @@ function DetectionsTableShell({
 				rowSelection={{}}
 				onRowSelectionChange={() => {}}
 				canDelete={canDelete}
+				canListen={canListen}
 				onDeleteSelected={() => {}}
 			/>
 		</section>

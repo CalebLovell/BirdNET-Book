@@ -60,6 +60,7 @@ import { comNameForSlug, comNameToSlug } from "~/lib/species-slug.ts";
 import { formatTimeAgo } from "~/lib/time-ago.ts";
 import type { TrendPoint } from "~/lib/trend.ts";
 import { useAgeOffset } from "~/lib/use-age-offset.ts";
+import { useCanListen } from "~/lib/use-can-listen.ts";
 
 const CURRENT_YEAR = new Date().getFullYear();
 const MIN_YEAR = 2000;
@@ -347,6 +348,7 @@ function weeksInYear(year: number): number {
 
 /** The visit log's rows, as the loaded log draws them (see VisitLogCard). */
 function VisitLogSkeleton() {
+	const canListen = useCanListen();
 	return (
 		<section
 			aria-busy="true"
@@ -375,9 +377,11 @@ function VisitLogSkeleton() {
 						<ShellSized className="rounded-full">
 							<ConfidencePill confidence={0.9} className="shrink-0" />
 						</ShellSized>
-						<ShellSized className="rounded-md">
-							<RecordingButton audioUrl={null} {...VISIT_ROW_BUTTON} />
-						</ShellSized>
+						{canListen ? (
+							<ShellSized className="rounded-md">
+								<RecordingButton audioUrl={null} {...VISIT_ROW_BUTTON} />
+							</ShellSized>
+						) : null}
 					</li>
 				))}
 			</ul>
@@ -865,6 +869,9 @@ function VisitLogCard({
 	page: number;
 	onPageChange: (page: number) => void;
 }) {
+	// Signed out, a visit plays nothing -- the best recording above is the
+	// species' one public clip.
+	const canListen = useCanListen();
 	const fetchVisits = useServerFn(getSpeciesVisits);
 	const pageCount = visitPageCount(totalVisits);
 	// A URL past the last page (the bird's history is shorter than the link
@@ -985,11 +992,13 @@ function VisitLogCard({
 									confidence={visit.confidence}
 									className="shrink-0"
 								/>
-								<RecordingButton
-									audioUrl={visit.audioUrl ?? null}
-									speciesName={comName}
-									{...VISIT_ROW_BUTTON}
-								/>
+								{canListen ? (
+									<RecordingButton
+										audioUrl={visit.audioUrl ?? null}
+										speciesName={comName}
+										{...VISIT_ROW_BUTTON}
+									/>
+								) : null}
 							</li>
 						);
 					})}

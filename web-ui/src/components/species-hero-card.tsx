@@ -5,6 +5,7 @@ import { ConfidencePill } from "~/components/confidence-pill.tsx";
 import { RecordingButton } from "~/components/recording-button.tsx";
 import { SpeciesImage } from "~/components/species-image.tsx";
 import { ShellBar, ShellSized, ShellText } from "~/components/ui/shell.tsx";
+import { useCanListen } from "~/lib/use-can-listen.ts";
 
 /**
  * The Today page's masthead shape: portrait on the left, and a content column
@@ -123,6 +124,7 @@ export function SpeciesHeroCard({
 	className?: string;
 	style?: CSSProperties;
 }) {
+	const canListen = useCanListen();
 	return (
 		<HeroCardShell
 			label={label}
@@ -165,7 +167,9 @@ export function SpeciesHeroCard({
 				<div className="tabular-data mt-1 flex flex-wrap items-center gap-2 text-sm">
 					<span className="text-muted-foreground">last heard {heardAt}</span>
 					<ConfidencePill confidence={confidence} />
-					<RecordingButton audioUrl={audioUrl} speciesName={comName} />
+					{canListen ? (
+						<RecordingButton audioUrl={audioUrl} speciesName={comName} />
+					) : null}
 				</div>
 			</div>
 		</HeroCardShell>
@@ -210,6 +214,7 @@ export function SpeciesHeroCardShell({
  * moves when the data lands.
  */
 export function HeroTextShell({ actions }: { actions?: ReactNode }) {
+	const canListen = useCanListen();
 	return (
 		<>
 			<div className="flex flex-wrap items-start justify-between gap-3 max-[400px]:gap-2">
@@ -230,9 +235,11 @@ export function HeroTextShell({ actions }: { actions?: ReactNode }) {
 					<ShellSized className="rounded-full">
 						<ConfidencePill confidence={0.9} />
 					</ShellSized>
-					<ShellSized className="rounded-md">
-						<RecordingButton audioUrl={null} />
-					</ShellSized>
+					{canListen ? (
+						<ShellSized className="rounded-md">
+							<RecordingButton audioUrl={null} />
+						</ShellSized>
+					) : null}
 				</div>
 			</div>
 		</>

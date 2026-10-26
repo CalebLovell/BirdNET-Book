@@ -57,6 +57,12 @@ type DetectionsTableProps = {
 	 * checkboxes rather than a column that leads to a refusal.
 	 */
 	canDelete: boolean;
+	/**
+	 * Whether every clip may play. A detection's clip can carry voices from
+	 * around the station, so a signed-out visitor gets no Recording column at
+	 * all -- the server would refuse the clip anyway.
+	 */
+	canListen: boolean;
 	/** Opens the page's delete confirmation for the selected rows. */
 	onDeleteSelected: () => void;
 };
@@ -104,6 +110,12 @@ const CELL_GAP = "px-[calc(var(--page-gap)/2)]";
 const AUDIO_EDGE = "pr-(--page-gap)";
 // Which columns sit out at which width. Hidden, a cell leaves the grid's flow
 // entirely, and the grid's own column list (on the <Table>) drops its track.
+// Without the Recording column, the last column showing takes the card's
+// padding instead: Recorded on the narrow row, Confidence from 36rem.
+const LAST_EDGE_WITHOUT_AUDIO: Record<string, string> = {
+	recorded: `${AUDIO_EDGE} @min-[36rem]:pr-[calc(var(--page-gap)/2)]`,
+	confidence: AUDIO_EDGE,
+};
 const COLUMN_VISIBILITY: Record<string, string> = {
 	scientificName: "hidden @min-[54rem]:block",
 	confidence: "hidden @min-[36rem]:block",
@@ -133,14 +145,15 @@ const GRID_ROW = "col-span-full grid grid-cols-subgrid items-center";
 // column has to leave the list as well as the row. Species may shrink below its
 // name at the narrow widths, where it truncates; at the widest every column
 // holds its content on one line and the four between the ends share the rest.
-function gridColumns(canDelete: boolean): CSSProperties {
+function gridColumns(canDelete: boolean, canListen: boolean): CSSProperties {
 	// The row number follows the checkbox at every width, sized to its widest.
 	const lead = canDelete ? "max-content max-content " : "max-content ";
+	const audio = canListen ? " max-content" : "";
 	const fill = "minmax(max-content, 1fr)";
 	return {
-		"--cols-sm": `${lead}minmax(0, 1fr) max-content max-content`,
-		"--cols-md": `${lead}minmax(0, 1fr) ${fill} ${fill} max-content`,
-		"--cols-lg": `${lead}repeat(4, ${fill}) max-content`,
+		"--cols-sm": `${lead}minmax(0, 1fr) max-content${audio}`,
+		"--cols-md": `${lead}minmax(0, 1fr) ${fill} ${fill}${audio}`,
+		"--cols-lg": `${lead}repeat(4, ${fill})${audio}`,
 	} as CSSProperties;
 }
 
@@ -488,6 +501,7 @@ export function DetectionsTable({
 	rowSelection,
 	onRowSelectionChange,
 	canDelete,
+	canListen,
 	onDeleteSelected,
 }: DetectionsTableProps) {
 	function updateSearch(change: Partial<DetectionWorkspaceSearch>) {
@@ -552,6 +566,29 @@ export function DetectionsTable({
 				index={firstIndex + row.index}
 				widest={Math.max(lastIndex, TABLE_INDEX_FLOOR)}
 			/>
+		),
+		enableHiding: false,
+	};
+
+	const audioColumn: ColumnDef<DetectionTableRow> = {
+		id: "audio",
+		// Narrow, the column is a lone speaker glyph per row and needs no
+		// heading to explain it; the name stays for screen readers.
+		header: () => (
+			<span className="sr-only @min-[36rem]:not-sr-only">Recording</span>
+		),
+		cell: ({ row }) => (
+			<div className="flex justify-end">
+				<RecordingButton
+					audioUrl={audioUrlFor(
+						row.original.Date,
+						row.original.Com_Name,
+						row.original.File_Name,
+					)}
+					labelClassName="hidden @min-[36rem]:inline"
+					speciesName={row.original.Com_Name}
+				/>
+			</div>
 		),
 		enableHiding: false,
 	};
@@ -654,28 +691,7 @@ export function DetectionsTable({
 				</div>
 			),
 		},
-		{
-			id: "audio",
-			// Narrow, the column is a lone speaker glyph per row and needs no
-			// heading to explain it; the name stays for screen readers.
-			header: () => (
-				<span className="sr-only @min-[36rem]:not-sr-only">Recording</span>
-			),
-			cell: ({ row }) => (
-				<div className="flex justify-end">
-					<RecordingButton
-						audioUrl={audioUrlFor(
-							row.original.Date,
-							row.original.Com_Name,
-							row.original.File_Name,
-						)}
-						labelClassName="hidden @min-[36rem]:inline"
-						speciesName={row.original.Com_Name}
-					/>
-				</div>
-			),
-			enableHiding: false,
-		},
+		...(canListen ? [audioColumn] : []),
 	];
 
 	const skeleton = page === null;
@@ -744,7 +760,7 @@ export function DetectionsTable({
 			<Table
 				role="table"
 				className="grid h-full min-w-min @min-[36rem]:grid-cols-(--cols-md) @min-[54rem]:grid-cols-(--cols-lg) grid-cols-(--cols-sm) grid-rows-[auto_minmax(0,1fr)]"
-				style={gridColumns(canDelete)}
+				style={gridColumns(canDelete, canListen)}
 				containerClassName="-ml-(--page-gap) -mr-(--card-edge) -mt-(--page-gap) min-h-0 flex-1 overflow-x-auto overflow-y-hidden pr-0 pl-0"
 			>
 				{/* A hairline under the header, the footer's rule mirrored, so the
@@ -770,6 +786,7 @@ export function DetectionsTable({
 										"font-semibold",
 										CELL_GAP,
 										HEADER_CLASSES[header.column.id],
+										!canListen && LAST_EDGE_WITHOUT_AUDIO[header.column.id],
 										header.column.id === "select"
 											? undefined
 											: (COLUMN_VISIBILITY[header.column.id] ??
@@ -847,6 +864,7 @@ export function DetectionsTable({
 									className={cn(
 										CELL_GAP,
 										CELL_CLASSES[cell.column.id],
+										!canListen && LAST_EDGE_WITHOUT_AUDIO[cell.column.id],
 										COLUMN_VISIBILITY[cell.column.id],
 										index === 0 && FIRST_COLUMN_CLASSES,
 									)}

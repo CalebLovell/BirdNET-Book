@@ -5,7 +5,7 @@ import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import test from "node:test";
 
-import { bestRecordings } from "./best-recording.server.ts";
+import { bestRecordings, isBestRecording } from "./best-recording.server.ts";
 
 type Row = [
 	date: string,
@@ -102,5 +102,41 @@ test("narrows to one species when named", () => {
 	assert.deepEqual(
 		[...bestRecordings(database, root, "Blue Jay").keys()],
 		["Blue Jay"],
+	);
+});
+
+test("only a species' best recording counts as one", () => {
+	const { database, root } = fixture(
+		[
+			["2026-10-19", "12:00:00", "Blue Jay", 0.8, "recent.wav"],
+			["2026-06-30", "06:00:00", "Blue Jay", 0.98, "best.wav"],
+		],
+		["recent.wav", "best.wav"],
+	);
+	const clip = (date: string, fileName: string, speciesDir = "Blue_Jay") => ({
+		date,
+		speciesDir,
+		fileName,
+	});
+	assert.equal(
+		isBestRecording(database, root, clip("2026-06-30", "best.wav")),
+		true,
+	);
+	assert.equal(
+		isBestRecording(database, root, clip("2026-10-19", "recent.wav")),
+		false,
+	);
+	// The right file under another species' folder, or another day, is not it.
+	assert.equal(
+		isBestRecording(
+			database,
+			root,
+			clip("2026-06-30", "best.wav", "House_Finch"),
+		),
+		false,
+	);
+	assert.equal(
+		isBestRecording(database, root, clip("2026-10-19", "best.wav")),
+		false,
 	);
 });

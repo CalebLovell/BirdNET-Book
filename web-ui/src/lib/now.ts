@@ -4,6 +4,7 @@ import { and, avg, count, desc, sql } from "drizzle-orm";
 import { db } from "~/db/index.ts";
 import { detections } from "~/db/schema.ts";
 import { audioUrlFor } from "~/lib/audio.ts";
+import { canHearEveryClip } from "~/lib/clip-access.server.ts";
 import { illustrationUrlFor } from "~/lib/illustrations.ts";
 import { comNameToSlug } from "~/lib/species-slug.ts";
 import {
@@ -124,6 +125,7 @@ function detectionKey(row: { detectedAt: string; fileName: string }): string {
 async function buildCurrentBird(
 	latest: LatestRow,
 	generatedAtMs: number,
+	withAudio: boolean,
 ): Promise<CurrentBird> {
 	const isSameSpecies = sql`${detections.Com_Name} = ${latest.comName}`;
 	// The same test with the unary + that keeps SQLite off the Com_Name index:
@@ -169,7 +171,9 @@ async function buildCurrentBird(
 		detectedAt: latest.detectedAt,
 		ageMs: generatedAtMs - timestampToMillis(latest.detectedAt),
 		confidence: latest.confidence,
-		audioUrl: audioUrlFor(latest.date, latest.comName, latest.fileName),
+		audioUrl: withAudio
+			? audioUrlFor(latest.date, latest.comName, latest.fileName)
+			: null,
 		countLast24h: totals.countLast24h,
 		visitsLast24h: countVisits(moments.map((moment) => moment.timestamp)),
 		averageConfidence:
@@ -235,6 +239,7 @@ function buildRecentPage(
 	log: Visit<WindowRow>[],
 	page: number,
 	generatedAtMs: number,
+	withAudio: boolean,
 ): Promise<RecentVisit[]> {
 	const start = (page - 1) * RECENT_PAGE_SIZE;
 	return Promise.all(
@@ -255,7 +260,9 @@ function buildRecentPage(
 				ageMs: generatedAtMs - timestampToMillis(last.detectedAt),
 				detections: visit.moments.length,
 				confidence: best.confidence,
-				audioUrl: audioUrlFor(best.date, best.comName, best.fileName),
+				audioUrl: withAudio
+					? audioUrlFor(best.date, best.comName, best.fileName)
+					: null,
 			};
 		}),
 	);
@@ -271,8 +278,10 @@ export const getNowSnapshot = createServerFn({ method: "GET" }).handler(
 		// Everything, the hero included, is bounded to the last 24 hours: a bird
 		// heard two days ago leaves the page to its quiet state instead.
 		const latest = await getLatestRow();
+		// Signed out, the page plays nothing: its clips aren't best recordings.
+		const withAudio = await canHearEveryClip();
 		const [current, window, anyDetections] = await Promise.all([
-			latest ? buildCurrentBird(latest, generatedAtMs) : null,
+			latest ? buildCurrentBird(latest, generatedAtMs, withAudio) : null,
 			getWindowVisits(latest ? detectionKey(latest) : undefined),
 			latest ? true : hasAnyDetections(),
 		]);
@@ -282,7 +291,7 @@ export const getNowSnapshot = createServerFn({ method: "GET" }).handler(
 			current,
 			hasAnyDetections: anyDetections,
 			summary: { detections: window.rows.length },
-			recent: await buildRecentPage(window.log, 1, generatedAtMs),
+			recent: await buildRecentPage(window.log, 1, generatedAtMs, withAudio),
 			recentTotal: window.log.length,
 		};
 	},
@@ -303,12 +312,18 @@ export const getRecentPage = createServerFn({ method: "GET" })
 	.handler(async ({ data: { page } }): Promise<RecentPage> => {
 		const generatedAtDate = new Date();
 		const latest = await getLatestRow();
+		const withAudio = await canHearEveryClip();
 		const { log } = await getWindowVisits(
 			latest ? detectionKey(latest) : undefined,
 		);
 		return {
 			page,
-			recent: await buildRecentPage(log, page, generatedAtDate.getTime()),
+			recent: await buildRecentPage(
+				log,
+				page,
+				generatedAtDate.getTime(),
+				withAudio,
+			),
 			recentTotal: log.length,
 			generatedAt: localTimestamp(generatedAtDate),
 		};

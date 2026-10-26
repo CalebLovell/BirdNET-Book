@@ -6,6 +6,7 @@ import { detections } from "~/db/schema.ts";
 import { extractedDir } from "~/lib/audio.server.ts";
 import { audioUrlFor } from "~/lib/audio.ts";
 import { bestRecordings } from "~/lib/best-recording.server.ts";
+import { canHearEveryClip } from "~/lib/clip-access.server.ts";
 import { illustrationUrlFor } from "~/lib/illustrations.ts";
 import {
 	type CatalogSpecies,
@@ -118,6 +119,8 @@ async function getVisitPage(
 	page: number,
 	now: Date,
 ): Promise<RecentVisit[]> {
+	// Signed out, a visit carries no clip: only the best recording plays.
+	const withAudio = await canHearEveryClip();
 	const rows = await db
 		.select({
 			date: detections.Date,
@@ -135,7 +138,9 @@ async function getVisitPage(
 		date: visit.date,
 		time: visit.time,
 		confidence: visit.confidence,
-		audioUrl: audioUrlFor(visit.date, comName, visit.fileName),
+		audioUrl: withAudio
+			? audioUrlFor(visit.date, comName, visit.fileName)
+			: null,
 		ageMs: now.getTime() - timestampToMillis(`${visit.date} ${visit.time}`),
 	}));
 }
