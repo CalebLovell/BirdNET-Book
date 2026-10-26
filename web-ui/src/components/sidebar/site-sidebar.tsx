@@ -2,7 +2,7 @@ import { Link } from "@tanstack/react-router";
 
 import { SidebarNav } from "~/components/sidebar/sidebar-nav.tsx";
 import { SiteSearch } from "~/components/sidebar/site-search.tsx";
-import { SongbookMark } from "~/components/sidebar/songbook-mark.tsx";
+import { SongbookWordmark } from "~/components/sidebar/songbook-wordmark.tsx";
 
 /**
  * Everything inside the sidebar, shared by the desktop column and the mobile
@@ -26,8 +26,7 @@ export function SidebarBody({
 					onClick={onNavigate}
 					className="display-title flex items-center gap-2 px-3 pb-4 font-semibold text-xl no-underline"
 				>
-					<SongbookMark className="size-6 shrink-0 text-[var(--moss)]" />
-					Songbook
+					<SongbookWordmark className="shrink-0 text-[var(--moss)]" />
 				</Link>
 			) : null}
 

@@ -5,7 +5,7 @@ import { createPortal } from "react-dom";
 
 import { UpdateDot } from "~/components/sidebar/sidebar-nav.tsx";
 import { SidebarBody } from "~/components/sidebar/site-sidebar.tsx";
-import { SongbookMark } from "~/components/sidebar/songbook-mark.tsx";
+import { SongbookWordmark } from "~/components/sidebar/songbook-wordmark.tsx";
 import { useUpdateOffered } from "~/lib/use-update-offered.ts";
 
 /**
@@ -163,8 +163,7 @@ function SiteName({ onClick }: { onClick?: () => void }) {
 			onClick={onClick}
 			className="display-title flex h-9 items-center gap-2 rounded-md px-2 font-semibold text-lg no-underline transition-colors duration-[180ms] hover:bg-[color-mix(in_oklab,var(--moss)_8%,var(--paper-raised))]"
 		>
-			<SongbookMark className="size-5 shrink-0 text-[var(--moss)]" />
-			Songbook
+			<SongbookWordmark className="shrink-0 text-[var(--moss)]" />
 		</Link>
 	);
 }
