@@ -178,7 +178,7 @@ function SectionLabel({ id, children }: { id: string; children: string }) {
 	return (
 		<h2
 			id={id}
-			className="-mx-3 m-0 flex items-center gap-2 pb-2 font-bold text-[0.69rem] text-[var(--kicker)] leading-none"
+			className="m-0 -mx-3 flex items-center gap-2 pb-2 font-bold text-[0.69rem] text-[var(--kicker)] leading-none"
 		>
 			{/* The lines run out past the nav's inset to the card's edges, like the
 			    divider under the wordmark; the leading one is that inset longer,
