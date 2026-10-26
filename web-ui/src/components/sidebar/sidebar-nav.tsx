@@ -178,9 +178,10 @@ function SectionLabel({ id, children }: { id: string; children: string }) {
 	return (
 		<h2
 			id={id}
-			className="m-0 flex items-center gap-2 pb-2 font-bold text-[0.69rem] text-[var(--kicker)] leading-none"
+			className="m-0 flex items-center gap-2 pb-2 pl-2.5 font-bold text-[0.69rem] text-[var(--kicker)] leading-none"
 		>
-			<span aria-hidden="true" className="h-px w-3 bg-[var(--line)]" />
+			{/* Inset by the links' own padding, so the label starts where their
+			    icons do. */}
 			{children}
 			<span aria-hidden="true" className="h-px flex-1 bg-[var(--line)]" />
 		</h2>

@@ -20,14 +20,19 @@ export function SidebarBody({
 }) {
 	return (
 		<div className="flex min-h-full flex-col py-3">
+			{/* The wordmark centered over a hairline that runs the card's full
+			    width, setting the brand apart from the list below. */}
 			{withTitle ? (
-				<Link
-					to="/"
-					onClick={onNavigate}
-					className="display-title flex items-center gap-2 px-3 pb-4 font-semibold text-xl no-underline"
-				>
-					<SongbookWordmark className="shrink-0 text-[26px] text-[var(--moss)]" />
-				</Link>
+				<>
+					<Link
+						to="/"
+						onClick={onNavigate}
+						className="flex justify-center px-3 pt-1.5 pb-3.5 no-underline"
+					>
+						<SongbookWordmark className="shrink-0 text-[26px] text-[var(--moss)]" />
+					</Link>
+					<div aria-hidden="true" className="mb-3 h-px bg-[var(--line)]" />
+				</>
 			) : null}
 
 			<SiteSearch onNavigate={onNavigate} />
