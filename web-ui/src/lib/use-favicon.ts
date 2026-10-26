@@ -2,13 +2,18 @@ import { useEffect } from "react";
 
 import { isPhotoUrl } from "~/lib/illustrations.ts";
 
-/** The tab's picture on any page without a bird of its own: the empty nest. */
-export const DEFAULT_FAVICON = "/illustrations/nest.webp";
+/** The tab's picture on any page that isn't about a bird: the wordmark's
+    singing book. */
+export const DEFAULT_FAVICON = "/songbook.svg";
 
-/** The icon for `href`: a reference photo is never a favicon, so it, like no
-    bird at all, gets the nest. */
+/** What a bird page shows when it has no bird to put in the tab, matching the
+    empty nest its hero card shows. */
+export const NEST_FAVICON = "/illustrations/nest.webp";
+
+/** A bird page's icon for `href`: a reference photo is never a favicon, so
+    it, like no bird at all, gets the nest. */
 export function faviconHref(href: string | null): string {
-	return href && !isPhotoUrl(href) ? href : DEFAULT_FAVICON;
+	return href && !isPhotoUrl(href) ? href : NEST_FAVICON;
 }
 
 /** The reset a page that just unmounted has asked for, until the next page
@@ -71,14 +76,14 @@ if (typeof window !== "undefined") {
 
 /**
  * Points the tab icon at a bird page's painting while the calling component
- * is mounted -- the nest when there's no painting -- and puts the nest back
- * once it's gone. `undefined` means the page doesn't know
+ * is mounted -- the nest when there's no painting -- and puts the singing book
+ * back once it's gone. `undefined` means the page doesn't know
  * its picture yet: the tab keeps whatever it shows rather than flashing a
  * stand-in while the data loads.
  *
  * The way back to the default waits a tick: a page that takes over the tab in
  * the same navigation cancels it, so going from one bird page to another never
- * shows the nest in between. A page that doesn't claim the tab lets it run.
+ * shows the book in between. A page that doesn't claim the tab lets it run.
  *
  * This mutates the single <link rel="icon"> the root route renders rather than
  * appending a second one, which matters more than it looks: a document gets one

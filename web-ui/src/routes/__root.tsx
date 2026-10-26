@@ -37,11 +37,11 @@ export const Route = createRootRoute({
 				rel: "stylesheet",
 				href: appCss,
 			},
-			// The one and only icon element in the document: the empty nest.
+			// The one and only icon element in the document: the singing book.
 			// Routes that know which bird they are about point this same link
 			// somewhere else via `useBirdFavicon` -- see the note there for why
 			// they must not render a second one. No `type`: the href gets swapped
-			// between webp and png, and a stale type is worse than none.
+			// between svg, webp and png, and a stale type is worse than none.
 			{
 				rel: "icon",
 				href: DEFAULT_FAVICON,

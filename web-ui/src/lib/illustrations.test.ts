@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import { illustrationUrlFor, isPhotoUrl } from "./illustrations.ts";
-import { DEFAULT_FAVICON, faviconHref } from "./use-favicon.ts";
+import { faviconHref, NEST_FAVICON } from "./use-favicon.ts";
 
 const PHOTO = "https://inaturalist-open-data.s3.amazonaws.com/x.jpg";
 
@@ -36,8 +36,8 @@ test("isPhotoUrl tells photos from paintings", () => {
 });
 
 test("faviconHref never shows a photo", () => {
-	assert.equal(faviconHref(PHOTO), DEFAULT_FAVICON);
-	assert.equal(faviconHref(null), DEFAULT_FAVICON);
+	assert.equal(faviconHref(PHOTO), NEST_FAVICON);
+	assert.equal(faviconHref(null), NEST_FAVICON);
 	assert.equal(
 		faviconHref("/illustrations-new/x.png"),
 		"/illustrations-new/x.png",
