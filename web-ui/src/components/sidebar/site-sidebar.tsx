@@ -26,7 +26,7 @@ export function SidebarBody({
 					onClick={onNavigate}
 					className="display-title flex items-center gap-2 px-3 pb-4 font-semibold text-xl no-underline"
 				>
-					<SongbookWordmark className="shrink-0 text-[var(--moss)]" />
+					<SongbookWordmark className="shrink-0 text-[26px] text-[var(--moss)]" />
 				</Link>
 			) : null}
 

@@ -163,7 +163,7 @@ function SiteName({ onClick }: { onClick?: () => void }) {
 			onClick={onClick}
 			className="display-title flex h-9 items-center gap-2 rounded-md px-2 font-semibold text-lg no-underline transition-colors duration-[180ms] hover:bg-[color-mix(in_oklab,var(--moss)_8%,var(--paper-raised))]"
 		>
-			<SongbookWordmark className="shrink-0 text-[var(--moss)]" />
+			<SongbookWordmark className="shrink-0 text-[24px] text-[var(--moss)]" />
 		</Link>
 	);
 }
