@@ -3,7 +3,7 @@ import { useEffect } from "react";
 import { isPhotoUrl } from "~/lib/illustrations.ts";
 
 /** What the tab shows on any page that cannot name a bird of its own. */
-export const DEFAULT_FAVICON = "/illustrations/nest.webp";
+export const DEFAULT_FAVICON = "/songbook.svg";
 
 /** The icon for `href`: a reference photo is never a favicon, so it gets the default. */
 export function faviconHref(href: string | null): string {

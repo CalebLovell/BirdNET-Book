@@ -37,11 +37,11 @@ export const Route = createRootRoute({
 				rel: "stylesheet",
 				href: appCss,
 			},
-			// The one and only icon element in the document, standing in until a
-			// proper mark exists. Routes that know which bird they are about point
-			// this same link somewhere else via `useFavicon` -- see the note there
-			// for why they must not render a second one. No `type`: the href gets
-			// swapped between webp and png, and a stale type is worse than none.
+			// The one and only icon element in the document: the Songbook mark.
+			// Routes that know which bird they are about point this same link
+			// somewhere else via `useFavicon` -- see the note there for why they
+			// must not render a second one. No `type`: the href gets swapped
+			// between svg, webp and png, and a stale type is worse than none.
 			{
 				rel: "icon",
 				href: DEFAULT_FAVICON,

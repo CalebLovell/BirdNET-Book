@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { existsSync, mkdirSync } from "node:fs";
+import { existsSync, mkdirSync, realpathSync } from "node:fs";
 import path from "node:path";
 import tailwindcss from "@tailwindcss/vite";
 import { tanstackStart } from "@tanstack/react-start/plugin/vite";
@@ -41,7 +41,14 @@ function devStationPassword(): Plugin {
 	};
 }
 
+// Run from the real folder even when started through a link to it (the old
+// BirdNET-Pi-Live path is a junction to this checkout): Vite and Nitro take
+// their root from the working directory, Node resolves modules by real path,
+// and when the two disagree the dev server can't load its own entry files.
+process.chdir(realpathSync.native(process.cwd()));
+
 const config = defineConfig({
+	root: process.cwd(),
 	// PORT lets a harness hand the dev server a free port when 3000 is taken;
 	// plain `npm run dev` still lands on 3000, which is what the launch config
 	// and every bookmarked localhost URL expect.
