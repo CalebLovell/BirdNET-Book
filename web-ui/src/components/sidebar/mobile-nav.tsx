@@ -157,7 +157,7 @@ function SiteName({ onClick }: { onClick?: () => void }) {
 		<Link
 			to="/"
 			onClick={onClick}
-			className="display-title flex items-center gap-2 font-semibold text-lg no-underline"
+			className="display-title flex h-9 items-center gap-2 rounded-md px-2 font-semibold text-lg no-underline transition-colors duration-[180ms] hover:bg-[color-mix(in_oklab,var(--moss)_8%,var(--paper-raised))]"
 		>
 			<SongbookMark className="size-5 shrink-0 text-[var(--moss)]" />
 			Songbook
