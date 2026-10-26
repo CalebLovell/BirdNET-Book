@@ -19,9 +19,19 @@ export function faviconHref(
 	return href && !isPhotoUrl(href) ? href : fallback;
 }
 
+/** The reset a page that just unmounted has asked for, until the next page
+    either claims the tab or lets it happen. */
+let pendingReset: ReturnType<typeof setTimeout> | undefined;
+
 /**
  * Points the tab icon at `href` while the calling component is mounted, and
- * puts the default back on the way out.
+ * puts the default back once it's gone. `undefined` means the page doesn't know
+ * its picture yet: the tab keeps whatever it shows rather than flashing a
+ * stand-in while the data loads.
+ *
+ * The way back to the default waits a tick: a page that takes over the tab in
+ * the same navigation cancels it, so going from one bird page to another never
+ * shows the mark in between. A page that doesn't claim the tab lets it run.
  *
  * This mutates the single <link rel="icon"> the root route renders rather than
  * appending a second one, which matters more than it looks: a document gets one
@@ -34,19 +44,26 @@ export function faviconHref(
  * document, so a route-level one only ever arrives as the second.
  */
 export function useFavicon(
-	href: string | null,
+	href: string | null | undefined,
 	fallback: string = DEFAULT_FAVICON,
 ) {
 	useEffect(() => {
 		const link = document.querySelector<HTMLLinkElement>('link[rel~="icon"]');
 		if (!link) return;
 
-		link.setAttribute("href", faviconHref(href, fallback));
-		return () => link.setAttribute("href", DEFAULT_FAVICON);
+		clearTimeout(pendingReset);
+		if (href !== undefined)
+			link.setAttribute("href", faviconHref(href, fallback));
+		return () => {
+			pendingReset = setTimeout(
+				() => link.setAttribute("href", DEFAULT_FAVICON),
+				0,
+			);
+		};
 	}, [href, fallback]);
 }
 
 /** A bird page's tab: its bird's painting, or the nest when it has none. */
-export function useBirdFavicon(href: string | null) {
+export function useBirdFavicon(href: string | null | undefined) {
 	useFavicon(href, NEST_FAVICON);
 }

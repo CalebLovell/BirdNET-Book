@@ -100,7 +100,11 @@ const FOOTER_CLASS =
 
 function Species() {
 	const { cards } = Route.useLoaderData();
-	useBirdFavicon(topCard(useSettled(cards)?.value ?? [])?.imageUrl ?? null);
+	// Nothing until the life list is in, so the tab keeps what it had.
+	const settledCards = useSettled(cards);
+	useBirdFavicon(
+		settledCards ? (topCard(settledCards.value)?.imageUrl ?? null) : undefined,
+	);
 
 	return (
 		<div className="page-wrap flex min-h-full flex-col gap-(--page-gap) py-4">

@@ -127,12 +127,15 @@ function Timeline() {
 	const anchor = resolveAnchor(period, search.date);
 	const navigate = Route.useNavigate();
 	// The window's most-heard bird (rows come busiest first), held over from the
-	// last window while the next one loads so the tab doesn't flash the nest.
+	// last window while the next one loads, and nothing at all before the first
+	// one lands, so the tab never flashes a stand-in.
 	const shown = settled?.value.body;
 	useBirdFavicon(
-		shown && shown.kind !== "day-out-of-range"
-			? (shown.rows[0]?.imageUrl ?? null)
-			: null,
+		shown === undefined
+			? undefined
+			: shown.kind === "day-out-of-range"
+				? null
+				: (shown.rows[0]?.imageUrl ?? null),
 	);
 
 	const show = (next: {

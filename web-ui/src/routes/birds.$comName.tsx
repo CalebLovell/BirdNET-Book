@@ -55,10 +55,12 @@ import {
 	visitPageCount,
 } from "~/lib/species-detail.ts";
 import { speciesLinkFor } from "~/lib/species-link.ts";
+import { comNameForSlug } from "~/lib/species-slug.ts";
 import { formatTimeAgo } from "~/lib/time-ago.ts";
 import type { TrendPoint } from "~/lib/trend.ts";
 import { useAgeOffset } from "~/lib/use-age-offset.ts";
 import { useBirdFavicon } from "~/lib/use-favicon.ts";
+import { useSettled } from "~/lib/use-settled.ts";
 
 const CURRENT_YEAR = new Date().getFullYear();
 const MIN_YEAR = 2000;
@@ -98,9 +100,13 @@ export const Route = createFileRoute("/birds/$comName")({
 			},
 		}),
 	}),
-	// The section name until the bird's own arrives with its detail; the page
-	// sets that itself (see useBirdTitle).
-	head: () => ({ meta: [{ title: pageTitle("Species") }] }),
+	// The bird's name when the link that led here was built in this browser --
+	// any click from a list -- so the tab names it at once. A first load can't
+	// know it yet: it shows the section name until the detail lands and the
+	// page names itself (see useBirdTitle).
+	head: ({ params }) => ({
+		meta: [{ title: pageTitle(comNameForSlug(params.comName) ?? "Bird") }],
+	}),
 	component: BirdPage,
 });
 
@@ -167,6 +173,22 @@ function buildHeatMap(history: TrendPoint[]): {
 function BirdPage() {
 	const { result } = Route.useLoaderData();
 	const { year } = Route.useSearch();
+	// Set here rather than in the detail view so the shell holds the tab's
+	// current icon too: nothing until the bird resolves, then its painting --
+	// the same flight illustration the hero draws, so the browser serves it from
+	// cache rather than pulling a second half-megabyte PNG. The wings lose their
+	// detail at 16px, but the silhouette still reads. A bird without a bundled
+	// illustration gets the nest.
+	const settled = useSettled(result);
+	useBirdFavicon(
+		settled === null
+			? undefined
+			: settled.value.status === "detected"
+				? illustrationUrlFor(settled.value.detail.sciName, "flight")
+				: settled.value.status === "undetected"
+					? illustrationUrlFor(settled.value.sciName, "flight")
+					: null,
+	);
 
 	// Keyed on the year, the one search the loader reruns for, so a new year
 	// drops the page to its shell at once rather than holding the old one.
@@ -476,12 +498,6 @@ function SpeciesNotFound() {
 function SpeciesDetailView({ detail }: { detail: SpeciesDetail }) {
 	const { year, visits: visitsPage } = Route.useSearch();
 	const navigate = Route.useNavigate();
-	// The same flight illustration the hero draws, so the browser serves it from
-	// cache rather than pulling a second half-megabyte PNG. The wings lose their
-	// detail at 16px, but the silhouette still reads. Species without a bundled
-	// illustration keep the nest.
-	useBirdFavicon(illustrationUrlFor(detail.sciName, "flight"));
-
 	const { weeks, maximum } = buildHeatMap(detail.history);
 	// A year of weeks is wider than a phone, so the grid scrolls inside its card.
 	// For the current year the right edge is today, so start there; a past year
