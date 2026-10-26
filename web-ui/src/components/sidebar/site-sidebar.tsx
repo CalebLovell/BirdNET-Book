@@ -24,7 +24,7 @@ export function SidebarBody({
 				<Link
 					to="/"
 					onClick={onNavigate}
-					className="display-title flex items-center gap-2 px-3 pb-4 font-semibold text-xl no-underline"
+					className="display-title flex items-center justify-center gap-2 px-3 pb-4 font-semibold text-xl no-underline"
 				>
 					<SongbookMark className="size-6 shrink-0 text-[var(--moss)]" />
 					Songbook
