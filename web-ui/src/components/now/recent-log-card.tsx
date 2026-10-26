@@ -18,8 +18,8 @@ import {
 	recentPageCount,
 } from "~/lib/now.ts";
 import { formatClockRange, formatTimeAgo } from "~/lib/time-ago.ts";
-import { useCanListen } from "~/lib/use-can-listen.ts";
 import { useAgeOffset } from "~/lib/use-age-offset.ts";
+import { useCanListen } from "~/lib/use-can-listen.ts";
 
 /** A row's height: the 40px thumbnail and 7px above and below it. Paged, the
     list holds a full page's height, so a short last page never pulls the
