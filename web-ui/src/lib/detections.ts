@@ -13,11 +13,12 @@ import {
 	sql,
 } from "drizzle-orm";
 import Fuse from "fuse.js";
-import { db, openWritableDetectionsDb } from "~/db/index.ts";
+import { db, openWritableDetectionsDb, sqlite } from "~/db/index.ts";
 import { type Detection, detections } from "~/db/schema.ts";
 import { extractedDir } from "~/lib/audio.server.ts";
 import { audioUrlFor } from "~/lib/audio.ts";
 import { requireUnlocked } from "~/lib/auth.ts";
+import { bestRecordings } from "~/lib/best-recording.server.ts";
 import {
 	type DetectionClipIdentity,
 	resolveDetectionClipPath,
@@ -328,9 +329,6 @@ export const getLifeListCards = createServerFn({ method: "GET" }).handler(
 		// groups add up to the species' total, and the latest one holds its most
 		// recent detection. Every pass over a years-deep table is costly, and the
 		// alternative -- every row sent here to be folded -- costs more still.
-		//
-		// File_Name is a bare column beside a single max(): SQLite takes it from
-		// the row the max came from, so it is the clip of that latest detection.
 		const groups = await db
 			.select({
 				comName: detections.Com_Name,
@@ -338,7 +336,6 @@ export const getLifeListCards = createServerFn({ method: "GET" }).handler(
 				hour: sql<string>`substr(${detections.Time}, 1, 2)`,
 				count: count(),
 				latestAt: sql<string>`max(${detections.Date} || ' ' || ${detections.Time})`,
-				fileName: detections.File_Name,
 			})
 			.from(detections)
 			.groupBy(
@@ -347,7 +344,9 @@ export const getLifeListCards = createServerFn({ method: "GET" }).handler(
 				sql`substr(${detections.Time}, 1, 2)`,
 			);
 
-		const cards = new Map<string, LifeListCard & { fileName: string }>();
+		const best = bestRecordings(sqlite, extractedDir());
+
+		const cards = new Map<string, LifeListCard>();
 		for (const group of groups) {
 			let card = cards.get(group.comName);
 			if (!card) {
@@ -360,7 +359,6 @@ export const getLifeListCards = createServerFn({ method: "GET" }).handler(
 					audioUrl: null,
 					imageUrl: illustrationUrlFor(group.sciName),
 					speciesLink: speciesLinkFor(group.sciName),
-					fileName: "",
 				};
 				cards.set(group.comName, card);
 			}
@@ -369,15 +367,17 @@ export const getLifeListCards = createServerFn({ method: "GET" }).handler(
 			if (hour >= 0 && hour <= 23) card.hourCounts[hour] += group.count;
 			if (group.latestAt > card.lastDetected) {
 				card.lastDetected = group.latestAt;
-				card.fileName = group.fileName;
 			}
 		}
 
-		return [...cards.values()].map(({ fileName, ...card }) => ({
-			...card,
-			audioUrl: card.lastDetected
-				? audioUrlFor(card.lastDetected.slice(0, 10), card.comName, fileName)
-				: null,
-		}));
+		return [...cards.values()].map((card) => {
+			const clip = best.get(card.comName);
+			return {
+				...card,
+				audioUrl: clip
+					? audioUrlFor(clip.date, card.comName, clip.fileName)
+					: null,
+			};
+		});
 	},
 );

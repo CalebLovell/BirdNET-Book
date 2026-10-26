@@ -1,9 +1,11 @@
 import { createServerFn } from "@tanstack/react-start";
 import { avg, desc, sql } from "drizzle-orm";
 
-import { db } from "~/db/index.ts";
+import { db, sqlite } from "~/db/index.ts";
 import { detections } from "~/db/schema.ts";
+import { extractedDir } from "~/lib/audio.server.ts";
 import { audioUrlFor } from "~/lib/audio.ts";
+import { bestRecordings } from "~/lib/best-recording.server.ts";
 import { illustrationUrlFor } from "~/lib/illustrations.ts";
 import {
 	type CatalogSpecies,
@@ -35,7 +37,8 @@ export type Visit = {
  */
 export type RecentVisit = Visit & { ageMs: number };
 
-/** The species' highest-confidence detection, featured with a spectrogram. */
+/** The species' best recording (see best-recording.server.ts), featured with
+ * a spectrogram. */
 export type BestRecording = {
 	date: string;
 	time: string;
@@ -59,7 +62,7 @@ export type SpeciesDetail = {
 	detectionTrend: TrendPoint[];
 	/** Every detection by hour of day, like the stats page's chart. */
 	hourActivity: HourActivity[];
-	/** The single cleanest clip -- highest confidence, all-time. */
+	/** The single cleanest clip still on disk -- highest confidence, all-time. */
 	bestRecording: BestRecording | null;
 	recentVisits: RecentVisit[];
 	/** When the visit ages were measured, for `useAgeOffset` to advance them. */
@@ -263,6 +266,7 @@ export const getSpeciesDetail = createServerFn({ method: "GET" })
 				return missToResult(comNameSlug);
 			}
 			const comName = totals.comName;
+			const best = bestRecordings(sqlite, extractedDir(), comName).get(comName);
 			const logPage = Math.min(
 				toPageNumber(visitsPage),
 				visitPageCount(totals.totalDetections),
@@ -271,7 +275,6 @@ export const getSpeciesDetail = createServerFn({ method: "GET" })
 			const [
 				[first],
 				[last],
-				[best],
 				recentVisits,
 				availableYears,
 				history,
@@ -298,19 +301,6 @@ export const getSpeciesDetail = createServerFn({ method: "GET" })
 					.from(detections)
 					.where(filter)
 					.orderBy(desc(detections.Date), desc(detections.Time))
-					.limit(1),
-				db
-					.select({
-						date: detections.Date,
-						time: detections.Time,
-						confidence: detections.Confidence,
-						fileName: detections.File_Name,
-					})
-					.from(detections)
-					.where(filter)
-					// The cleanest clip is the highest-confidence one; ties break toward
-					// the most recent, since that clip is likeliest to still be on disk.
-					.orderBy(desc(detections.Confidence), desc(detections.Date))
 					.limit(1),
 				getVisitPage(comName, 1, generatedAtDate),
 				getDetectionYears(filter),
