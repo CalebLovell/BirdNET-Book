@@ -30,16 +30,28 @@ const HERO_CARD_ROW =
  */
 const HERO_CARD_FOOTER = "sm:pl-48";
 
+/**
+ * The top-right controls (the Live pill, say) share the title's line beside
+ * the portrait. Below `sm` the portrait stacks on top, which would leave them
+ * under the bird next to the title, so there the card gives them a row of
+ * their own above the portrait instead, and this copy hides.
+ */
+export const HERO_ACTIONS_CLASS = "max-sm:hidden";
+
 export function HeroCardShell({
 	label,
 	portrait,
 	className = HERO_CARD_SHELL,
 	style,
+	actions,
 	footer,
 	children,
 }: {
 	label: string;
 	portrait: ReactNode;
+	/** Below `sm`, the top-right controls' own row above the portrait. Beside
+	    it, the content column places them; see HERO_ACTIONS_CLASS. */
+	actions?: ReactNode;
 	className?: string;
 	style?: CSSProperties;
 	/** Unfolds beneath the portrait row, aligned with the content column. */
@@ -48,6 +60,9 @@ export function HeroCardShell({
 }) {
 	return (
 		<section aria-label={label} className={className} style={style}>
+			{actions ? (
+				<div className="mb-2 flex justify-end sm:hidden">{actions}</div>
+			) : null}
 			<div className={HERO_CARD_ROW}>
 				{portrait}
 
@@ -131,6 +146,7 @@ export function SpeciesHeroCard({
 			portrait={<HeroPortrait imageUrl={imageUrl} comName={comName} />}
 			className={className}
 			style={style}
+			actions={actions}
 			footer={footer}
 		>
 			{/* Title and actions share a line, so the column starts level with the
@@ -154,7 +170,7 @@ export function SpeciesHeroCard({
 					</h1>
 					<p className="text-[var(--bark)] text-xs italic">{sciName}</p>
 				</div>
-				{actions}
+				{actions ? <div className={HERO_ACTIONS_CLASS}>{actions}</div> : null}
 			</div>
 
 			<div>
@@ -198,6 +214,7 @@ export function SpeciesHeroCardShell({
 	return (
 		<HeroCardShell
 			label={label}
+			actions={actions}
 			portrait={
 				// The portrait's whole slot, as HeroPortrait sizes it -- the space the
 				// painting is given, however much of it a bird fills.
@@ -229,7 +246,7 @@ export function HeroTextShell({ actions }: { actions?: ReactNode }) {
 					/>
 					<ShellText className="text-xs" barClassName="w-32" />
 				</div>
-				{actions}
+				{actions ? <div className={HERO_ACTIONS_CLASS}>{actions}</div> : null}
 			</div>
 
 			<div>

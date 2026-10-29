@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { LivePillSkeleton } from "~/components/now/live-pill.tsx";
 import {
+	HERO_ACTIONS_CLASS,
 	HERO_CARD_SHELL,
 	HeroCardShell,
 	HeroTextShell,
@@ -39,7 +40,11 @@ export function CurrentBirdCard({
 
 	if (!current && hasAnyDetections) {
 		return (
-			<HeroCardShell label="Last 24 hours" portrait={<NestPortrait />}>
+			<HeroCardShell
+				label="Last 24 hours"
+				portrait={<NestPortrait />}
+				actions={live}
+			>
 				<StandInBody live={live}>
 					<h1 className="display-title font-bold text-2xl sm:text-3xl">
 						{EMPTY.window.liveQuietTitle}
@@ -112,7 +117,7 @@ function StandInBody({
 				<div className="flex min-w-0 flex-col justify-center gap-2 self-stretch">
 					{children}
 				</div>
-				{live}
+				{live ? <div className={HERO_ACTIONS_CLASS}>{live}</div> : null}
 			</div>
 		</div>
 	);
