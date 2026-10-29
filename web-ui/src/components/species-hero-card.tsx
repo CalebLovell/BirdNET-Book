@@ -168,7 +168,11 @@ export function SpeciesHeroCard({
 					<span className="text-muted-foreground">last heard {heardAt}</span>
 					<ConfidencePill confidence={confidence} />
 					{canListen ? (
-						<RecordingButton audioUrl={audioUrl} speciesName={comName} />
+						<RecordingButton
+							audioUrl={audioUrl}
+							speciesName={comName}
+							size="sm"
+						/>
 					) : null}
 				</div>
 			</div>
@@ -237,7 +241,7 @@ export function HeroTextShell({ actions }: { actions?: ReactNode }) {
 					</ShellSized>
 					{canListen ? (
 						<ShellSized className="rounded-md">
-							<RecordingButton audioUrl={null} />
+							<RecordingButton audioUrl={null} size="sm" />
 						</ShellSized>
 					) : null}
 				</div>

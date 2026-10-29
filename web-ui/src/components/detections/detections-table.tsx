@@ -484,6 +484,7 @@ function SkeletonCell({
 					<ShellSized className="rounded-md">
 						<RecordingButton
 							audioUrl={null}
+							size="sm"
 							labelClassName="hidden @min-[36rem]:inline"
 						/>
 					</ShellSized>
@@ -585,6 +586,7 @@ export function DetectionsTable({
 						row.original.Com_Name,
 						row.original.File_Name,
 					)}
+					size="sm"
 					labelClassName="hidden @min-[36rem]:inline"
 					speciesName={row.original.Com_Name}
 				/>

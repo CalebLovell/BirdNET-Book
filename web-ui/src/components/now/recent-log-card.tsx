@@ -33,8 +33,9 @@ const ROW_CLASS =
 	"flex items-center @min-[26rem]:gap-3 gap-2 px-(--page-gap) py-1.75";
 const TIME_COLUMN_CLASS = "@min-[26rem]:block hidden shrink-0 text-right";
 const ROW_BUTTON = {
+	size: "sm" as const,
 	labelClassName: "@min-[26rem]:inline hidden",
-	className: "@min-[26rem]:w-auto w-6 @min-[26rem]:px-2.5 px-0",
+	className: "@min-[26rem]:w-auto w-7 @min-[26rem]:px-3 px-0",
 };
 const FOOTER_CLASS =
 	"-mx-(--page-gap) mt-auto -mb-(--page-gap) flex shrink-0 items-center border-t px-(--page-gap) py-2";
