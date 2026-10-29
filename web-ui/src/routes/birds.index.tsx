@@ -247,6 +247,9 @@ function SpeciesGridShell() {
 	);
 }
 
+/** A card's small print: the word after its count, and when it was last heard. */
+const CARD_NOTE_CLASS = "text-[11px] text-muted-foreground leading-none";
+
 const NAME_WIDTHS = ["w-36", "w-28", "w-40", "w-32"];
 
 function SpeciesCardSkeleton({ index }: { index: number }) {
@@ -259,7 +262,7 @@ function SpeciesCardSkeleton({ index }: { index: number }) {
 						barClassName="w-full"
 					/>
 					<ShellText
-						className="w-12 text-[10px] leading-none"
+						className={`w-12 ${CARD_NOTE_CLASS}`}
 						barClassName="w-full"
 					/>
 				</div>
@@ -279,17 +282,19 @@ function SpeciesCardSkeleton({ index }: { index: number }) {
 				</div>
 				<div className="flex w-full flex-wrap items-center gap-2">
 					<ShellSized className="rounded-md">
-						<Button icon={Volume2}>Bird Call</Button>
+						<Button size="sm" icon={Volume2}>
+							Bird Call
+						</Button>
 					</ShellSized>
 					<ShellSized className="rounded-md">
-						<Button variant="outline" icon={ExternalLink}>
+						<Button variant="outline" size="sm" icon={ExternalLink}>
 							eBird
 						</Button>
 					</ShellSized>
 				</div>
 				<ShellText
-					className="w-full text-[10px] leading-none"
-					barClassName="right-0 left-auto w-28"
+					className={`w-full ${CARD_NOTE_CLASS}`}
+					barClassName="right-0 left-auto w-36"
 				/>
 			</div>
 		</div>
@@ -623,7 +628,7 @@ function SpeciesCard({ card }: { card: LifeListCard }) {
 					</div>
 					{/* Not "total": that word belongs to the station's own figure
 					    above the grid, which this card's count is one share of. */}
-					<div className="text-[10px] text-muted-foreground/70 leading-none">
+					<div className={CARD_NOTE_CLASS}>
 						{card.allTimeCount === 1 ? "detection" : "detections"}
 					</div>
 				</div>
@@ -655,8 +660,9 @@ function SpeciesCard({ card }: { card: LifeListCard }) {
 					audioUrl={card.audioUrl}
 					speciesLink={card.speciesLink}
 					comName={card.comName}
+					size="sm"
 				/>
-				<div className="w-full self-end text-right text-[10px] text-muted-foreground/70 leading-none">
+				<div className={`w-full self-end text-right ${CARD_NOTE_CLASS}`}>
 					Last heard · {lastHeard}
 				</div>
 			</div>
