@@ -317,7 +317,7 @@ function SpeciesBrowser({ cards }: { cards: LifeListCard[] }) {
 		const direction = reverse ? -1 : 1;
 		return [...matches].sort((a, b) => {
 			if (sort === "alpha")
-				return direction * b.comName.localeCompare(a.comName);
+				return direction * a.comName.localeCompare(b.comName);
 			if (sort === "recent")
 				return direction * b.lastDetected.localeCompare(a.lastDetected);
 			return direction * (b.allTimeCount - a.allTimeCount);
@@ -383,7 +383,7 @@ const SORT_META: Record<
 	recent: { label: "Recent", icon: Clock },
 	// "Name" rather than the tab's "Alphabetical": a native select is as wide as
 	// its widest option, and the search box beside it needs that width more.
-	// Not "A–Z" either -- the default order runs Z first (see `filtered`).
+	// Not "A–Z" either -- the direction button can flip it to Z first.
 	alpha: { label: "Name", icon: ArrowDownAZ },
 };
 
@@ -391,7 +391,7 @@ const SORT_META: Record<
 const SORT_PHRASE: Record<SortKey, [string, string]> = {
 	count: ["most recorded first", "least recorded first"],
 	recent: ["most recently heard first", "longest unheard first"],
-	alpha: ["Z to A", "A to Z"],
+	alpha: ["A to Z", "Z to A"],
 };
 
 /**
@@ -565,8 +565,8 @@ function SortTabs({
 }
 
 /**
- * Flips the current sort. Every sort starts descending -- biggest, newest, or
- * Z first -- and reversing it flips the arrow. Not a chevron: beside the
+ * Flips the current sort. Every sort starts in its natural order -- biggest,
+ * newest, or A first -- and reversing it flips the arrow. Not a chevron: beside the
  * dropdown's own chevron it would read as a second dropdown.
  */
 function DirectionButton({
