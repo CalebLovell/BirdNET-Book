@@ -57,12 +57,15 @@ import {
 } from "~/lib/species-detail.ts";
 import { speciesLinkFor } from "~/lib/species-link.ts";
 import { comNameForSlug, comNameToSlug } from "~/lib/species-slug.ts";
+import { stationToday } from "~/lib/station-time.ts";
 import { formatTimeAgo } from "~/lib/time-ago.ts";
 import type { TrendPoint } from "~/lib/trend.ts";
 import { useAgeOffset } from "~/lib/use-age-offset.ts";
 import { useCanListen } from "~/lib/use-can-listen.ts";
 
-const CURRENT_YEAR = new Date().getFullYear();
+// The station's year, not the viewer's: they differ for a few hours around New
+// Year when the two sit in different zones.
+const CURRENT_YEAR = Number(stationToday().slice(0, 4));
 const MIN_YEAR = 2000;
 const DEFAULT_YEAR = CURRENT_YEAR;
 
@@ -330,10 +333,13 @@ function weeksInYear(year: number): number {
 	// Midnights, as buildHeatMap's buckets are: measuring to the current time
 	// of day counted an extra day, and now and then an extra week column --
 	// which widened the heat map's column and shifted the page on load.
-	const today = new Date();
+	// The station's today, as the server's rolling year counts it.
+	const [todayYear, todayMonth, todayDay] = stationToday()
+		.split("-")
+		.map(Number);
 	const end =
 		year === CURRENT_YEAR
-			? new Date(today.getFullYear(), today.getMonth(), today.getDate())
+			? new Date(todayYear, todayMonth - 1, todayDay)
 			: new Date(year, 11, 31);
 	const start =
 		year === CURRENT_YEAR

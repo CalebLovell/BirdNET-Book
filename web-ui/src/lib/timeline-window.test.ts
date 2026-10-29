@@ -35,6 +35,7 @@ test("spelled dates carry the right ordinal", () => {
 	assert.equal(spelledDate("2026-10-11"), "October 11th, 2026");
 	assert.equal(spelledDate("2026-10-12"), "October 12th, 2026");
 	assert.equal(spelledDate("2026-10-22"), "October 22nd, 2026");
+	assert.equal(spelledDate("2026-10-22", { short: true }), "Oct 22nd, 2026");
 });
 
 test("a month window ends on the real last day", () => {
@@ -92,7 +93,8 @@ test("an anchor round-trips back to itself through its window", () => {
 	}
 });
 
-test("the current anchor uses local calendar parts", () => {
+test("the current anchor uses the station's calendar day", () => {
+	// The test runner stands in for the station, so its zone is the station's.
 	const noon = new Date(2026, 6, 28, 12, 0, 0);
 	assert.equal(currentAnchor("day", noon), "2026-07-28");
 	assert.equal(currentAnchor("week", noon), "2026-W31");
@@ -156,7 +158,7 @@ test("stepping crosses month, year and ISO-week boundaries", () => {
 });
 
 test("short anchor labels fit a phone's date stepper", () => {
-	assert.equal(shortAnchorLabel("day", "2026-09-23"), "September 23rd, 2026");
+	assert.equal(shortAnchorLabel("day", "2026-09-23"), "Sep 23rd, 2026");
 	assert.equal(shortAnchorLabel("week", "2026-W39"), "Week 39, 2026");
 	assert.equal(shortAnchorLabel("week", "2026-W01"), "Week 1, 2026");
 	assert.equal(
@@ -165,7 +167,7 @@ test("short anchor labels fit a phone's date stepper", () => {
 	);
 	assert.equal(
 		shortAnchorLabel("day", "2026-09-23", { compact: true }),
-		"September 23rd, 2026",
+		"Sep 23rd, 2026",
 	);
 	assert.equal(shortAnchorLabel("month", "2026-09"), "Sep 2026");
 	assert.equal(shortAnchorLabel("year", "2026"), "2026");

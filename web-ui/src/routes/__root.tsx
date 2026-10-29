@@ -9,6 +9,7 @@ import { MobileNav } from "~/components/sidebar/mobile-nav.tsx";
 import { SiteSidebar } from "~/components/sidebar/site-sidebar.tsx";
 import { Toaster } from "~/components/ui/toaster.tsx";
 import { pageTitle } from "~/lib/page-title.ts";
+import { stationTimeZoneScript } from "~/lib/station-time.ts";
 import { unlockStatusForNavigation } from "~/lib/unlock-status.ts";
 import appCss from "../styles.css?url";
 
@@ -78,6 +79,9 @@ function RootDocument({ children }: { children: React.ReactNode }) {
 			<head>
 				<HeadContent />
 				<ScriptOnce>{SCROLLBAR_PROBE}</ScriptOnce>
+				{/* Before any app code, so "today" is the station's from the first
+				    render on (see station-time.ts). */}
+				<ScriptOnce>{stationTimeZoneScript()}</ScriptOnce>
 			</head>
 			<body>
 				{/* The shell is pinned to the viewport and never scrolls itself.

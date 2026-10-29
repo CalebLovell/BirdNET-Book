@@ -4,6 +4,7 @@
 // UTC on date-only values, which keeps a window's edges from sliding when the
 // browser and the station disagree about the local zone.
 
+import { stationToday } from "~/lib/station-time.ts";
 import type { TimelinePeriod } from "~/lib/timeline-periods.ts";
 
 /**
@@ -68,10 +69,13 @@ function spelledDay(date: Date, { short = false } = {}): string {
 	return `${month} ${day}${suffix}`;
 }
 
-/** A "YYYY-MM-DD" day spelled out in full, e.g. "October 20th, 2026". */
-export function spelledDate(day: string): string {
+/**
+ * A "YYYY-MM-DD" day spelled out in full, e.g. "October 20th, 2026" -- or
+ * "Oct 20th, 2026" with `short`.
+ */
+export function spelledDate(day: string, { short = false } = {}): string {
 	const date = utcDate(day);
-	return `${spelledDay(date)}, ${date.getUTCFullYear()}`;
+	return `${spelledDay(date, { short })}, ${date.getUTCFullYear()}`;
 }
 
 function utcDate(day: string): Date {
@@ -155,7 +159,7 @@ const SHORT_MONTH = new Intl.DateTimeFormat("en-US", {
 });
 
 /**
- * The anchor as the timeline's date stepper names it -- "September 23rd, 2026",
+ * The anchor as the timeline's date stepper names it -- "Sep 23rd, 2026",
  * "Week 39, 2026", "Sep 2026", "2026" -- shorter than the browser's own picker
  * text ("09/23/2026", "September 2026"). `compact` squeezes the one word that
  * can give, "Week" to "Wk", for a phone.
@@ -168,7 +172,7 @@ export function shortAnchorLabel(
 	switch (period) {
 		case "day":
 			// Spelled the way the masthead title is, so the two always agree.
-			return spelledDate(anchor);
+			return spelledDate(anchor, { short: true });
 		case "week":
 			return `${compact ? "Wk" : "Week"} ${Number(anchor.slice(6))}, ${anchor.slice(0, 4)}`;
 		case "month":
@@ -202,9 +206,9 @@ export function currentAnchor(
 	period: TimelinePeriod,
 	now: Date = new Date(),
 ): TimelineAnchor {
-	// Local parts, not UTC: "today" means the station operator's today.
-	const local = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
-	return anchorForDay(period, local);
+	// The station's today, not the viewer's: a visitor in another zone still
+	// lands on the day the station is living through.
+	return anchorForDay(period, stationToday(now));
 }
 
 /**

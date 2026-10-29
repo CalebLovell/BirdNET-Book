@@ -1,10 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
-import { min } from "drizzle-orm";
 
-import { db } from "~/db/index.ts";
-import { detections } from "~/db/schema.ts";
-import { dayIdFor } from "~/lib/day.ts";
-import { classifyDay } from "~/lib/day-range.ts";
+import { isDayId } from "~/lib/day.ts";
 import type { HighlightThresholds } from "~/lib/highlight-thresholds.ts";
 import { readHighlightThresholds } from "~/lib/settings-config.server.ts";
 import {
@@ -24,19 +20,11 @@ export type TimelinePageRequest = {
 };
 
 /**
- * A day whose anchor names no reviewable day: still ahead, before the station
- * was listening, or not a date at all. Every other window resolves to rows.
- */
-export type DayOutOfRange =
-	| { status: "malformed" }
-	| { status: "future" }
-	| { status: "before-station"; firstRecorded: string };
-
-/**
  * Every period now draws the same body -- species-by-hour, detections-by-hour
- * and the species grid -- all built from one set of rows. The only exception is
- * a Daily anchor that falls outside the station's history, which has no window
- * to draw and replaces the page with an explanation instead.
+ * and the species grid -- all built from one set of rows. A day still ahead,
+ * or before the station was listening, is just a quiet window like any other.
+ * The only exception is a Daily anchor that isn't a date at all, which has no
+ * window to draw and replaces the page with an explanation instead.
  */
 export type TimelineBody =
 	| {
@@ -46,7 +34,7 @@ export type TimelineBody =
 			/** The rules they were judged by, for the card's info tip. */
 			thresholds: HighlightThresholds;
 	  }
-	| { kind: "day-out-of-range"; result: DayOutOfRange };
+	| { kind: "not-a-date" };
 
 export type TimelinePageData = TimelineNav & {
 	/** The period this page was loaded for. A switch keeps the old page up for a
@@ -59,28 +47,12 @@ export type TimelinePageData = TimelineNav & {
 export const getTimelinePage = createServerFn({ method: "GET" })
 	.validator((request: TimelinePageRequest) => request)
 	.handler(async ({ data: { period, anchor } }): Promise<TimelinePageData> => {
-		// The Daily period keeps the range check the day review used to carry: a
-		// date still ahead, or before the station's first recording, has no window
-		// to resolve and gets its own message rather than an empty grid.
-		if (period === "day") {
-			const [range] = await db
-				.select({ firstRecorded: min(detections.Date) })
-				.from(detections);
-			const firstRecorded = range?.firstRecorded ?? null;
-			const verdict = classifyDay(anchor, dayIdFor(new Date()), firstRecorded);
-
-			if (verdict !== "in-range") {
-				const result: DayOutOfRange =
-					verdict === "before-station"
-						? {
-								status: "before-station",
-								firstRecorded: firstRecorded ?? anchor,
-							}
-						: { status: verdict };
-				// A window still lets the toolbar draw around the message.
-				const nav = await loadTimelineNav("day", windowFor("day", anchor));
-				return { ...nav, period, body: { kind: "day-out-of-range", result } };
-			}
+		// Any real day loads, future and pre-station ones included, so the
+		// picker can go anywhere; only a Daily anchor that isn't a date has no
+		// window to resolve and gets its own message.
+		if (period === "day" && !isDayId(anchor)) {
+			const nav = await loadTimelineNav("day", windowFor("day", anchor));
+			return { ...nav, period, body: { kind: "not-a-date" } };
 		}
 
 		const thresholds = await readHighlightThresholds();

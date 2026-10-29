@@ -155,7 +155,7 @@ function PeriodSelect({
 	return (
 		<div className="relative shrink-0 min-[800px]:hidden">
 			{/* Under 400px the icon goes too: the row needs its width for the
-			    longest window name ("September 23rd, 2026") beside it. */}
+			    longest window name ("Sep 23rd, 2026") beside it. */}
 			<Icon
 				className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 max-[400px]:hidden"
 				aria-hidden="true"
@@ -185,8 +185,7 @@ function PeriodSelect({
  * either end by hairlines, around the window's short name ("Sep 2026") rather
  * than the browser's own picker text ("September 2026"), which is wider and
  * reads differently in every browser. The steps move one window at a time,
- * quiet ones included, and disable at the station's first window and at
- * today's.
+ * quiet ones included, as far as you like either way.
  *
  * Clicking the name opens the native picker for the granularity, laid
  * invisibly over it -- or, for a year, a native list of the station's years.
@@ -205,23 +204,11 @@ function WindowStepper({
 }) {
 	const label = PICKER_LABELS[period];
 	const nativePicker = useNativePicker(PICKER_TYPES[period]);
-	const min = stationRange
-		? anchorForDay(period, stationRange.first)
-		: undefined;
-	// The latest pickable window is today's, even when the station hasn't heard
-	// anything yet today (or has been quiet for a while) -- otherwise the
-	// browser greys out its own "Today" button. Anchors of one period compare
-	// as plain strings.
-	const lastDetected = stationRange
-		? anchorForDay(period, stationRange.last)
-		: undefined;
-	const today = currentAnchor(period);
-	const max = lastDetected && lastDetected > today ? lastDetected : today;
-	// The arrows walk one window at a time, quiet ones included, between the
-	// station's first window and today's.
-	const prevTarget =
-		min && anchor > min ? stepAnchor(period, anchor, -1) : null;
-	const nextTarget = anchor < max ? stepAnchor(period, anchor, 1) : null;
+	// The arrows walk one window at a time, quiet ones included, with no limit
+	// either way: a window ahead or before the station is just a quiet one.
+	const valid = isValidAnchor(period, anchor);
+	const prevTarget = valid ? stepAnchor(period, anchor, -1) : null;
+	const nextTarget = valid ? stepAnchor(period, anchor, 1) : null;
 
 	const overlay = "absolute inset-0 size-full cursor-pointer opacity-0";
 
@@ -248,30 +235,26 @@ function WindowStepper({
 					{shortAnchorLabel(period, anchor, { compact: true })}
 				</span>
 				{period === "year" ? (
-					stationRange ? (
-						<select
-							aria-label={label}
-							className={overlay}
-							value={anchor}
-							onChange={(event) => onPick(event.target.value)}
-						>
-							{yearsBetween(stationRange.first, stationRange.last).map(
-								(year) => (
-									<option key={year} value={year}>
-										{year}
-									</option>
-								),
-							)}
-						</select>
-					) : null
+					<select
+						aria-label={label}
+						className={overlay}
+						value={anchor}
+						onChange={(event) => onPick(event.target.value)}
+					>
+						{pickableYears(anchor, stationRange).map((year) => (
+							<option key={year} value={year}>
+								{year}
+							</option>
+						))}
+					</select>
 				) : nativePicker ? (
 					<input
 						aria-label={label}
-						className={`${overlay} text-base`}
+						// iOS Safari gives date fields a minimum width of their own;
+						// stripping its native look lets the overlay fit the label.
+						className={`${overlay} min-w-0 appearance-none text-base`}
 						type={PICKER_TYPES[period]}
 						value={anchor}
-						min={min}
-						max={max}
 						// A desktop browser only opens its calendar from the field's own
 						// little button, which is invisible here -- so a click anywhere on
 						// the name asks for the picker outright. Touch browsers open it on
@@ -319,10 +302,23 @@ function useNativePicker(type: string): boolean {
 	return supported;
 }
 
-/** Every year from the station's first recording to its last, newest first. */
-function yearsBetween(first: string, last: string): string[] {
-	const from = Number(first.slice(0, 4));
-	const to = Number(last.slice(0, 4));
+/**
+ * The years the year list offers, newest first: the station's, this year, and
+ * the one showing, plus a year either side. A native list can't run forever,
+ * so the arrows are what reach further out.
+ */
+function pickableYears(
+	anchor: TimelineAnchor,
+	stationRange: { first: string; last: string } | null,
+): string[] {
+	const years = [Number(currentAnchor("year"))];
+	if (isValidAnchor("year", anchor)) years.push(Number(anchor));
+	if (stationRange) {
+		years.push(Number(stationRange.first.slice(0, 4)));
+		years.push(Number(stationRange.last.slice(0, 4)));
+	}
+	const from = Math.min(...years) - 1;
+	const to = Math.max(...years) + 1;
 	return Array.from({ length: to - from + 1 }, (_, i) => String(to - i));
 }
 

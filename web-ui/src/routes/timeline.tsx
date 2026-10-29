@@ -25,7 +25,6 @@ import { ButtonLink } from "~/components/ui/button-link.tsx";
 import { ShellFigure } from "~/components/ui/shell.tsx";
 import { TooltipProvider } from "~/components/ui/tooltip.tsx";
 import { getDayShareCard } from "~/lib/day-share.ts";
-import { formatDayTitle } from "~/lib/day-title.ts";
 import { EMPTY } from "~/lib/empty-messages.ts";
 import type { HighlightThresholds } from "~/lib/highlight-thresholds.ts";
 import { PAGE_HEADERS } from "~/lib/page-headers.ts";
@@ -33,11 +32,7 @@ import { pageTitle } from "~/lib/page-title.ts";
 import { formatShareCard } from "~/lib/share-card.ts";
 import type { HourActivity } from "~/lib/stats-data.ts";
 import type { TimelineData, TimelineRow } from "~/lib/timeline.ts";
-import {
-	type DayOutOfRange,
-	getTimelinePage,
-	type TimelinePageData,
-} from "~/lib/timeline-page.ts";
+import { getTimelinePage, type TimelinePageData } from "~/lib/timeline-page.ts";
 import {
 	TIMELINE_PERIOD_LABELS,
 	TIMELINE_PERIODS,
@@ -137,11 +132,11 @@ function Timeline() {
 			resetScroll: false,
 		});
 
-	// A date the station could never have recorded is the one case with nothing
-	// to say at all -- no figures, no window, no grid -- so it replaces the page
-	// rather than sitting inside it.
-	if (settled?.current && settled.value.body.kind === "day-out-of-range") {
-		return <OutOfRangeDay result={settled.value.body.result} date={anchor} />;
+	// An address that names no date at all is the one case with nothing to say
+	// -- no figures, no window, no grid -- so it replaces the page rather than
+	// sitting inside it. Days ahead or before the station are just quiet days.
+	if (settled?.current && settled.value.body.kind === "not-a-date") {
+		return <NotADate date={anchor} />;
 	}
 
 	return (
@@ -172,7 +167,7 @@ function Timeline() {
 					}
 				>
 					{(data) =>
-						data.body.kind === "day-out-of-range" ? null : (
+						data.body.kind === "not-a-date" ? null : (
 							// A station with nothing recorded yet draws the same cards as a
 							// quiet window, each saying so, so the page holds the shape its
 							// shells promised and every control stays usable.
@@ -369,7 +364,7 @@ function TimelineHeader({
 }
 
 /**
- * The page's title: the scope, then the window -- "Daily — August 26th, 2026".
+ * The page's title: the scope, then the window -- "Daily — Aug 26th, 2026".
  * "all" has no window to name, so it stops at the scope ("All Time"); every
  * other period appends the window label the picker moves through. The day title
  * drops the weekday the shared window label carries -- the "Daily" eyebrow
@@ -391,7 +386,12 @@ function headerLines(period: TimelinePeriod, anchor: string): string[] {
 	// anchor that isn't a date at all is shown as typed; the page beneath
 	// explains it once the server has judged it.
 	if (period === "day") {
-		return [scope, isValidAnchor("day", anchor) ? spelledDate(anchor) : anchor];
+		return [
+			scope,
+			isValidAnchor("day", anchor)
+				? spelledDate(anchor, { short: true })
+				: anchor,
+		];
 	}
 	return [scope, safeWindow(period, anchor)?.label ?? anchor];
 }
@@ -686,55 +686,20 @@ function ViewToggle({
 }
 
 /**
- * A date outside the station's history. Not a page with empty cards on it: the
+ * A Daily address that isn't a date. Not a page with empty cards on it: the
  * window itself is the thing that does not exist, so there is nothing to scope
  * and nothing to draw.
  */
-function OutOfRangeDay({
-	result,
-	date,
-}: {
-	result: DayOutOfRange;
-	date: string;
-}) {
-	switch (result.status) {
-		case "future":
-			return (
-				<StatusPage
-					icon={CalendarRange}
-					section={PAGE_HEADERS.timeline.missingSection}
-					sectionDescription={PAGE_HEADERS.timeline.missingDescription}
-					tone="missing"
-					title="That day hasn't happened yet"
-				>
-					{formatDayTitle(date)} is still ahead. There is nothing to review
-					until the station has heard it.
-				</StatusPage>
-			);
-		case "before-station":
-			return (
-				<StatusPage
-					icon={CalendarRange}
-					section={PAGE_HEADERS.timeline.missingSection}
-					sectionDescription={PAGE_HEADERS.timeline.missingDescription}
-					tone="missing"
-					title="Before this station started listening"
-				>
-					{formatDayTitle(date)} predates the first recording. This station has
-					been listening since {formatDayTitle(result.firstRecorded)}.
-				</StatusPage>
-			);
-		default:
-			return (
-				<StatusPage
-					icon={CalendarRange}
-					section={PAGE_HEADERS.timeline.missingSection}
-					sectionDescription={PAGE_HEADERS.timeline.missingDescription}
-					tone="missing"
-					title="That isn't a date"
-				>
-					“{date}” isn’t a valid date. Dates look like 2025-04-19.
-				</StatusPage>
-			);
-	}
+function NotADate({ date }: { date: string }) {
+	return (
+		<StatusPage
+			icon={CalendarRange}
+			section={PAGE_HEADERS.timeline.missingSection}
+			sectionDescription={PAGE_HEADERS.timeline.missingDescription}
+			tone="missing"
+			title="That isn't a date"
+		>
+			“{date}” isn’t a valid date. Dates look like 2025-04-19.
+		</StatusPage>
+	);
 }
