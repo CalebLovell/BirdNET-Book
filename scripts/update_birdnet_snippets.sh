@@ -139,7 +139,6 @@ if grep -E '^DATABASE_LANG=zh$' /etc/birdnet/birdnet.conf &>/dev/null;then
 fi
 
 [ -d $RECS_DIR/StreamData ] || sudo_with_user mkdir -p $RECS_DIR/StreamData
-[ -L ${EXTRACTED}/spectrogram.png ] || sudo_with_user ln -sf ${RECS_DIR}/StreamData/spectrogram.png ${EXTRACTED}/spectrogram.png
 
 if ! which inotifywait &>/dev/null;then
   ensure_apt_updated
@@ -169,6 +168,16 @@ fi
 install_tmp_mount
 remove_unit_file birdnet_server.service /usr/local/bin/server.py
 remove_unit_file extraction.service /usr/local/bin/extract_new_birdsounds.sh
+# Services of the old PHP web interface; the web UI draws its own charts and
+# spectrograms.
+remove_unit_file spectrogram_viewer.service /usr/local/bin/spectrogram.sh
+remove_unit_file chart_viewer.service /usr/local/bin/daily_plot.py
+remove_unit_file birdnet_stats.service /usr/local/bin/plotly_streamlit.py
+remove_unit_file birdnet_log.service /usr/local/bin/birdnet_log.sh
+remove_unit_file web_terminal.service
+rm -f ${EXTRACTED}/spectrogram.png
+# Scripts deleted from the repository leave dangling links behind.
+find /usr/local/bin -maxdepth 1 -xtype l -lname "$HOME/BirdNET-Pi/scripts/*" -delete
 
 if grep -q 'birdnet_server.service' "$HOME/BirdNET-Pi/templates/birdnet_analysis.service" &>/dev/null; then
     sed -i '/After=.*/d' "$HOME/BirdNET-Pi/templates/birdnet_analysis.service"

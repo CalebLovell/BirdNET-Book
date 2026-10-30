@@ -285,7 +285,6 @@ test("restart bounces exactly the named card's services", async () => {
 			"restart",
 			"birdnet_recording.service",
 			"livestream.service",
-			"spectrogram_viewer.service",
 		],
 	]);
 });

@@ -27,7 +27,6 @@ test("audio restarts only its three fixed services", async () => {
 				"restart",
 				"birdnet_recording.service",
 				"livestream.service",
-				"spectrogram_viewer.service",
 			],
 			stdin: undefined,
 		},
@@ -40,16 +39,8 @@ test("each card can invoke only its allowlisted services", async () => {
 		station: ["birdnet_analysis.service"],
 		detection: ["birdnet_analysis.service"],
 		privacy: ["birdnet_analysis.service"],
-		audio: [
-			"birdnet_recording.service",
-			"livestream.service",
-			"spectrogram_viewer.service",
-		],
-		recording: [
-			"birdnet_recording.service",
-			"birdnet_analysis.service",
-			"spectrogram_viewer.service",
-		],
+		audio: ["birdnet_recording.service", "livestream.service"],
+		recording: ["birdnet_recording.service", "birdnet_analysis.service"],
 		storage: [],
 		review: [],
 	} as const;

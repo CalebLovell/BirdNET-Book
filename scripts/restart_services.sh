@@ -7,8 +7,7 @@ my_dir=$HOME/BirdNET-Pi/scripts
 
 sudo systemctl stop birdnet_recording.service
 
-services=(spectrogram_viewer.service
-  icecast2.service
+services=(icecast2.service
   birdnet_recording.service
   birdnet_analysis.service)
 

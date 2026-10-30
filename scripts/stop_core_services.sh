@@ -4,8 +4,7 @@
 
 services=(birdnet_recording.service
 custom_recording.service
-birdnet_analysis.service
-spectrogram_viewer.service)
+birdnet_analysis.service)
 
 for i in  "${services[@]}";do
   sudo systemctl stop  ${i}

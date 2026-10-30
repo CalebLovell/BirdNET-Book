@@ -59,7 +59,6 @@ create_necessary_dirs() {
   [ -d ${EXTRACTED}/Charts ] || sudo -u ${USER} mkdir -p ${EXTRACTED}/Charts
   [ -d ${PROCESSED} ] || sudo -u ${USER} mkdir -p ${PROCESSED}
   [ -d $RECS_DIR/StreamData ] || sudo -u ${USER} mkdir -p $RECS_DIR/StreamData
-  [ -L ${EXTRACTED}/spectrogram.png ] || sudo -u ${USER} ln -sf ${RECS_DIR}/StreamData/spectrogram.png ${EXTRACTED}/spectrogram.png
 
   sudo -u ${USER} ln -fs $my_dir/exclude_species_list.txt $my_dir/scripts
   sudo -u ${USER} ln -fs $my_dir/confirmed_species_list.txt $my_dir/scripts
@@ -150,23 +149,6 @@ EOF
   systemctl restart avahi-daemon.service
 }
 
-install_spectrogram_service() {
-  cat << EOF > $HOME/BirdNET-Pi/templates/spectrogram_viewer.service
-[Unit]
-Description=BirdNET-Pi Spectrogram Viewer
-[Service]
-Restart=always
-RestartSec=10
-Type=simple
-User=${USER}
-ExecStart=/usr/local/bin/spectrogram.sh
-[Install]
-WantedBy=multi-user.target
-EOF
-  ln -sf $HOME/BirdNET-Pi/templates/spectrogram_viewer.service /usr/lib/systemd/system
-  systemctl enable spectrogram_viewer.service
-}
-
 config_icecast() {
   if [ -f /etc/icecast2/icecast.xml ];then
     cp /etc/icecast2/icecast.xml{,.prebirdnetpi}
@@ -220,7 +202,6 @@ install_services() {
   install_birdnet_analysis
   install_recording_service
   install_custom_recording_service # But does not enable
-  install_spectrogram_service
   install_livestream_service
   install_birdnet_mount
   install_cleanup_cron
