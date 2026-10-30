@@ -49,12 +49,17 @@ install_birdnet_mount() {
 [Unit]
 Description=Birdnet tmpfs for transient files
 ConditionPathExists=$RECS_DIR/StreamData
+# Mounted before anything opens the folder, or the analysis would watch the
+# card underneath it.
+Before=birdnet_recording.service custom_recording.service birdnet_analysis.service livestream.service
 
 [Mount]
 What=tmpfs
 Where=$RECS_DIR/StreamData
 Type=tmpfs
-Options=mode=1777,nosuid,nodev
+# About 20 chunks: if the analysis stalls, recording waits instead of filling
+# memory.
+Options=mode=1777,nosuid,nodev,size=64M
 
 [Install]
 WantedBy=multi-user.target

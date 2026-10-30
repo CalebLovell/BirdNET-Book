@@ -204,6 +204,8 @@ install_services() {
   install_custom_recording_service # But does not enable
   install_livestream_service
   install_birdnet_mount
+  # Chunks live in RAM, sparing the SD card ~17 GB of writes a day.
+  systemctl enable "$(systemd-escape -p --suffix=mount "$RECS_DIR/StreamData")"
   install_cleanup_cron
 
   create_necessary_dirs
