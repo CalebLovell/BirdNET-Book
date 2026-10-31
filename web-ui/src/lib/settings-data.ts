@@ -154,6 +154,7 @@ export const storageSettingsSchema = z.object({
 	fullDiskAction: z.enum(["purge", "keep"]),
 	purgeThreshold: z.number().int().min(20).max(99),
 	maxFilesPerSpecies: z.number().int().min(0),
+	keepPerSpecies: z.number().int().min(0),
 });
 
 export const reviewSettingsSchema = z.object({
@@ -259,6 +260,7 @@ export const SETTINGS_DEFAULTS = {
 		fullDiskAction: "purge",
 		purgeThreshold: 95,
 		maxFilesPerSpecies: 0,
+		keepPerSpecies: 10,
 	},
 	review: { rareSpeciesMax: DEFAULT_REVIEW_RARE_SPECIES_MAX },
 	highlights: {

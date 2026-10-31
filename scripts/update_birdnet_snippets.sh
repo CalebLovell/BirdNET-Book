@@ -114,6 +114,13 @@ if ! grep -E '^MAX_FILES_SPECIES=' /etc/birdnet/birdnet.conf &>/dev/null;then
   echo "MAX_FILES_SPECIES=\"0\"" >> /etc/birdnet/birdnet.conf
 fi
 
+if ! grep -E '^PURGE_KEEP_PER_SPECIES=' /etc/birdnet/birdnet.conf &>/dev/null;then
+  echo "PURGE_KEEP_PER_SPECIES=10" >> /etc/birdnet/birdnet.conf
+  # Introduced with the end of per-detection spectrogram images: the web UI
+  # draws its own, so the old ones only take space.
+  find ${EXTRACTED}/By_Date -name '*.png' -delete
+fi
+
 if ! grep -E '^AUTOMATIC_UPDATE=' /etc/birdnet/birdnet.conf &>/dev/null;then
   echo "AUTOMATIC_UPDATE=0" >> /etc/birdnet/birdnet.conf
 fi

@@ -4,15 +4,13 @@ import logging
 import os
 import sqlite3
 import subprocess
-import tempfile
 import io
 import soundfile
 from time import sleep
 
 import requests
-from PIL import Image, ImageDraw, ImageFont
 
-from .helpers import get_settings, get_font, DB_PATH
+from .helpers import get_settings, DB_PATH
 from .classes import Detection, ParseFileName
 from .notifications import sendAppriseNotifications
 
@@ -46,33 +44,6 @@ def extract_safe(in_file, out_file, start, stop):
     extract(in_file, out_file, safe_start, safe_stop)
 
 
-def spectrogram(in_file, title, comment, raw=0):
-    fd, tmp_file = tempfile.mkstemp(suffix='.png')
-    os.close(fd)
-    args = ['sox', '-V1', f'{in_file}', '-n', 'remix', '1', 'rate', '24k', 'spectrogram',
-            '-t', '', '-c', '', '-o', tmp_file]
-    args += ['-r'] if int(raw) else []
-
-    result = subprocess.run(args, check=True, capture_output=True)
-    ret = result.stdout.decode('utf-8')
-    err = result.stderr.decode('utf-8')
-    if err:
-        raise RuntimeError(f'{ret}:\n {err}')
-    img = Image.open(tmp_file)
-    height = img.size[1]
-    width = img.size[0]
-    draw = ImageDraw.Draw(img)
-    title_font = ImageFont.truetype(get_font()['path'], 13)
-    _, _, w, _ = draw.textbbox((0, 0), title, font=title_font)
-    draw.text(((width-w)/2, 6), title, fill="white", font=title_font)
-
-    comment_font = ImageFont.truetype(get_font()['path'], 11)
-    _, _, _, h = draw.textbbox((0, 0), comment, font=comment_font)
-    draw.text((1, height - (h + 1)), comment, fill="white", font=comment_font)
-    img.save(f'{in_file}.png')
-    os.remove(tmp_file)
-
-
 def extract_detection(file: ParseFileName, detection: Detection):
     conf = get_settings()
     new_file_name = f'{detection.common_name_safe}-{detection.confidence_pct}-{detection.date}-birdnet-{file.RTSP_id}{detection.time}.{conf["AUDIOFMT"]}'
@@ -83,7 +54,6 @@ def extract_detection(file: ParseFileName, detection: Detection):
     else:
         os.makedirs(new_dir, exist_ok=True)
         extract_safe(file.file_name, new_file, detection.start, detection.stop)
-        spectrogram(new_file, detection.common_name, new_file.replace(os.path.expanduser('~/'), ''), conf['RAW_SPECTROGRAM'])
     return new_file
 
 

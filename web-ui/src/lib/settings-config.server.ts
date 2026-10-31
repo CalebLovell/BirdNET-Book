@@ -150,6 +150,11 @@ export async function readSettingsPageValues(
 				"MAX_FILES_SPECIES",
 				defaults.storage.maxFilesPerSpecies,
 			),
+			keepPerSpecies: integerValue(
+				values,
+				"PURGE_KEEP_PER_SPECIES",
+				defaults.storage.keepPerSpecies,
+			),
 		}),
 		highlights: parseSettingsCard("highlights", {
 			rareMax: integerValue(
@@ -254,6 +259,7 @@ function assignmentsFor<K extends SettingsCardKind>(
 				FULL_DISK: storage.fullDiskAction,
 				PURGE_THRESHOLD: String(storage.purgeThreshold),
 				MAX_FILES_SPECIES: String(storage.maxFilesPerSpecies),
+				PURGE_KEEP_PER_SPECIES: String(storage.keepPerSpecies),
 			};
 		}
 		case "review": {

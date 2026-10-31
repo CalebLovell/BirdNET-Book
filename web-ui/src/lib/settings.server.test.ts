@@ -72,6 +72,7 @@ test("development skip is explicit while no-action cards save normally", async (
 			fullDiskAction: "keep",
 			purgeThreshold: 90,
 			maxFilesPerSpecies: 100,
+			keepPerSpecies: 10,
 		},
 		{ settingsPath: storage.file },
 	);
@@ -185,6 +186,7 @@ test("reset returns every card but Station to its defaults", async () => {
 		fullDiskAction: "purge",
 		purgeThreshold: 95,
 		maxFilesPerSpecies: 0,
+		keepPerSpecies: 10,
 	});
 	assert.deepEqual(page.review, { rareSpeciesMax: 10 });
 
@@ -261,7 +263,12 @@ test("a card with nothing to restart just saves", async () => {
 		"FULL_DISK=purge\nPURGE_THRESHOLD=95\nMAX_FILES_SPECIES=0\n",
 	);
 	const saved = await saveStorageSettings(
-		{ fullDiskAction: "keep", purgeThreshold: 90, maxFilesPerSpecies: 0 },
+		{
+			fullDiskAction: "keep",
+			purgeThreshold: 90,
+			maxFilesPerSpecies: 0,
+			keepPerSpecies: 10,
+		},
 		{ settingsPath: file, skipSystemActions: true },
 	);
 	// Storage is read per operation, so it is live the moment it is written --

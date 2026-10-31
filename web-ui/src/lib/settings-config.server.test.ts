@@ -129,7 +129,12 @@ test("appends any key an older config never carried", async () => {
 	const file = await fixtureConfig("BIRDWEATHER_ID=keep-me\n");
 	await writeSettingsCard(
 		"storage",
-		{ fullDiskAction: "keep", purgeThreshold: 80, maxFilesPerSpecies: 5 },
+		{
+			fullDiskAction: "keep",
+			purgeThreshold: 80,
+			maxFilesPerSpecies: 5,
+			keepPerSpecies: 3,
+		},
 		file,
 	);
 	const text = await readFile(file, "utf8");
@@ -137,6 +142,7 @@ test("appends any key an older config never carried", async () => {
 	assert.match(text, /^FULL_DISK=keep$/m);
 	assert.match(text, /^PURGE_THRESHOLD=80$/m);
 	assert.match(text, /^MAX_FILES_SPECIES=5$/m);
+	assert.match(text, /^PURGE_KEEP_PER_SPECIES=3$/m);
 });
 
 test("round-trips RTSP streams and blank extraction length", async () => {

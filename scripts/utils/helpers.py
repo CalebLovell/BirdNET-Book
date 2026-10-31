@@ -12,23 +12,7 @@ _settings = None
 BASE_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
 DB_PATH = os.path.join(BASE_PATH, 'scripts/birds.db')
 MODEL_PATH = os.path.join(BASE_PATH, 'model')
-FONT_DIR = os.path.join(BASE_PATH, 'homepage/static')
 ANALYZING_NOW = os.path.expanduser('~/BirdSongs/StreamData/analyzing_now.txt')
-
-
-def get_font():
-    conf = get_settings()
-    if conf['DATABASE_LANG'] == 'ar':
-        ret = {'font.family': 'Noto Sans Arabic', 'path': os.path.join(FONT_DIR, 'NotoSansArabic-Regular.ttf')}
-    elif conf['DATABASE_LANG'] in ['ja', 'zh_CN', 'zh_TW']:
-        ret = {'font.family': 'Noto Sans JP', 'path': os.path.join(FONT_DIR, 'NotoSansJP-Regular.ttf')}
-    elif conf['DATABASE_LANG'] == 'ko':
-        ret = {'font.family': 'Noto Sans KR', 'path': os.path.join(FONT_DIR, 'NotoSansKR-Regular.ttf')}
-    elif conf['DATABASE_LANG'] == 'th':
-        ret = {'font.family': 'Noto Sans Thai', 'path': os.path.join(FONT_DIR, 'NotoSansThai-Regular.ttf')}
-    else:
-        ret = {'font.family': 'Roboto Flex', 'path': os.path.join(FONT_DIR, 'RobotoFlex-Regular.ttf')}
-    return ret
 
 
 class PHPConfigParser(ConfigParser):

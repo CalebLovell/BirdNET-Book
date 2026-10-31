@@ -156,11 +156,13 @@ test("enforces privacy and storage boundaries", () => {
 			fullDiskAction: "purge",
 			purgeThreshold: 99,
 			maxFilesPerSpecies: 0,
+			keepPerSpecies: 10,
 		}),
 		{
 			fullDiskAction: "purge",
 			purgeThreshold: 99,
 			maxFilesPerSpecies: 0,
+			keepPerSpecies: 10,
 		},
 	);
 	assert.throws(() => parseSettingsCard("privacy", { privacyThreshold: 3.1 }));
@@ -169,6 +171,7 @@ test("enforces privacy and storage boundaries", () => {
 			fullDiskAction: "delete-everything",
 			purgeThreshold: 19,
 			maxFilesPerSpecies: -1,
+			keepPerSpecies: -1,
 		}),
 	);
 });

@@ -1003,7 +1003,7 @@ function StorageCard({
 				label="When the disk fills"
 				hint={
 					form.values.fullDiskAction === "purge"
-						? "Removes the oldest recordings and detection rows once the threshold is crossed."
+						? "Removes the least confident recordings once the threshold is crossed. Detections stay."
 						: "Stops core services when space runs out instead of deleting recordings."
 				}
 			>
@@ -1037,6 +1037,23 @@ function StorageCard({
 						form.setValues({
 							...form.values,
 							purgeThreshold: numberOr(event, form.values.purgeThreshold),
+						})
+					}
+				/>
+			</Field>
+			<Field
+				label="Recordings always kept per species"
+				hint="A purge never takes a species below its most confident recordings."
+			>
+				<FieldInput
+					type="number"
+					min={0}
+					required
+					value={form.values.keepPerSpecies}
+					onChange={(event) =>
+						form.setValues({
+							...form.values,
+							keepPerSpecies: numberOr(event, form.values.keepPerSpecies),
 						})
 					}
 				/>
